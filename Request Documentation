@@ -1,0 +1,149 @@
+Read API Documentation,
+ before reading this.
+
+Note that access to any
+ component can be gotten
+ by prefixing the type
+ of component with "c.",
+ but unless interfacing
+ with an external device,
+ use "stat" and "randr".
+("randr" covers your
+ multi-screen needs.)
+In a truly extreme case,
+ like an installer, you
+ can use "c.filesystem".
+Signals from the devices
+ are not relayed, as I
+ am unsure of a way to
+ verify the source.
+(It seems to be a default
+ to have the device as
+ the first parameter, but
+ I don't want to rely on
+ this behavior.)
+
+There are exceptions:
+A successful "c.modem" or
+ "c.tunnel" request will
+ enable the modem_message
+ event to make it
+ somewhat useful.
+A similar thing occurs
+ for "c.chat_box",
+ and "root" allows seeing
+ all events.
+
+Another way to get at
+ signals is the 
+"s.<signal>" permission.
+Like the "c.<component>"
+ permission, it's a tiny
+ general means of getting
+ events that the kernel
+ has no way (or reason)
+ to access.
+
+The interface has a
+ function to return an
+ iterator of proxies,
+ called "list".
+The interface may have a
+ "primary" field if the
+ system has a 'primary'
+ choice for that device.
+
+-------------------------
+ KittenOS A.request()
+  Acceptable Values:
+
+"math", "table", "string"
+, "unicode": Standard,
+ if indirect, access to
+ those Lua APIs.
+(Done via metatable to 
+ preserve memory.)
+ Note that the "unicode"
+  API has an additional
+  function:
+ safeTextFormat(txt,ptr)
+ adds spaces after wide
+  characters, making it
+  easier to display text
+  with wide characters
+  in. "ptr" can be a
+  point in the string,
+  and is also adjusted -
+  this can be used for
+  e.g. console cursors.
+ Returns atxt, aptr.
+
+"root": The kernel _ENV.
+ Essentially everything.
+
+"stat": Contains:
+ (names preserved, but
+  namespaces aren't)
+ computer:
+  totalMemory freeMemory
+  energy maxEnergy
+ os:
+  clock date difftime
+  time
+ Also contains
+  "component.list", but
+  named "componentList".
+
+"proc": Contains:
+ aid: A field containing
+  the running app ID.
+  Usually pkg .. "-" .. n
+   where 'n' is a number.
+ pkg: A field containing
+  the app name (aka. pkg)
+ listApps()
+  Returns a table of
+  {package, aid} entries.
+
+ sendRPC(aid, ...)
+  Causes the "rpc" event
+  to be called, with the
+  given data parameters.
+
+"lang":
+ getLanguage(): Gets the
+  current system language
+ getTable(): Loads and
+  calls the Lua file at
+ "/lang/<lang>/<pkg>.lua"
+ Failing that, returns
+  nil
+
+"setlang": Actually one
+ function, setting the
+ system language.
+
+"kill": Contains:
+ killApp(aid)
+  Kills a process.
+
+"randr": Contains:
+ getResolution,
+ maxResolution,
+ setResolution,
+ (the above work
+  as on a GPU)
+ iterateScreens,
+ iterateGPUs
+ (the above iterate over
+  *non-primary* proxies,
+  direct control of the
+   primary screen is not
+   allowed)
+"c.modem": See the notes
+ above on the "c." setup,
+ but note that this adds
+ the "modem_message"
+ callback.
+"c.<component type>":
+ See the notes above.

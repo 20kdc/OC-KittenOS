@@ -1,0 +1,192 @@
+KittenOS App Construction
+
+Firstly, an 'app' is,
+ in essence, a process,
+ with one window.
+The app's initial Lua
+ script must return 3
+ values: app, w, h.
+App contains callbacks,
+ w and h are the app's
+ initial window size.
+In the below section,
+ "dbool" means a boolean
+ which, if true, redraws
+ the whole window.
+
+Callbacks are:
+ update():dbool
+ key(ascii, scan, down):
+  dbool
+ clipboard(text):dbool
+ get_ch(x, y):character
+ event(t, ...):dbool
+ ^ The above is only used
+    under any one of these
+    conditions:
+   1. The event is a
+      modem_message, and
+      the app requested
+      and got one of the
+      following APIs:
+      c.modem, c.tunnel
+      (implemented as a
+       special case in
+       the getAPI for
+       those APIs,
+       giving access to
+       s.modem_message)
+   2. The app managed to
+       get the API named
+       "s.<signal type>".
+   3. The app managed to
+       successfully get
+       the root API
+ rpc(cPkg, cAid, ...):any
+  The application named
+   by cPkg, process cAid,
+   called your app via
+   the "proc" API.
+  The return value is
+   passed on, to the
+   calling application.
+
+-KittenOS API Reference--
+
+KittenOS initializes apps
+ with global functions,
+ but only one library
+ table: "A".
+
+This table contains all
+ basic KittenOS funcs,
+ in the order they are
+ written in the kernel.
+
+A.listApps()
+ Returns a list of apps
+  that can be launched.
+ (Not running processes,
+  see Request Doc/"proc")
+ Used to allow launcher
+  to avoid requiring a
+  special permission for
+  almost no reason.
+
+A.launchApp(pkg)
+ Launches an application,
+  from the Lua file:
+  "apps/"..pkg..".lua" on
+  the primary filesystem.
+ The package name must
+  match the Lua pattern:
+  "[a-zA-Z%-_\x80-\xFF]+"
+ The app ID is returned.
+
+A.opencfg(mode)
+ Opens the file:
+  "cfgs/"..pkg on the
+  primary filesystem.
+ This allows storage of
+  any and all data an app
+  may store without any
+  user involvement.
+ This is not to be used
+  for documents, except
+  as part of a recovery
+  system.
+
+A.openfile(type, mode)
+ Asks the user to pick a
+  file, and opens it with
+  a specific file mode.
+ This invokes the script
+  "tfilemgr.lua".
+ File modes are 'r and 'w
+  and both are binary.
+ Should the mode be nil,
+  the file manager is
+  opened without any way
+  to open a file.
+ This is useful for
+  file management, and is
+  the implementation of
+  the "filemgr" app.
+
+A.request(...)
+ Allows you to get APIs.
+ For a list, look in the
+  kernel for "getAPI".
+ Some APIs may require
+  permission, and the
+  request may cause added
+  callbacks to be called,
+  e.g. the "net" API will
+  cause "modem_message"
+  calls on those signals.
+
+A.timer(t)
+ Sets the "update"
+  callback to be called
+  in a given number of
+  seconds. Note that only
+  one timer can be going
+  at a given time, and
+  passing <= 0 to timer
+  will disable it.
+
+A.resize(w, h)
+ Resize the running app,
+  among other things,
+  forcing a complete
+  redraw of the app.
+
+A.die()
+ Kill the running app,
+  immediately.
+ Do not call functions
+  after this is called.
+
+-KittenOS File API-------
+This is the interface
+ exposed by filewrap.lua,
+ when loaded.
+It is not a very good
+ interface, but it works.
+
+file.read(bytes)
+ Read some amount of
+  bytes from the file.
+ Returns nil on EOF.
+
+file.write(str)
+ Write some amount of
+  bytes to the file.
+ The bytes are in str,
+  as per the old standard
+  of byte arrays being
+  strings.
+
+file.close()
+ Closes the file.
+
+-KittenOS Security Notes-
+KittenOS has a few parts
+ which add security, but
+ all of them follow one
+ principle: Kernel-local
+ objects are private, and
+ passing an environment
+ to the "load" function
+ will ensure this.
+Assuming this axiom is
+ true, KittenOS allows
+ access to anything only
+ if the user explicitly
+ allows it.
+Files are handled on a
+ per-file basis, unless
+ the "fs" permission is
+ granted (which allows
+ complete access to the
+ filesystem).
