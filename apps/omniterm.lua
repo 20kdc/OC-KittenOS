@@ -16,15 +16,17 @@ if not consoleBuffer then
   "rpc:<appId>  |RPC",
   "tun:<CA>     |Linked Card",
   "net:<RA>:<pt>|Net.Card",
- --Allows talking with everybody on a network.
+ --Broadcast (hopefully obvious?)
   "net:<pt>     |Net.Card-BC",
  --Allows talking with MineOS Chat... in theory...
   "moschat:<RA> |MineOS Chat",
   "componentlist|Components.",
+  "lua          |Lua console",
   "Exit with Ctrl-W."
  }
 end
 
+local prevLine = ""
 local lineBuffer = ""
 local function incomingSubLine(txt)
  for i = 1, #consoleBuffer - 1 do
@@ -170,7 +172,7 @@ local drivers = {
  end,
  -- componentlist
  -- Used to list components
- -- Useful because OpenComputers stupidly cuts off text,
+ -- Useful because OpenComputers cuts off text,
  --  which is really bad when you need the *whole* ID...
  --  >.< like when doing anything involving networking.
  componentlist = function (id)
@@ -182,6 +184,18 @@ local drivers = {
      incomingLine(ad)
     end
    end
+  end
+ end,
+ lua = function (id)
+  local root = A.request("root")
+  incomingLine("Lua Console")
+  outgoingLine = function (txt)
+   local r, re = pcall(function ()
+    local f, fe = load(txt, nil, root)
+    if not f then error(fe) end
+    return f()
+   end)
+   incomingLine(tostring(re))
   end
  end
 }
@@ -247,8 +261,13 @@ function app.key(ka, kc, down)
   return false
  end
  if down then
+  if kc == 200 then
+   lineBuffer = prevLine
+   return true
+  end
   if ka ~= 0 then
    if ka == 13 then
+    prevLine = lineBuffer
     typedLine(lineBuffer)
     lineBuffer = ""
     return true
