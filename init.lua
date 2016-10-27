@@ -668,7 +668,7 @@ while true do
  if t then
   for k, v in pairs(apps) do
    if v.hasAccess["root"] or v.hasAccess["s." .. t] then
-    handleEvNRD(v, "event", table.unpack(signal))
+    handleEvNRD(k, "event", table.unpack(signal))
    end
   end
   if t == "key_down" then
