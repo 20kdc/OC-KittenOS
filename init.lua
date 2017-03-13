@@ -596,10 +596,13 @@ openDialog("Welcome to KittenOS", "~welcome",
 --2345678901234567890123456789012
 "Alt-(arrow key): Move window.   " ..
 "Alt-Enter: Start 'launcher'.    " ..
+"Tab: Switch window.             " ..
 "Shift-C will generally stop apps" ..
-" which don't care about text, or" ..
-" don't want any text right now. " ..
-"Tab: Switch window.")
+" which don't care about text.   " ..
+"On a Tier 1 RAM, use Lua 5.3 -- " ..
+" you can do this by shift-using " ..
+" your computer's CPU. ")
+
 
 -- main WM
 local isAltDown = false
