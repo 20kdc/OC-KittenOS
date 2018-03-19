@@ -9,15 +9,11 @@ local neoux, err = require("neoux")
 if not neoux then error(err) end -- This app is basically neoux's testcase
 neoux = neoux(event, neo)
 
-local donkonit = neo.requestAccess("x.neo.sys.manage")
-if not donkonit then error("needs donkonit for sysconf access") end
-local scr = neo.requestAccess("s.k.securityrequest")
-if not scr then error("no security request access") end
+local settings = neo.requireAccess("x.neo.sys.manage", "security sysconf access")
 
-local fs = neo.requestAccess("c.filesystem")
+local fs = neo.requireAccess("c.filesystem", "file managers")
 
-local donkonitDFProvider = neo.requestAccess("r.neo.pub.base")
-if not donkonitDFProvider then return end
+local donkonitDFProvider = neo.requireAccess("r.neo.pub.base", "creating basic NEO APIs")
 
 local targsDH = {} -- data disposal
 
@@ -110,14 +106,34 @@ donkonitDFProvider(function (pkg, pid, sendSig)
  }
 end)
 
-event.listen("k.securityrequest", function (evt, pkg, pid, perm, rsp)
+-- Connect in security policy now
+local rootAccess = neo.requireAccess("k.root", "installing GUI integration")
+local backup = rootAccess.securityPolicyINIT or rootAccess.securityPolicy
+rootAccess.securityPolicyINIT = backup
+rootAccess.securityPolicy = function (pid, proc, req)
+ if neo.dead then
+  return backup(pid, proc, req)
+ end
+ req.result = proc.pkg:sub(1, 4) == "sys-"
  local secpol, err = require("sys-secpolicy")
  if not secpol then
-  rsp(false)
-  error("Bad security policy: " .. err)
+  -- Failsafe.
+  neo.emergency("Used fallback policy because of load-err: " .. err)
+  req.service()
+  return
  end
- secpol(neoux, donkonit, pkg, pid, perm, rsp)
-end)
+ -- Push to ICECAP thread to avoid deadlock on neoux b/c wrong event-pull context
+ event.runAt(0, function ()
+  local ok, err = pcall(secpol, neoux, settings, proc.pkg, pid, req.perm, function (r)
+   req.result = r
+   req.service()
+  end)
+  if not ok then
+   neo.emergency("Used fallback policy because of run-err: " .. err)
+   req.service()
+  end
+ end)
+end
 
 event.listen("k.procdie", function (evt, pkg, pid, reason)
  if targsDH[pid] then

@@ -22,7 +22,7 @@ return function (event, neo)
   lclEvToW = {}
  end
  local function pushWindowToEverest(k)
-  local everest = retrieveEverest()  
+  local everest = retrieveEverest()
   if not everest then
    everestDied()
    return

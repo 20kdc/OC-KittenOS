@@ -16,7 +16,7 @@ local readBufSize = 2048
 -- A function used for logging, usable by programs.
 -- Comment this out if you don't want programs to have
 --  access to ocemu's logger.
-local emergencyFunction
+local emergencyFunction = function () end
 local ocemu = component.list("ocemu", true)()
 if ocemu then
  ocemu = component.proxy(ocemu)
@@ -25,6 +25,7 @@ end
 
 primaryDisk = component.proxy(computer.getBootAddress())
 
+-- {{time, func, arg1...}...}
 timers = {}
 
 libraries = {}
@@ -36,19 +37,13 @@ setmetatable(libraries, {
 -- proc.pkg = "pkg"
 -- proc.access = {["perm"] = true, ...}
 -- proc.denied = {["perm"] = true, ...}
--- proc.deathcbs = {function(), ...}
+-- proc.deathCBs = {function(), ...}
 -- very slightly adjusted total CPU time
 -- proc.cpuUsage
 processes = {}
 -- Maps registration-accesses to function(pkg, pid)
 accesses = {}
 local lastPID = 0
-
--- keys: <any>
--- sr.waiting: keys are PIDs, values are just "true"
--- sr.service: function()
--- sr.result: boolean
-local outstandingSR = {}
 
 -- Kernel global "idle time" counter, useful for accurate performance data
 local idleTime = 0
@@ -184,7 +179,7 @@ local function termProc(pid, reason)
   -- Immediately prepare for GC, it's possible this is out of memory.
   -- If out of memory, then to reduce risk of memory leak by error, memory needs to be freed ASAP.
   -- Start by getting rid of all process data.
-  local dcbs = processes[pid].deathcbs
+  local dcbs = processes[pid].deathCBs
   local pkg = processes[pid].pkg
   local usage = processes[pid].cpuUsage
   processes[pid] = nil
@@ -197,7 +192,7 @@ local function termProc(pid, reason)
   if reason and criticalFailure then
    error(tostring(reason)) -- This is a debugging aid to give development work an easy-to-get-at outlet. Icecap is for most cases
   end
-  if reason and emergencyFunction then
+  if reason then
    emergencyFunction("d1 " .. pkg .. "/" .. pid)
    emergencyFunction("d2 " .. reason)
   end
@@ -240,18 +235,16 @@ function distEvent(pid, s, ...)
   if not v then
    return
   end
-  if (not v.access["s." .. s]) or v.access["k.root"] then
+  if not (v.access["s." .. s] or v.access["k.root"]) then
    return
   end
-  -- Schedule a timer for "now"
-  table.insert(timers, {computer.uptime(), function ()
-   return execEvent(pid, s, table.unpack(ev))
-  end})
-  return
+  -- Schedule the timer to carry the event.
+  table.insert(timers, {0, execEvent, pid, s, table.unpack(ev)})
+ else
+  for k, v in pairs(processes) do
+   distEvent(k, s, ...)
+  end 
  end
- for k, v in pairs(processes) do
-  distEvent(k, s, ...)
- end 
 end
 
 local loadLibraryInner = nil
@@ -337,6 +330,26 @@ function loadLibraryInner(library)
  return nil, r
 end
 
+-- These two are hooks for k.root level applications to change policy.
+-- Only a k.root application is allowed to do this for obvious reasons.
+function securityPolicy(pid, proc, req)
+ -- Important safety measure : only sys-init gets anything until sys-init decides what to do.
+ req.result = proc.pkg == "sys-init"
+ req.service()
+end
+function runProgramPolicy(ipkg, pkg, pid, ...)
+ -- VERY specific injunction here:
+ -- non "sys-" apps NEVER start "sys-" apps
+ -- This is part of the "default security policy" below:
+ -- sys- has all access
+ -- anything else has none
+ if ipkg:sub(1, 4) == "sys-" then
+  if pkg:sub(1, 4) ~= "sys-" then
+   return nil, "non-sys app trying to start sys app"
+  end
+ end
+end
+
 function retrieveAccess(perm, pkg, pid)
  -- Return the access lib and the death callback.
 
@@ -344,12 +357,16 @@ function retrieveAccess(perm, pkg, pid)
  -- "c.<hw>":    Component
  -- "s.<event>": Signal receiver (with responsibilities for Security Request watchers)
  -- "s.k.<...>": Kernel stuff
- -- "s.k.securityrequest": !!! HAS SIDE EFFECTS !!!
+ -- "s.k.procnew" : New process (pkg, pid)
+ -- "s.k.procdie" : Process dead (pkg, pid, reason, usage)
+ -- "s.k.registration" : Registration of service alert ("x." .. etc)
+ -- "s.k.deregistration" : Registration of service alert ("x." .. etc)
+ -- "s.k.securityresponse" : Response from security policy (accessId, accessObj)
  -- "s.h.<...>": Incoming HW messages
  -- "s.x.<endpoint>": This access is actually useless on it's own - it is given by x.<endpoint>
 
  -- "k.<x>":     Kernel
- -- "k.root":    _ENV (holy grail)
+ -- "k.root":    _ENV (holy grail), and indirectly security request control (which is basically equivalent to this)
  -- "k.computer":   computer
 
  -- "r.<endpoint>": Registration Of Service...
@@ -441,24 +458,15 @@ end
 local start = nil
 
 function start(pkg, ...)
- ensureType(pkg, "string")
- ensurePathComponent(pkg .. ".lua")
  local args = {...}
  local proc = {}
  local pid = lastPID
  lastPID = lastPID + 1
 
  local function startFromUser(ipkg, ...)
-  -- VERY specific injunction here:
-  -- non "sys-" apps NEVER start "sys-" apps
-  -- This is part of the "default security policy" below:
-  -- sys- has all access
-  -- anything else has none
-  if ipkg:sub(1, 4) == "sys-" then
-   if pkg:sub(1, 4) ~= "sys-" then
-    return nil, "non-sys app trying to start sys app"
-   end
-  end
+  ensureType(pkg, "string")
+  ensurePathComponent(pkg .. ".lua")
+  runProgramPolicy(ipkg, pkg, pid, ...)
   return start(ipkg, pkg, pid, ...)
  end
 
@@ -479,16 +487,17 @@ function start(pkg, ...)
   ensureType(perm, "string")
   -- Safety-checked, prepare security event.
   local req = {}
-  req.waiting = {}
+  req.perm = perm
   req.service = function ()
    if processes[pid] then
     local n = nil
     local n2 = nil
     if req.result then
      proc.access[perm] = true
+     proc.denied[perm] = nil
      n, n2 = retrieveAccess(perm, pkg, pid)
      if n2 then
-      table.insert(processes[pid].deathcbs, n2)
+      table.insert(processes[pid].deathCBs, n2)
      end
     else
      proc.denied[perm] = true
@@ -496,40 +505,21 @@ function start(pkg, ...)
     distEvent(pid, "k.securityresponse", perm, n)
    end
   end
-  req.result = (not proc.denied[perm]) or proc.access["k.root"]
+  -- outer security policy:
+  req.result = proc.access["k.root"] or not proc.denied[perm]
+
   if proc.access["k.root"] or proc.access[perm] or proc.denied[perm] then
    -- Use cached result to prevent possible unintentional security service spam
    req.service()
    return
   end
-  -- Anything with s.k.securityrequest access has the response function and thus the vote,
-  --  but can't vote on itself for obvious reasons. Kernel judge is a fallback.
-  local shouldKernelJudge = true
-  for k, v in pairs(processes) do
-   if v.access["s.k.securityrequest"] then
-    shouldKernelJudge = false
-    if k ~= pid then
-     req.waiting[k] = true
-     distEvent(k, "k.securityrequest", pkg, pid, perm, function (r)
-      ensureType(r, "boolean")
-      if not r then
-       req.result = false
-      end
-      req.waiting[k] = nil
-     end)
-    end
-   end
-  end
-  if shouldKernelJudge then
-   -- Rather restrictive, but an important safety measure
-   req.result = pkg:sub(1, 4) == "sys-"
-   req.service()
-  else
-   table.insert(outstandingSR, req)
-  end
+  -- Denied goes to on to prevent spam
+  proc.denied[perm] = true
+  securityPolicy(pid, proc, req)
  end
  local env = baseProcEnv()
  env.neo.pid = pid
+ env.neo.dead = false
  env.neo.executeAsync = startFromUser
  env.neo.execute = function (...)
   return osExecuteCore(function () end, ...)
@@ -548,12 +538,16 @@ function start(pkg, ...)
    handler(table.unpack(n))
   end
  end
+ env.neo.requireAccess = function (perm, reason)
+  -- Allows for hooking
+  local res = env.neo.requestAccess(perm)
+  if not res then error(pkg .. " needed " .. perm .. " for " .. (reason or "some reason")) end
+  return res
+ end
  env.neo.scheduleTimer = function (time)
   ensureType(time, "number")
   local tag = {}
-  table.insert(timers, {time, function(ofs)
-   return execEvent(pid, "k.timer", tag, time, ofs)
-  end})
+  table.insert(timers, {time, execEvent, pid, "k.timer", tag, time, ofs})
   return tag
  end
 
@@ -571,11 +565,13 @@ function start(pkg, ...)
   ["s.k.procdie"] = true,
   -- Used when a registration is updated, in particular, as this signifies "readiness"
   ["s.k.registration"] = true,
+  ["s.k.deregistration"] = true
  }
  proc.denied = {}
- proc.deathcbs = {}
+ -- You are dead. Not big surprise.
+ proc.deathCBs = {function () pcall(function () env.neo.dead = true end) end}
  proc.cpuUsage = 0
- -- Note the target process doesn't get the procnew (it's executed after it's creation)
+ -- Note the target process doesn't get the procnew (the dist occurs before it's creation)
  pcall(distEvent, nil, "k.procnew", pkg, pid)
  processes[pid] = proc
  -- For processes waiting on others, this at least tries to guarantee some safety.
@@ -589,34 +585,10 @@ function start(pkg, ...)
  return pid
 end
 
--- Main Scheduling Loop --
-
-local function processSRs()
- local didAnything = false
- for k, v in pairs(outstandingSR) do
-  -- Outstanding security request handler.
-  local actualWaitingCount = 0
-  for k2, _ in pairs(v.waiting) do
-   if not processes[k2] then
-    v.waiting[k2] = nil
-    v.result = false
-   else
-    actualWaitingCount = actualWaitingCount + 1
-   end
-  end
-  if actualWaitingCount == 0 then
-   -- Service the SR
-   outstandingSR[k].service()
-   outstandingSR[k] = nil
-   didAnything = true
-  end
- end
- return didAnything
-end
-
--- The actual loop & initialization
+-- Kernel Scheduling Loop --
 
 if not start("sys-init") then error("Could not start sys-init") end
+
 while true do
  local tmr = nil
  for i = 1, 16 do
@@ -628,7 +600,7 @@ while true do
   while timers[k] do
    local v = timers[k]
    if v[1] <= now then
-    if v[2](now - v[1]) then
+    if v[2](table.unpack(v, 3)) then
      breaking = true
      tmr = 0.05
      break
@@ -649,7 +621,6 @@ while true do
    end
   end
   if breaking then break end
-  didAnything = didAnything or processSRs()
   -- If the system didn't make any progress, then we're waiting for a signal (this includes timers)
   if not didAnything then break end
  end

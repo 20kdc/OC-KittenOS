@@ -53,12 +53,11 @@ end
 
 return function (neoux, settings, pkg, pid, perm, rsp)
  local res = actualPolicy(pkg, pid, perm)
- if res == "ask" then
+ if res == "ask" and settings then
   res = settings.getSetting("perm|" .. pkg .. "|" .. perm) or "ask"
  end
- if res == "ask" then
+ if res == "ask" and neoux then
   local fmt = neoux.fmtText(unicode.safeTextFormat(string.format("%s/%i wants:\n%s\nAllow this?", pkg, pid, perm)), 20)
-
   local always = "Always"
   local yes = "Yes"
   local no = "No"
@@ -73,7 +72,9 @@ return function (neoux, settings, pkg, pid, perm, rsp)
     w.close()
    end),
    neoux.tcbutton((#yes) + 3, #fmt + 2, always, function (w)
-    settings.setSetting("perm|" .. pkg .. "|" .. perm, "allow")
+    if settings then
+     settings.setSetting("perm|" .. pkg .. "|" .. perm, "allow")
+    end
     rsp(true)
     w.close()
    end),

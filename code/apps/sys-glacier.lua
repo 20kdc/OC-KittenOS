@@ -4,17 +4,15 @@
 -- s-donkonit : config, shutdown, screens
 
 -- Doesn't matter what calls this service, because there's a mutex here.
-local donkonitSPProvider = neo.requestAccess("r.neo.sys.manage") -- Restrict to s-
-if not donkonitSPProvider then return end
-local donkonitRDProvider = neo.requestAccess("r.neo.sys.screens")
-if not donkonitRDProvider then return end
+local donkonitSPProvider = neo.requireAccess("r.neo.sys.manage", "creating NEO core APIs") -- Restrict to s-
+local donkonitRDProvider = neo.requireAccess("r.neo.sys.screens", "creating NEO core APIs")
 
-local computer = neo.requestAccess("k.computer")
-local fs = neo.requestAccess("c.filesystem")
-local gpus = neo.requestAccess("c.gpu")
-local screens = neo.requestAccess("c.screen")
-neo.requestAccess("s.h.component_added")
-neo.requestAccess("s.h.component_removed")
+local computer = neo.requireAccess("k.computer", "shutting down")
+local fs = neo.requireAccess("c.filesystem", "settings I/O")
+local gpus = neo.requireAccess("c.gpu", "screen control")
+local screens = neo.requireAccess("c.screen", "screen control")
+neo.requireAccess("s.h.component_added", "HW management")
+neo.requireAccess("s.h.component_removed", "HW management")
 
 local function shutdownFin(reboot)
  -- any final actions donkonit needs to take here

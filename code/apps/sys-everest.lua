@@ -59,9 +59,6 @@ monitors[0] = {nil, nil, 80, 25}
 -- line y
 local surfaces = {}
 
--- Dead process's switch to clean up resources by crashing processes which "just don't get it"
-local dead = false
-
 local savingThrow = neo.requestAccess("x.neo.sys.manage")
 if savingThrow then
  savingThrow.registerForShutdownEvent()
@@ -73,7 +70,7 @@ if savingThrow then
   -- In this case the surfaces are leaked and hold references here. They have to be removed manually.
   -- Do this via a "primary event" (k.deregistration) and "deathtrap events"
   -- If a process evades the deathtrap then it clearly has reason to stay alive regardless of Everest status.
-  dead = true
+  -- Also note, should savingThrow fail, neo.dead is now a thing.
   monitors = {}
   for _, v in ipairs(surfaces) do
    pcall(v[6], "line", 1)
@@ -335,7 +332,7 @@ everestProvider(function (pkg, pid, sendSig)
  local base = pkg .. "/" .. pid
  local lid = 0
  return function (w, h, title)
-  if dead then error("everest died") end
+  if neo.dead then error("everest died") end
   w = math.floor(math.max(w, 8))
   h = math.floor(math.max(h, 1)) + 1
   if type(title) ~= "string" then
@@ -410,7 +407,7 @@ everestProvider(function (pkg, pid, sendSig)
   return {
    id = llid,
    setSize = function (w, h)
-    if dead then return end
+    if neo.dead then return end
     w = math.floor(math.max(w, 8))
     h = math.floor(math.max(h, 1)) + 1
     local _, x, y = ensureOnscreen(surf[1], surf[2], surf[3], w, h)
@@ -418,7 +415,7 @@ everestProvider(function (pkg, pid, sendSig)
     return w, (h - 1)
    end,
    span = function (x, y, text, bg, fg)
-    if dead then error("everest died") end
+    if neo.dead then error("everest died") end
     if type(x) ~= "number" then error("X must be number.") end
     if type(y) ~= "number" then error("Y must be number.") end
     if type(bg) ~= "number" then error("Background must be number.") end
@@ -429,7 +426,7 @@ everestProvider(function (pkg, pid, sendSig)
     handleSpan(surf, x, y + 1, text, bg, fg)
    end,
    close = function ()
-    if dead then return end
+    if neo.dead then return end
     local os1 = surfaces[1]
     surfaceOwners[surf] = nil
     for k, v in ipairs(surfaces) do
