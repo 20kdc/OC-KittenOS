@@ -1,3 +1,6 @@
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
+
 os.execute("tar -cf code.tar code")
 os.execute("cat insthead.lua > inst.lua")
 local f = io.open("inst.lua", "ab")

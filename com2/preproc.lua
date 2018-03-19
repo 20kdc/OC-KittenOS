@@ -1,4 +1,7 @@
--- PREPROC: preprocess input
+-- PREPROC: preprocess input to be 7-bit
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
+
 while true do
  local c = io.read(1)
  if not c then return end

@@ -1,3 +1,6 @@
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
+
 -- BDIVIDE
 -- format:
 -- 0-127 for constants

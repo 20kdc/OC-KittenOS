@@ -10,7 +10,7 @@ local gpu, screen = nil, nil
 local shutdownEmergency = neo.requestAccess("k.computer").shutdown
 neo.requestAccess("s.h.key_down")
 
--- donkonit hasn't started yet - this will be dealt with later
+-- glacier hasn't started yet - this will be dealt with later
 local function _(tx)
  return tx
 end
@@ -24,9 +24,9 @@ local warnings = {
 
 -- Attempts to call upon nsm for a safe shutdown
 local function shutdown(reboot)
- local donkonit = neo.requestAccess("x.neo.sys.manage")
- if donkonit then
-  donkonit.shutdown(reboot)
+ local nsm = neo.requestAccess("x.neo.sys.manage")
+ if nsm then
+  nsm.shutdown(reboot)
   while true do
    coroutine.yield()
   end
@@ -62,11 +62,11 @@ local function retrieveNssMonitor(nss)
   end
   -- nss available - this means the monitor pool is now ready.
   -- If no monitors are available, shut down now.
-  -- donkonit monitor pool output is smaller than, but similar to, Everest monitor data:
+  -- NSS monitor pool output is smaller than, but similar to, Everest monitor data:
   -- {gpu, screenAddr}
   local pool = nss.getClaimable()
   while not pool[1] do
-   coroutine.yield() -- wait for presumably a donkonit notification
+   coroutine.yield() -- wait for presumably a NSS notification
    pool = nss.getClaimable()
   end
   subpool = {}
@@ -177,7 +177,7 @@ local function finalPrompt()
     end, 2, 5, scrW - 2}
   if password == "" then
    pw = {function ()
-     return "Log in..."
+     return _("Log in...")
     end, function (key)
      if key == 13 then
       waiting = false
@@ -191,7 +191,7 @@ local function finalPrompt()
     end, function (key)
      if key == 13 then
       basicDraw()
-      gpu.set(2, 4, "Shutting down...")
+      gpu.set(2, 4, _("Shutting down..."))
       shutdown(false)
      end
     end, 2, scrH - 1, unicode.len(shButton)},
@@ -200,7 +200,7 @@ local function finalPrompt()
     end, function (key)
      if key == 13 then
       basicDraw()
-      gpu.set(2, 4, "Rebooting...")
+      gpu.set(2, 4, _("Rebooting..."))
       shutdown(true)
      end
     end, 3 + unicode.len(shButton), scrH - 1, unicode.len(rbButton)},
@@ -209,7 +209,7 @@ local function finalPrompt()
     end, function (key)
      if key == 13 then
       basicDraw()
-      gpu.set(2, 4, "Login to activate Safe Mode.")
+      gpu.set(2, 4, _("Login to activate Safe Mode."))
       sleep(1)
       safeModeActive = true
       advDraw()
@@ -259,10 +259,10 @@ local function postPrompt()
  if everests then
   local s, e = pcall(everests.startSession)
   if not s then
-   table.insert(warnings, "Everest failed to create a session")
+   table.insert(warnings, _("Everest failed to create a session"))
    table.insert(warnings, tostring(e))
   else
-   warnings = {"Transferring to Everest..."}
+   warnings = {_("Transferring to Everest...")}
    advDraw()
    if performDisclaim then
     performDisclaim()
@@ -272,7 +272,7 @@ local function postPrompt()
    return
   end
  else
-  table.insert(warnings, "Couldn't communicate with Everest...")
+  table.insert(warnings, _("Couldn't communicate with Everest..."))
  end
  advDraw()
  sleep(1)
@@ -298,7 +298,7 @@ local function initializeSystem()
  end
  local w = 1
  local steps = {
-  "sys-donkonit", -- (Donkonit : Config, Screen, Power)
+  "sys-glacier", -- (Glacier : Config, Screen, Power)
   -- Let that start, and system GC
   "WAIT",
   "WAIT",
@@ -340,14 +340,14 @@ local function initializeSystem()
    end
    if steps[w] then
     if steps[w] == "INJECT" then
-     local donkonit = neo.requestAccess("x.neo.sys.manage")
-     if not donkonit then
-      table.insert(warnings, "Settings not available for INJECT.")
+     local nsm = neo.requestAccess("x.neo.sys.manage")
+     if not nsm then
+      table.insert(warnings, _("Settings not available for INJECT."))
      else
       local nextstepsA = {}
       local nextstepsB = {}
       for _, v in ipairs(neo.listApps()) do
-       if donkonit.getSetting("run." .. v) == "yes" then
+       if nsm.getSetting("run." .. v) == "yes" then
         if v:sub(1, 4) == "sys-" then
          table.insert(nextstepsA, v)
         else
@@ -396,19 +396,19 @@ end
 if finalPrompt() then
  -- Safe Mode
  basicDraw()
- local donkonit = neo.requestAccess("x.neo.sys.manage")
- if donkonit then
-  gpu.set(2, 4, "Rebooting for Safe Mode...")
-  for _, v in ipairs(donkonit.listSettings()) do
+ local nsm = neo.requestAccess("x.neo.sys.manage")
+ if nsm then
+  gpu.set(2, 4, _("Rebooting for Safe Mode..."))
+  for _, v in ipairs(nsm.listSettings()) do
    if v ~= "password" then
-    donkonit.delSetting(v)
+    nsm.delSetting(v)
    end
   end
  else
   -- assume sysconf.lua did something very bad
-  gpu.set(2, 4, "No Donkonit. Wiping configuration completely.")
+  gpu.set(2, 4, "No NSM. Wiping configuration completely.")
   local fs = neo.requestAccess("c.filesystem")
-  fs.primary.remove("/data/sys-donkonit/sysconf.lua")
+  fs.primary.remove("/data/sys-glacier/sysconf.lua")
  end
  -- Do not give anything a chance to alter the new configuration
  shutdownEmergency(true)

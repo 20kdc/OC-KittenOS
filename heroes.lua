@@ -1,3 +1,6 @@
+-- This is released into the public domain where possible.
+-- No warranty is provided, implied or otherwise.
+
 -- SYSTEM HEROES.
 -- Nabbed Sonic Heroes lyrics follow:
 --  "What comes up, must come down... "

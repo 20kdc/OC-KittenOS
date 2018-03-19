@@ -1,3 +1,5 @@
+-- This is released into the public domain. XX
+-- No warranty is provided, implied or otherwise. XX
 local sector = io.write -- XX
 -- BUNDIVIDE reference implementation for integration XX
 local Cs,Cbu,Cb,Cw,Cp,Ci,CP,CB,CD={},128,"",128,""

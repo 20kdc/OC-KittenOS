@@ -5,7 +5,7 @@
 
 -- Terminology:
 -- "monitor": Either the Null Virtual Monitor[0] (a safetynet),
---             or an actual GPU/Screen pair managed by donkonit.
+--             or an actual GPU/Screen pair managed by Glacier.
 -- "surface": Everest system-level drawing primitive
 -- "window" : Everest user-level wrapper around a surface providing a reliable window frame, movement, etc.
 -- "line"   : A Wx1 area across a surface.
