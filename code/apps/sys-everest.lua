@@ -26,19 +26,15 @@
 --     or this is a screensaver host, and has a saving-throw to start Bristol if it dies unexpectedly.
 --    In any case, this eventually returns to 2 or 4.
 
-local everestProvider = neo.requestAccess("r.neo.pub.window")
+local everestProvider = neo.requestAccess("r.neo.pub.window", "registering npw")
 if not everestProvider then return end
 
-local everestSessionProvider = neo.requestAccess("r.neo.sys.session")
-if not everestSessionProvider then return end
+local everestSessionProvider = neo.requireAccess("r.neo.sys.session", "registering nsse")
 
 -- Got mutexes. Now setup saving throw and shutdown callback
 -- Something to note is that Donkonit is the safety net on this,
 --  as it auto-releases the monitors.
-local screens = neo.requestAccess("x.neo.sys.screens")
-if not screens then
- error("Donkonit is required to run Everest")
-end
+local screens = neo.requireAccess("x.neo.sys.screens", "access to screens")
 
 neo.requestAccess("s.h.clipboard")
 neo.requestAccess("s.h.touch")
@@ -51,7 +47,7 @@ local monitors = {}
 
 -- NULL VIRTUAL MONITOR!
 -- This is where we stuff processes while Bristol isn't online
-monitors[0] = {nil, nil, 80, 25}
+monitors[0] = {nil, nil, 160, 50}
 
 -- {monitor, x, y, w, h, callback}
 -- callback events are:
@@ -116,6 +112,23 @@ local function monitorGPUColours(m, cb, bg, fg)
  end
 end
 
+-- Status line at top of screen
+local statusLine = nil
+
+local function doBackgroundLine(m, mg, bdx, bdy, bdl)
+ if statusLine and (bdy == 1) then
+  -- Status bar
+  monitorGPUColours(m, mg, 0x000000, 0xFFFFFF)
+  local str = unicode.sub(statusLine, bdx, bdx + bdl - 1)
+  local strl = unicode.len(str)
+  mg.set(bdx, bdy, unicode.undoSafeTextFormat(str))
+  mg.fill(bdx + strl, bdy, bdl - strl, 1, " ")
+ else
+  monitorGPUColours(m, mg, 0x000020, 0)
+  mg.fill(bdx, bdy, bdl, 1, " ")
+ end
+end
+
 local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
  if not renderingAllowed() then return end
  local m = monitors[monitorId]
@@ -131,21 +144,21 @@ local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
  -- this, in combination with 'forcefully blank out last column of window during render',
  -- cleans up littering
  w = w + 1
- -- end
+ -- WCHAX: end
 
  for span = 1, h do
   local backgroundMarkStart = nil
   for sx = 1, w do
    local t, tx, ty = surfaceAt(monitorId, sx + x - 1, span + y - 1)
    if t then
-    -- It has to be in this order to get rid of wide char weirdness
+    -- Background must occur first due to wide char weirdness
     if backgroundMarkStart then
-     monitorGPUColours(m, mg, 0x000020, 0)
-     mg.fill(backgroundMarkStart + x - 1, span + y - 1, sx - backgroundMarkStart, 1, " ")
+     local bdx, bdy, bdl = backgroundMarkStart + x - 1, span + y - 1, sx - backgroundMarkStart
+     doBackgroundLine(m, mg, bdx, bdy, bdl)
      backgroundMarkStart = nil
     end
-    if not surfaceSpanCache[t .. "_" .. ty] then
-     surfaceSpanCache[t .. "_" .. ty] = true
+    if not surfaceSpanCache[monitorId .. t .. "_" .. ty] then
+     surfaceSpanCache[monitorId .. t .. "_" .. ty] = true
      surfaces[t][6]("line", ty)
     end
    elseif not backgroundMarkStart then
@@ -153,10 +166,23 @@ local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
    end
   end
   if backgroundMarkStart then
-   local m = monitors[monitorId]
-   monitorGPUColours(m, mg, 0x000020, 0)
-   mg.fill(backgroundMarkStart + x - 1, span + y - 1, (w - backgroundMarkStart) + 1, 1, " ")
+   doBackgroundLine(monitors[monitorId], mg, backgroundMarkStart + x - 1, span + y - 1, (w - backgroundMarkStart) + 1)
   end
+ end
+end
+
+local function updateStatus()
+ statusLine = "Λ-¶: menu, ◣-Λ-C: Session hardkill"
+ if surfaces[1] then
+  if #monitors > 1 then
+   statusLine = "Λ-＋: move, Λ-Z: switch, Λ-X: swMonitor"
+  else
+   statusLine = "Λ-＋: move, Λ-Z: switch"
+  end
+ end
+ statusLine = unicode.safeTextFormat(statusLine)
+ for k, v in ipairs(monitors) do
+  updateRegion(k, 1, 1, v[3], 1, {})
  end
 end
 
@@ -185,6 +211,7 @@ local function reconcileAll()
   v[6] = -1
   updateRegion(k, 1, 1, v[3], v[4], {})
  end
+ updateStatus()
 end
 
 local function moveSurface(surface, m, x, y, w, h)
@@ -305,6 +332,7 @@ local function changeFocus(oldSurface, optcache)
   if ns1 then
    ns1[6]("focus", true)
   end
+  updateStatus()
   if oldSurface then
    updateRegion(oldSurface[1], oldSurface[2], oldSurface[3], oldSurface[4], oldSurface[5], optcache)
   end

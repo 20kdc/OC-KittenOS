@@ -88,15 +88,17 @@ getFsNode = function (fs, parent, fsc, path, mode)
     if confirmedDel then
      delText = "Delete <ARMED>"
     end
-    n[#n + 1] = {delText, function ()
-     if not confirmedDel then
-      confirmedDel = true
-      return nil, t
-     end
-     fsc.remove(path)
-     return nil, dialog("Done.", parent)
-    end}
-    n[#n + 1] = {"Mk. Directory", function ()
+    if path ~= "/" then
+     table.insert(n, {delText, function ()
+      if not confirmedDel then
+       confirmedDel = true
+       return nil, t
+      end
+      fsc.remove(path)
+      return nil, dialog("Done.", parent)
+     end})
+    end
+    table.insert(n, {"Mk. Directory", function ()
      return nil, {
       name = "MKDIR...",
       list = function () return {} end,
@@ -106,7 +108,7 @@ getFsNode = function (fs, parent, fsc, path, mode)
        return nil, dialog("Done!", t)
       end
      }
-    end}
+    end})
     return n
    end,
    unknownAvailable = mode ~= nil,

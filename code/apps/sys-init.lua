@@ -281,31 +281,6 @@ end
 
 local function initializeSystem()
  -- System has just booted, bristol is in charge
- -- IMMEDIATELY install security policy in a TSR-like manner,
- --  using root privs to keep it going when sys-init's not around
- local rootAccess = neo.requireAccess("k.root", "installing security (YOU SHOULD NEVER SEE THIS)")
- rootAccess.securityPolicy = function (pid, proc, req)
-  req.result = proc.pkg:sub(1, 4) == "sys-"
-  local secpol, err = require("sys-secpolicy")
-  if not secpol then
-   -- Failsafe.
-   neo.emergency("Used fallback policy because of load-err: " .. err)
-   req.service()
-  end
-  local settings
-  pcall(function ()
-   -- basically pull system settings from thin air
-   settings = rootAccess.retrieveAccess("x.neo.sys.manage", "sys-init", -1)
-  end)
-  local ok, err = pcall(secpol, nil, settings, proc.pkg, pid, req.perm, function (r)
-   req.result = r
-   req.service()
-  end)
-  if not ok then
-   neo.emergency("Used fallback policy because of run-err: " .. err)
-   req.service()
-  end
- end
  -- Firstly, initialize hardware to something sensible since we don't know scrcfg
  gpu = neo.requestAccess("c.gpu").list()()
  if gpu then

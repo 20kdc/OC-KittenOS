@@ -1,3 +1,0 @@
-app app-eeprog
-This flashes EEPROMs, an example of a package that does not come by default with KittenOS NEO.
-end

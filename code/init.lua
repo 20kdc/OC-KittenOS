@@ -333,8 +333,8 @@ end
 -- These two are hooks for k.root level applications to change policy.
 -- Only a k.root application is allowed to do this for obvious reasons.
 function securityPolicy(pid, proc, req)
- -- Important safety measure : only sys-init gets anything until sys-init decides what to do.
- req.result = proc.pkg == "sys-init"
+ -- Important safety measure : only sys-* gets anything at first
+ req.result = proc.pkg:sub(1, 4) == "sys-"
  req.service()
 end
 function runProgramPolicy(ipkg, pkg, pid, ...)

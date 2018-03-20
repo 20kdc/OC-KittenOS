@@ -3,7 +3,13 @@
 
 # leaving in preSH.tar.gz for anyone who's interested
 # in how NOT to do compression
-code.tar
+work.tar
+work
+work/
+work/*
+work/*/
+work/*/*
+work/*/*/
+work/*/*/*
 inst.lua
 com2/code.tar.bd
-
