@@ -10,11 +10,6 @@ local gpu, screen = nil, nil
 local shutdownEmergency = neo.requestAccess("k.computer").shutdown
 neo.requestAccess("s.h.key_down")
 
--- glacier hasn't started yet - this will be dealt with later
-local function _(tx)
- return tx
-end
-
 local scrW, scrH
 local warnings = {
  "",
@@ -38,13 +33,13 @@ end
 local function basicDraw()
  scrW, scrH = gpu.getResolution()
  gpu.fill(1, 1, scrW, scrH, " ")
- gpu.set(2, 2, _("KittenOS NEO"))
+ gpu.set(2, 2, "KittenOS NEO")
 end
 
 local function advDraw()
  basicDraw()
  local usage = math.floor((os.totalMemory() - os.freeMemory()) / 1024)
- gpu.set(2, 3, _("RAM Usage: ") .. usage .. "K / " .. math.floor(os.totalMemory() / 1024) .. "K")
+ gpu.set(2, 3, "RAM Usage: " .. usage .. "K / " .. math.floor(os.totalMemory() / 1024) .. "K")
  for i = 1, #warnings do
   gpu.set(2, 6 + i, warnings[i])
  end
@@ -98,7 +93,7 @@ local function retrieveNssMonitor(nss)
    end
   end
  
-  if not subpool[1] then error(_("Unable to claim any monitor.")) end
+  if not subpool[1] then error("Unable to claim any monitor.") end
   gpu = subpool[1][1]() -- BAD
   screen = subpool[1][2]
  end
@@ -147,19 +142,19 @@ local function finalPrompt()
  if nsm then
   password = nsm.getSetting("password")
  end
- warnings[1] = _("TAB to change option,")
- warnings[2] = _("ENTER to select...")
+ warnings[1] = "TAB to change option,"
+ warnings[2] = "ENTER to select..."
  -- The actual main prompt loop
  while waiting do
   advDraw()
   local entry = ""
   local entry2 = ""
   local active = true
-  local shButton = _("<Shutdown>")
-  local rbButton = _("<Reboot>")
-  local smButton = _("<Safe Mode>")
+  local shButton = "<Shutdown>"
+  local rbButton = "<Reboot>"
+  local smButton = "<Safe Mode>"
   local pw = {function ()
-     return _("Password: ") .. entry2
+     return "Password: " .. entry2
     end, function (key)
      if key >= 32 then
       entry = entry .. unicode.char(key)
@@ -177,7 +172,7 @@ local function finalPrompt()
     end, 2, 5, scrW - 2}
   if password == "" then
    pw = {function ()
-     return _("Log in...")
+     return "Log in..."
     end, function (key)
      if key == 13 then
       waiting = false
@@ -191,7 +186,7 @@ local function finalPrompt()
     end, function (key)
      if key == 13 then
       basicDraw()
-      gpu.set(2, 4, _("Shutting down..."))
+      gpu.set(2, 4, "Shutting down...")
       shutdown(false)
      end
     end, 2, scrH - 1, unicode.len(shButton)},
@@ -200,7 +195,7 @@ local function finalPrompt()
     end, function (key)
      if key == 13 then
       basicDraw()
-      gpu.set(2, 4, _("Rebooting..."))
+      gpu.set(2, 4, "Rebooting...")
       shutdown(true)
      end
     end, 3 + unicode.len(shButton), scrH - 1, unicode.len(rbButton)},
@@ -209,7 +204,7 @@ local function finalPrompt()
     end, function (key)
      if key == 13 then
       basicDraw()
-      gpu.set(2, 4, _("Login to activate Safe Mode."))
+      gpu.set(2, 4, "Login to activate Safe Mode.")
       sleep(1)
       safeModeActive = true
       advDraw()
@@ -259,10 +254,10 @@ local function postPrompt()
  if everests then
   local s, e = pcall(everests.startSession)
   if not s then
-   table.insert(warnings, _("Everest failed to create a session"))
+   table.insert(warnings, "Everest failed to create a session")
    table.insert(warnings, tostring(e))
   else
-   warnings = {_("Transferring to Everest...")}
+   warnings = {"Transferring to Everest..."}
    advDraw()
    if performDisclaim then
     performDisclaim()
@@ -272,7 +267,7 @@ local function postPrompt()
    return
   end
  else
-  table.insert(warnings, _("Couldn't communicate with Everest..."))
+  table.insert(warnings, "Couldn't communicate with Everest...")
  end
  advDraw()
  sleep(1)
@@ -342,7 +337,7 @@ local function initializeSystem()
     if steps[w] == "INJECT" then
      local nsm = neo.requestAccess("x.neo.sys.manage")
      if not nsm then
-      table.insert(warnings, _("Settings not available for INJECT."))
+      table.insert(warnings, "Settings not available for INJECT.")
      else
       local nextstepsA = {}
       local nextstepsB = {}
@@ -398,7 +393,7 @@ if finalPrompt() then
  basicDraw()
  local nsm = neo.requestAccess("x.neo.sys.manage")
  if nsm then
-  gpu.set(2, 4, _("Rebooting for Safe Mode..."))
+  gpu.set(2, 4, "Rebooting for Safe Mode...")
   for _, v in ipairs(nsm.listSettings()) do
    if v ~= "password" then
     nsm.delSetting(v)

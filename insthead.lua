@@ -52,7 +52,7 @@ local function tA(s)
  else
   tFN = s:sub(1, 100):gsub("\x00", "")
   local sz = convoct(s:sub(125, 135))
-  if tFN:sub(1, 5) ~= "code/" then
+  if tFN:sub(1, 5) ~= "work/" then
    tW = math.ceil(sz / 512)
   else
    tFN = tFN:sub(6)
