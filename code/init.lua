@@ -113,61 +113,11 @@ keymaps = {
  ["??-dvorak"] = {
   {19, "PYFGCRL"},
   {19, "pyfgcrl"},
-  {30, "AOEUIDHTN"},
-  {30, "aoeuidhtn"},
-  {45, "QJKXBM"},
-  {45, "qjkxbm"},
+  {30, "AOEUIDHTNS"},
+  {30, "aoeuidhtns"},
+  {45, "QJKXBMWVZ"},
+  {45, "qjkxbmwvz"},
  },
- ["??-dvorak-full"] = {
-  {16, "\"<>PYFGCRL"},
-  {16, "',.pyfgcrl"},
-  {30, "AOEUIDHTN"},
-  {30, "aoeuidhtn"},
-  {44, ":QJKXBM"},
-  {44, ";qjkxbm"},
- },
- ["cz-qwertz"] = {
-  {2, "+ěščřžýáíé="}, -- The last letter is a *compose key*. #WTF
-  {2, "1234567890%"},
-  {15, "\tQWERTZUIOP/("},
-  {15, "\tqwertzuiopú)"},
-  {30, "ASDFGHJKL\"!'"},
-  {30, "asdfghjklů§"},
-  {44, "YXCVBNM?:_"},
-  {44, "yxcvbnm,.-"},
- },
- ["de-qwertz"] = {
-  {2, "1234567890ß"}, -- another one?
-  {2, "!\"§$%&/()=?"},
-  {15, "\tQWERTZUIOPÜ*"},
-  {15, "\tqwertzuiopü+"},
-  {30, "ASDFGHJKLÖÄ"},
-  {30, "asdfghjklÖÄ"},
-  {44, "YXCVBNM;:_"},
-  {44, "yxcvbnm,.-"},
- },
- ["uk-qwerty"] = {
-  {41, "`"}, {41, "¬"},
-  {2, "1234567890-="},
-  {2, "!\"£$%^&*()_+"},
-  {15, "\tQWERTYUIOP{}"},
-  {15, "\tqwertyuiop[]"},
-  {30, "ASDFGHJKL:@"},
-  {30, "asdfghjkl;'"},
-  {44, "ZXCVBNM<>?"},
-  {44, "zxcvbnm,./"},
- },
- ["us-qwerty"] = {
-  {41, "`"}, {41, "~"},
-  {2, "1234567890-="},
-  {2, "!@#$%^&*()_+"},
-  {15, "\tQWERTYUIOP{}\r"},
-  {15, "\tqwertyuiop[]\r"},
-  {30, "ASDFGHJKL\"|"},
-  {30, "asdfghjkl'\\"},
-  {44, "ZXCVBNM<>?"},
-  {44, "zxcvbnm,./"},
- }
 }
 local unknownKeymapContains = {}
 currentKeymap = "unknown"
@@ -241,11 +191,21 @@ unicode.keymap = function (text)
  local km = unicode.getKeymap()
  local rtext = ""
  local codes = {}
+ local notQ = false
  for i = 1, unicode.len(text) do
   local ch = unicode.sub(text, i, i)
-  local okc = unicode.getKCByCh(ch, "uk-qwerty") or 0
-  rtext = rtext .. (unicode.getChByKC(okc, currentKeymap) or unicode.getChByKC(okc, "unknown") or ch)
+  local okc = unicode.getKCByCh(ch, "??-qwerty") or 0
+  local ch2 = unicode.getChByKC(okc, currentKeymap) or unicode.getChByKC(okc, "unknown")
+  if not ch2 then
+   ch2 = "?"
+  else
+   notQ = true
+  end
+  rtext = rtext .. ch2
   codes[i] = unicode.getKCByCh(ch, currentKeymap) or unicode.getKCByCh(ch, "unknown")
+ end
+ if not notQ then
+  rtext = text
  end
  return rtext, codes
 end

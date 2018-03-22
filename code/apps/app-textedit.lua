@@ -13,7 +13,7 @@ end
 local lines = {
  "Neolithic: Text Editor",
  "Keymap " .. unicode.getKeymap() .. ", to correct, type",
- "\"A Cruel Jump's Kinesis: DVSQuest\"",
+ " the alphabet in capitals.",
  "Then, restart the text editor.",
  "^" .. mappingFinal[1] .. ", ^" .. mappingFinal[2] .. ", ^" .. mappingFinal[3] .. ": Load, Save, New",
  "^" .. mappingFinal[4] .. ", ^" .. mappingFinal[5] .. ", ^" .. mappingFinal[6] .. ": Copy, Paste, Delete Line",
@@ -53,6 +53,8 @@ local appendFlag = false
 local sW, sH = 37, #lines + 2
 local window = neo.requestAccess("x.neo.pub.window")(sW, sH)
 local flush
+
+local screenCache = {}
 
 local function splitCur()
  local s = lines[cursorY]
@@ -143,11 +145,9 @@ local function getline(y)
 
  -- rX is difficult!
  local rX = 1
- local Xthold = math.floor(sW / 2)
+ local Xthold = math.max(1, math.floor(sW / 2) - 1)
  local _, cursorXP = unicode.safeTextFormat(lines[cursorY], cursorX)
- if cursorXP > Xthold then
-  rX = rX + (cursorXP - Xthold)
- end
+ rX = (math.max(0, math.floor(cursorXP / Xthold) - 1) * Xthold) + 1
  local line = lines[rY]
  if not line then
   return ("¬"):rep(sW)
@@ -378,9 +378,14 @@ local function ev_clipboard(t)
 end
 
 flush = function ()
+ local newCache = {}
  for i = 1, sH do
-  window.span(1, i, getline(i), 0xFFFFFF, 0)
+  newCache[i] = getline(i)
+  if newCache[i] ~= screenCache[i] then
+   window.span(1, i, newCache[i], 0xFFFFFF, 0)
+  end
  end
+ screenCache = newCache
 end
 local flash
 flash = function ()
@@ -388,7 +393,9 @@ flash = function ()
  -- reverse:
  --local rY = (y + cursorY) - math.ceil(sH / 2)
  local csY = math.ceil(sH / 2)
- window.span(1, csY, getline(csY), 0xFFFFFF, 0)
+ local l = getline(csY)
+ screenCache[csY] = l
+ window.span(1, csY, l, 0xFFFFFF, 0)
  event.runAt(os.uptime() + 0.5, flash)
 end
 event.runAt(os.uptime() + 0.5, flash)

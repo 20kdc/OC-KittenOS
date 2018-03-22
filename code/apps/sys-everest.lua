@@ -39,6 +39,8 @@ local screens = neo.requireAccess("x.neo.sys.screens", "access to screens")
 neo.requestAccess("s.h.clipboard")
 neo.requestAccess("s.h.touch")
 neo.requestAccess("s.h.drag")
+neo.requestAccess("s.h.drop")
+neo.requestAccess("s.h.scroll")
 neo.requestAccess("s.h.key_up")
 neo.requestAccess("s.h.key_down")
 
@@ -99,6 +101,11 @@ local function surfaceAt(monitor, x, y)
  end
 end
 
+-- Always use the first sometime before the second
+local function monitorResetBF(m)
+ m[5] = -1
+ m[6] = -1
+end
 local function monitorGPUColours(m, cb, bg, fg)
  local nbg = m[5]
  local nfg = m[6]
@@ -134,6 +141,7 @@ local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
  local m = monitors[monitorId]
  local mg = m[1]()
  if not mg then return end
+ monitorResetBF(m)
  -- The input region is the one that makes SENSE.
  -- Considering WC handling, that's not an option.
  -- WCHAX: start
@@ -208,8 +216,6 @@ local function reconcileAll()
   if mon then
    v[3], v[4] = mon.getResolution()
   end
-  v[5] = -1
-  v[6] = -1
   updateRegion(k, 1, 1, v[3], v[4], {})
  end
  updateStatus()
@@ -237,6 +243,11 @@ local function moveSurface(surface, m, x, y, w, h)
       cb.copy(ox, oy, w, h, x - ox, y - oy)
      end
     end
+    --because OC's widechar support sucks, comment out this perf. opt.
+    --if surfaces[1] == surface then
+    -- updateRegion(om, ox, oy, ow, oh, cache)
+    -- return
+    --end
    end
   end
  end
@@ -260,6 +271,7 @@ local function handleSpan(target, x, y, text, bg, fg)
  local m = monitors[target[1]]
  local cb = m[1]()
  if not cb then return end
+ monitorResetBF(m)
  -- It is assumed basic type checks were handled earlier.
  if y < 1 then return end
  if y > target[5] then return end
@@ -280,22 +292,8 @@ local function handleSpan(target, x, y, text, bg, fg)
  local buildingSegmentE = nil
  local function submitSegment()
   if buildingSegment then
-   base = unicode.sub(text, buildingSegment, buildingSegmentE - 1)
-   local ext = unicode.sub(text, buildingSegmentE, buildingSegmentE)
-   if unicode.charWidth(ext) == 1 then
-    base = base .. ext
-   else
-    -- While the GPU may or may not be able to display "half a character",
-    --  getting it to do so reliably is another matter.
-    -- In my experience it always leads to drawing errors much worse than if the code was left alone.
-    -- If your language uses wide chars and you are affected by a window's positioning...
-    -- ... may I ask how, exactly, you intend me to fix it?
-    -- My current theory is that for cases where the segment is >= 2 chars (so we have scratchpad),
-    --  the GPU might be tricked via a copy.
-    -- Then the rest of the draw can proceed as normal,
-    --  with the offending char removed.
-    base = base .. " "
-   end
+   base = unicode.sub(text, buildingSegment, buildingSegmentE)
+   -- rely on undoSafeTextFormat for this transform now
    monitorGPUColours(m, cb, bg, fg)
    cb.set(buildingSegmentWX, buildingSegmentWY, unicode.undoSafeTextFormat(base))
    buildingSegment = nil
@@ -388,9 +386,7 @@ everestProvider(function (pkg, pid, sendSig)
      specialDragHandler = function (x, y)
       local ofsX, ofsY = math.floor(x) - math.floor(a), math.floor(y) - math.floor(b)
       if (ofsX == 0) and (ofsY == 0) then return end
-      local pX, pY = ofsSurface(surf, ofsX, ofsY)
-      --a = a + pX
-      --b = b + pY
+      ofsSurface(surf, ofsX, ofsY)
      end
      return
     end
@@ -403,11 +399,7 @@ everestProvider(function (pkg, pid, sendSig)
     end
     b = b - 1
    end
-   if ev == "scroll" then
-    b = b - 1
-   end
-   if ev == "drop" then
-    specialDragHandler = nil
+   if ev == "scroll" or ev == "drop" then
     b = b - 1
    end
    if ev == "line" then

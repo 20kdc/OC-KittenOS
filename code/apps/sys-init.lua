@@ -6,7 +6,7 @@
 
 local callerPkg, callerPid, callerScr = ...
 
-local gpu, screen = nil, nil
+local gpuG, screen = nil, nil
 local shutdownEmergency = neo.requestAccess("k.computer").shutdown
 neo.requestAccess("s.h.key_down")
 
@@ -30,14 +30,19 @@ local function shutdown(reboot)
  end
 end
 
-local function basicDraw()
+local function rstfbDraw(gpu)
+ gpu.setBackground(0xFFFFFF)
+ gpu.setForeground(0x000000)
+end
+
+local function basicDraw(gpu)
  scrW, scrH = gpu.getResolution()
  gpu.fill(1, 1, scrW, scrH, " ")
  gpu.set(2, 2, "KittenOS NEO")
 end
 
-local function advDraw()
- basicDraw()
+local function advDraw(gpu)
+ basicDraw(gpu)
  local usage = math.floor((os.totalMemory() - os.freeMemory()) / 1024)
  gpu.set(2, 3, "RAM Usage: " .. usage .. "K / " .. math.floor(os.totalMemory() / 1024) .. "K")
  for i = 1, #warnings do
@@ -49,9 +54,9 @@ end
 local performDisclaim = nil
 
 local function retrieveNssMonitor(nss)
- gpu = nil
+ gpuG = nil
  local subpool = {}
- while not gpu do
+ while not gpuG do
   if performDisclaim then
    performDisclaim()
   end
@@ -94,19 +99,20 @@ local function retrieveNssMonitor(nss)
   end
  
   if not subpool[1] then error("Unable to claim any monitor.") end
-  gpu = subpool[1][1]() -- BAD
+  gpuG = subpool[1][1]
   screen = subpool[1][2]
  end
  -- done with search
+ local gpu = gpuG()
  scrW, scrH = gpu.getResolution()
- gpu.setBackground(0xFFFFFF)
- gpu.setForeground(0x000000)
+ rstfbDraw(gpu)
  gpu.fill(1, 1, scrW, scrH, " ")
  performDisclaim = function ()
   for _, v in ipairs(subpool) do
    nss.disclaim(v[2])
   end
  end
+ return gpu
 end
 
 local function sleep(t)
@@ -120,10 +126,8 @@ local function sleep(t)
    -- This implies we have and can use nss, but check anyway
    local nss = neo.requestAccess("x.neo.sys.screens")
    if nss then
-    retrieveNssMonitor(nss)
-    gpu.setBackground(0xFFFFFF)
-    gpu.setForeground(0x000000)
-    basicDraw()
+    local gpu = retrieveNssMonitor(nss)
+    basicDraw(gpu)
    end
   end
  end
@@ -146,7 +150,9 @@ local function finalPrompt()
  warnings[2] = "ENTER to select..."
  -- The actual main prompt loop
  while waiting do
-  advDraw()
+  local gpu = gpuG()
+  rstfbDraw(gpu)
+  advDraw(gpu)
   local entry = ""
   local entry2 = ""
   local active = true
@@ -164,7 +170,9 @@ local function finalPrompt()
       if entry == password then
        waiting = false
       else
-       advDraw()
+       local gpu = gpuG()
+       rstfbDraw(gpu)
+       advDraw(gpu)
        sleep(1)
       end
       active = false
@@ -185,7 +193,9 @@ local function finalPrompt()
      return shButton
     end, function (key)
      if key == 13 then
-      basicDraw()
+      local gpu = gpuG()
+      rstfbDraw(gpu)
+      basicDraw(gpu)
       gpu.set(2, 4, "Shutting down...")
       shutdown(false)
      end
@@ -194,7 +204,9 @@ local function finalPrompt()
      return rbButton
     end, function (key)
      if key == 13 then
-      basicDraw()
+      local gpu = gpuG()
+      rstfbDraw(gpu)
+      basicDraw(gpu)
       gpu.set(2, 4, "Rebooting...")
       shutdown(true)
      end
@@ -203,17 +215,22 @@ local function finalPrompt()
      return smButton
     end, function (key)
      if key == 13 then
-      basicDraw()
+      local gpu = gpuG()
+      rstfbDraw(gpu)
+      basicDraw(gpu)
       gpu.set(2, 4, "Login to activate Safe Mode.")
       sleep(1)
+      gpu = gpuG()
       safeModeActive = true
-      advDraw()
+      rstfbDraw(gpu)
+      advDraw(gpu)
      end
     end, 4 + unicode.len(shButton) + unicode.len(rbButton), scrH - 1, unicode.len(smButton)},
    pw,
   }
   local control = #controls
   while active do
+   local gpu = gpuG()
    for k, v in ipairs(controls) do
     if k == control then
      gpu.setBackground(0x000000)
@@ -225,9 +242,6 @@ local function finalPrompt()
     gpu.fill(v[3], v[4], v[5], 1, " ")
     gpu.set(v[3], v[4], v[1]())
    end
-   -- Reset to normal
-   gpu.setBackground(0xFFFFFF)
-   gpu.setForeground(0x000000)
    -- event handling...
    local sig = {coroutine.yield()}
    if sig[1] == "x.neo.sys.screens" then
@@ -245,10 +259,14 @@ local function finalPrompt()
    end
   end
  end
- advDraw()
+ local gpu = gpuG()
+ rstfbDraw(gpu)
+ advDraw(gpu)
  return safeModeActive
 end
 local function postPrompt()
+ local gpu = gpuG()
+ rstfbDraw(gpu)
  -- Begin to finish login, or fail
  local everests = neo.requestAccess("x.neo.sys.session")
  if everests then
@@ -258,7 +276,7 @@ local function postPrompt()
    table.insert(warnings, tostring(e))
   else
    warnings = {"Transferring to Everest..."}
-   advDraw()
+   advDraw(gpu)
    if performDisclaim then
     performDisclaim()
     -- Give Everest time (this isn't perceptible, and is really just a safety measure)
@@ -269,7 +287,7 @@ local function postPrompt()
  else
   table.insert(warnings, "Couldn't communicate with Everest...")
  end
- advDraw()
+ advDraw(gpu)
  sleep(1)
  shutdown(true)
 end
@@ -280,12 +298,13 @@ local function initializeSystem()
  -- Note that we should try to keep going with this if there's no reason to do otherwise.
  local gpuAc = neo.requestAccess("c.gpu")
  local screenAc = neo.requestAccess("c.screen")
+ local gpu
  -- time to setup gpu/screen variables!
  if gpuAc and screenAc then
   local scrBestWHD = 0
   for s in screenAc.list() do
    for g in gpuAc.list() do
-    g.bind(s.address)
+    g.bind(s.address, false)
     local w, h = g.maxResolution()
     local whd = w * h * g.maxDepth()
     if whd > scrBestWHD then
@@ -348,7 +367,7 @@ local function initializeSystem()
     else
      gpu.setBackground(0xFFFFFF)
     end
-    basicDraw()
+    basicDraw(gpu)
    end
    if steps[w] then
     if steps[w] == "INJECT" then
@@ -407,7 +426,9 @@ end
 -- System initialized
 if finalPrompt() then
  -- Safe Mode
- basicDraw()
+ local gpu = gpuG()
+ rstfbDraw(gpu)
+ basicDraw(gpu)
  local nsm = neo.requestAccess("x.neo.sys.manage")
  if nsm then
   gpu.set(2, 4, "Rebooting for Safe Mode...")
@@ -420,6 +441,9 @@ if finalPrompt() then
   -- assume sysconf.lua did something very bad
   gpu.set(2, 4, "No NSM. Wiping configuration completely.")
   local fs = neo.requestAccess("c.filesystem")
+  if not fs then
+   gpu.set(2, 4, "Failed to get permission, you're doomed.")
+  end
   fs.primary.remove("/data/sys-glacier/sysconf.lua")
  end
  -- Do not give anything a chance to alter the new configuration

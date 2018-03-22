@@ -76,6 +76,8 @@ end
 local monitorPool = {}
 -- [screenAddr] = {gpu, claimedLoseCallback}
 local monitorClaims = {}
+-- [gpuAddr] = monitorAddr
+local currentGPUBinding = {}
 
 local function announceFreeMonitor(address, except)
  for k, v in pairs(targsRD) do
@@ -89,7 +91,7 @@ local function getGPU(monitor)
  local bestG
  local bestD = 0
  for v in gpus.list() do
-  v.bind(monitor.address)
+  v.bind(monitor.address, false)
   local d = v.maxDepth()
   if d > bestD then
    bestG = v
@@ -121,6 +123,7 @@ local function getMonitorSettings(a)
  return w, h, d
 end
 local function setupMonitor(gpu, monitor)
+ gpu.bind(monitor.address, false)
  local maxW, maxH = gpu.maxResolution()
  local maxD = gpu.maxDepth()
  local w, h, d = getMonitorSettings(monitor.address)
@@ -227,6 +230,7 @@ donkonitRDProvider(function (pkg, pid, sendSig)
      if gpu then
       setupMonitor(gpu, v)
       gpu = gpu.address
+      currentGPUBinding[gpu] = address
       local disclaimer = function (wasDevLoss)
        -- we lost it
        monitorClaims[address] = nil
@@ -244,12 +248,14 @@ donkonitRDProvider(function (pkg, pid, sendSig)
       return function ()
        for v in gpus.list() do
         if v.address == gpu then
-         local _, v2 = v.bind(address)
-         if not v2 then
-          return v
-         else
-          return
+         if currentGPUBinding[gpu] ~= address then
+          local _, v2 = v.bind(address, false)
+          if v2 then
+           return
+          end
          end
+         currentGPUBinding[gpu] = address
+         return v
         end
        end
       end
@@ -270,6 +276,7 @@ end)
 loadSettings()
 local function rescanDevs()
  monitorPool = {}
+ currentGPUBinding = {}
  local hasGPU = gpus.list()()
  for k, v in pairs(monitorClaims) do
   v[2](true)
