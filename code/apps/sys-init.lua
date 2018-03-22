@@ -276,11 +276,28 @@ end
 
 local function initializeSystem()
  -- System has just booted, bristol is in charge
- -- Firstly, initialize hardware to something sensible since we don't know scrcfg
- gpu = neo.requestAccess("c.gpu").list()()
- if gpu then
-  screen = neo.requestAccess("c.screen").list()()
-  if not screen then gpu = nil end
+ -- Firstly, since we don't know scrcfg, let's work out something sensible.
+ -- Note that we should try to keep going with this if there's no reason to do otherwise.
+ local gpuAc = neo.requestAccess("c.gpu")
+ local screenAc = neo.requestAccess("c.screen")
+ -- time to setup gpu/screen variables!
+ if gpuAc and screenAc then
+  local scrBestWHD = 0
+  for s in screenAc.list() do
+   for g in gpuAc.list() do
+    g.bind(s.address)
+    local w, h = g.maxResolution()
+    local whd = w * h * g.maxDepth()
+    if whd > scrBestWHD then
+     screen = s
+     gpu = g
+     scrBestWHD = whd
+    end
+   end
+   if screen then
+    break
+   end
+  end
  end
  if gpu then
   screen = screen.address

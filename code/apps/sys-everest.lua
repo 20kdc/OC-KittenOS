@@ -172,12 +172,13 @@ local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
 end
 
 local function updateStatus()
- statusLine = "Λ-¶: menu, ◣-Λ-C: Session hardkill"
+ statusLine = "Λ-¶: menu (launch 'pass' to logout)"
  if surfaces[1] then
   if #monitors > 1 then
-   statusLine = "Λ-＋: move, Λ-Z: switch, Λ-X: swMonitor"
+   --            123456789X123456789X123456789X123456789X123456789X
+   statusLine = "Λ-+: move, Λ-Z: switch, Λ-X: swMonitor, Λ-C: close"
   else
-   statusLine = "Λ-＋: move, Λ-Z: switch"
+   statusLine = "Λ-+: move, Λ-Z: switch, Λ-C: close"
   end
  end
  statusLine = unicode.safeTextFormat(statusLine)
@@ -370,12 +371,13 @@ everestProvider(function (pkg, pid, sendSig)
   end
   local m = 0
   if renderingAllowed() then m = 1 end
+  if surfaces[1] then m = surfaces[1][1] end
   local surf = {m, 1, 1, w, h}
   local focusState = false
   local llid = lid
   lid = lid + 1
   local specialDragHandler
-  surf[6] = function (ev, a, b, c)
+  surf[6] = function (ev, a, b, c, d, e)
    -- Must forward surface events
    if ev == "focus" then
     focusState = a
@@ -399,6 +401,13 @@ everestProvider(function (pkg, pid, sendSig)
      specialDragHandler(a, b)
      return
     end
+    b = b - 1
+   end
+   if ev == "scroll" then
+    b = b - 1
+   end
+   if ev == "drop" then
+    specialDragHandler = nil
     b = b - 1
    end
    if ev == "line" then
@@ -426,7 +435,7 @@ everestProvider(function (pkg, pid, sendSig)
     handleSpan(surf, surf[4], a, " ", 0, 0)
     a = a - 1
    end
-   sendSig(llid, ev, a, b, c)
+   sendSig(llid, ev, a, b, c, d, e)
   end
   local osrf = surfaces[1]
   table.insert(surfaces, 1, surf)
@@ -580,19 +589,20 @@ while true do
    for k, v in ipairs(monitors) do
     if v[2] == s[2] then
      local x, y = math.floor(s[3]), math.floor(s[4])
+     local ix, iy = s[3] - x, s[4] - y
      local sid, lx, ly = surfaceAt(k, x, y)
      if sid then
       local os = surfaces[1]
       local ns = table.remove(surfaces, sid)
       table.insert(surfaces, 1, ns)
       changeFocus(os)
-      ns[6]("touch", lx, ly)
+      ns[6]("touch", lx, ly, ix, iy, s[5])
      end
      break
     end
    end
   end
-  if s[1] == "h.drag" then
+  if s[1] == "h.drag" or s[1] == "h.drop" or s[1] == "h.scroll" then
    -- Pass to focus surface, even if out of bounds
    local focus = surfaces[1]
    if focus then
@@ -600,7 +610,9 @@ while true do
      if v[2] == s[2] then
       if k == focus[1] then
        local x, y = (math.floor(s[3]) - focus[2]) + 1, (math.floor(s[4]) - focus[3]) + 1
-       focus[6]("drag", x, y)
+       local ix, iy = s[3] - math.floor(s[3]), s[4] - math.floor(s[4])
+       -- Ok, so let's see...
+       focus[6](s[1]:sub(3), x, y, ix, iy, s[5])
       end
       break
      end

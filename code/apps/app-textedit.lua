@@ -2,24 +2,30 @@
 -- No warranty is provided, implied or otherwise.
 
 -- 'neolithic': Text Editor
--- This was textedit (femto) from KittenOS brought kicking and screaming into the NEO world
+-- This was textedit (femto) from KittenOS 'ported' to NEO.
 -- It also has fixes for bugs involving wide text, and runs faster due to the chars -> lines change.
 
--- needs translation??? figure out how to do translation in the new system NICELY
+local mapping, _ = unicode.keymap("ASQCVDJK")
+local mappingFinal = {}
+for i = 1, #mapping do
+ mappingFinal[i] = unicode.sub(mapping, i, i)
+end
 local lines = {
  "Neolithic: Text Editor",
- "^A, ^S, ^Q: Load, Save, New",
- "^C, ^V, ^D: Copy, Paste, Delete Line",
+ "Keymap " .. unicode.getKeymap() .. ", to correct, type",
+ "\"A Cruel Jump's Kinesis: DVSQuest\"",
+ "Then, restart the text editor.",
+ "^" .. mappingFinal[1] .. ", ^" .. mappingFinal[2] .. ", ^" .. mappingFinal[3] .. ": Load, Save, New",
+ "^" .. mappingFinal[4] .. ", ^" .. mappingFinal[5] .. ", ^" .. mappingFinal[6] .. ": Copy, Paste, Delete Line",
  -- These two are meant to replace similar functionality in GNU Nano
  --  (which I consider the best console text editor out there - Neolithic is an *imitation* and a poor one at that),
  --  except fixing a UI flaw by instead making J responsible for resetting the append flag,
  --  so the user can more or less arbitrarily mash together lines
- "^J: Reset 'append' flag for Cut Lines",
- "^K: Cut Line(s)",
+ "^" .. mappingFinal[7] .. ": Reset 'append' flag for Cut Lines",
+ "^" .. mappingFinal[8] .. ": Cut Line(s)",
  "^<arrows>: Resize Win",
  "'^' is Control.",
- "Wide text can be pasted in,",
- " using your 'actual' clipboard.",
+ "Wide text & clipboard supported.",
  "Ｆｏｒ ｅｘａｍｐｌｅ， ｔｈｉｓ．",
 }
 

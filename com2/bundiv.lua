@@ -2,24 +2,27 @@
 -- No warranty is provided, implied or otherwise. XX
 local sector = io.write -- XX
 -- BUNDIVIDE reference implementation for integration XX
-local Cs,Cbu,Cb,Cw,Cp,Ci,CP,CB,CD={},128,"",128,""
-CP=function(d,b,i)
- i=1
- while i<=#d do
-  b=d:byte(i)
-  i=i+1
-  if b==127 then
-   b=d:byte(i)
-   i=i+1
-   if b==127 then
-    b=d:byte(i)+254
-    i=i+1
+local Cs,Cbu,Cb,Cw,Cp,Ct,Ci,CP,CB,CD={},128,"",128,"",""
+CP=function(d,b)
+ Ct=Ct..d
+ while#Ct>2 do
+  b=Ct:byte()
+  Ct=Ct:sub(2)
+  if b==127then
+   b=Ct:byte()
+   Ct=Ct:sub(2)
+   if b==127then
+    b=Ct:byte()+254
+    if b>255then
+     b=b-256
+    end
+    Ct=Ct:sub(2)
    else
     b=b+127
    end
   end
   Cp=Cp..string.char(b)
-  if #Cp==512 then
+  if #Cp==512then
    sector(Cp)
    Cp=""
   end
@@ -63,4 +66,4 @@ CD(io.read("*a")) -- XX
 --local Ch=D.open("init-bdivide.lua","rb")--
 --dieCB=function()D.close(Ch)D.remove("init-bdivide.lua")end--
 --while true do local t=D.read(Ch, 64)if not t then break end CD(t)end--
-CD("\x00\x00")CP(Cs[Cw])
+CD("\x00\x00")CP(Cs[Cw] .. "\x00\x00")

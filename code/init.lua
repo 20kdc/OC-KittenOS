@@ -2,11 +2,7 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- NOTE: If it's not "local", it's because k.root ought to access it.
--- List of things that apply:
--- primaryDisk, timers, libraries, processes, accesses, wrapMeta,
---  distEvent, baseProcEnv, loadLibraryInner, retrieveAccess,
---  start
+-- NOTE: local is considered unnecessary in kernel since 21 March
 
 -- Debugging option, turns process errors into actual errors (!)
 local criticalFailure = false
@@ -14,9 +10,9 @@ local criticalFailure = false
 local readBufSize = 2048
 
 -- A function used for logging, usable by programs.
+local emergencyFunction = function () end
 -- Comment this out if you don't want programs to have
 --  access to ocemu's logger.
-local emergencyFunction = function () end
 local ocemu = component.list("ocemu", true)()
 if ocemu then
  ocemu = component.proxy(ocemu)
@@ -77,13 +73,181 @@ function unicode.undoSafeTextFormat(s)
  for i = 1, unicode.len(s) do
   if not ignoreNext then
    local ch = unicode.sub(s, i, i)
-   ignoreNext = unicode.charWidth(ch) ~= 1
+   if unicode.charWidth(ch) ~= 1 then
+    if unicode.sub(s, i + 1, i + 1) ~= " " then
+     ch = " "
+    else
+     ignoreNext = true
+    end
+   end
    res = res .. ch
   else
    ignoreNext = false
   end
  end
  return res
+end
+
+-- Yes, this is what I used the freed up SR space for.
+-- Think of this as my apology for refusing translation support on NEO.
+keymaps = {
+ -- 'synth' keymap
+ ["unknown"] = {
+ },
+ ["??-qwerty"] = {
+  {16, "QWERTYUIOP"},
+  {16, "qwertyuiop"},
+  {30, "ASDFGHJKL"},
+  {30, "asdfghjkl"},
+  {44, "ZXCVBNM"},
+  {44, "zxcvbnm"},
+ },
+ ["??-qwertz"] = {
+  {16, "QWERTZUIOP"},
+  {16, "qwertzuiop"},
+  {30, "ASDFGHJKL"},
+  {30, "asdfghjkl"},
+  {44, "YXCVBNM"},
+  {44, "yxcvbnm"},
+ },
+ ["??-dvorak"] = {
+  {19, "PYFGCRL"},
+  {19, "pyfgcrl"},
+  {30, "AOEUIDHTN"},
+  {30, "aoeuidhtn"},
+  {45, "QJKXBM"},
+  {45, "qjkxbm"},
+ },
+ ["??-dvorak-full"] = {
+  {16, "\"<>PYFGCRL"},
+  {16, "',.pyfgcrl"},
+  {30, "AOEUIDHTN"},
+  {30, "aoeuidhtn"},
+  {44, ":QJKXBM"},
+  {44, ";qjkxbm"},
+ },
+ ["cz-qwertz"] = {
+  {2, "+ěščřžýáíé="}, -- The last letter is a *compose key*. #WTF
+  {2, "1234567890%"},
+  {15, "\tQWERTZUIOP/("},
+  {15, "\tqwertzuiopú)"},
+  {30, "ASDFGHJKL\"!'"},
+  {30, "asdfghjklů§"},
+  {44, "YXCVBNM?:_"},
+  {44, "yxcvbnm,.-"},
+ },
+ ["de-qwertz"] = {
+  {2, "1234567890ß"}, -- another one?
+  {2, "!\"§$%&/()=?"},
+  {15, "\tQWERTZUIOPÜ*"},
+  {15, "\tqwertzuiopü+"},
+  {30, "ASDFGHJKLÖÄ"},
+  {30, "asdfghjklÖÄ"},
+  {44, "YXCVBNM;:_"},
+  {44, "yxcvbnm,.-"},
+ },
+ ["uk-qwerty"] = {
+  {41, "`"}, {41, "¬"},
+  {2, "1234567890-="},
+  {2, "!\"£$%^&*()_+"},
+  {15, "\tQWERTYUIOP{}"},
+  {15, "\tqwertyuiop[]"},
+  {30, "ASDFGHJKL:@"},
+  {30, "asdfghjkl;'"},
+  {44, "ZXCVBNM<>?"},
+  {44, "zxcvbnm,./"},
+ },
+ ["us-qwerty"] = {
+  {41, "`"}, {41, "~"},
+  {2, "1234567890-="},
+  {2, "!@#$%^&*()_+"},
+  {15, "\tQWERTYUIOP{}\r"},
+  {15, "\tqwertyuiop[]\r"},
+  {30, "ASDFGHJKL\"|"},
+  {30, "asdfghjkl'\\"},
+  {44, "ZXCVBNM<>?"},
+  {44, "zxcvbnm,./"},
+ }
+}
+local unknownKeymapContains = {}
+currentKeymap = "unknown"
+-- Not really part of this package, but...
+unicode.getKeymap = function ()
+ return currentKeymap
+end
+-- raw info functions, they return nil if they don't know
+-- Due to a fantastic oversight, unicode.byte or such doesn't exist in OCEmu,
+--  so things are managed via "Ch" internally.
+unicode.getKCByCh = function (ch, km)
+ for _, v in ipairs(keymaps[km]) do
+  local spanLen = unicode.len(v[2])
+  for i = 1, spanLen do
+   if unicode.sub(v[2], i, i) == ch then
+    return v[1] + i - 1
+   end
+  end
+ end
+end
+unicode.getChByKC = function (kc, km)
+ for _, v in ipairs(keymaps[km]) do
+  local spanLen = unicode.len(v[2])
+  if kc >= v[1] and kc < v[1] + spanLen then
+   return unicode.sub(v[2], kc + 1 - v[1], kc + 1 - v[1])
+  end
+ end
+end
+local function keymapDetect(ka, kc)
+ if ka == 0 then return end
+ if kc == 0 then return end
+ -- simple algorithm, does the job
+ -- emergencyFunction("KD: " .. unicode.char(signal[3]) .. " " .. signal[4])
+ ka = unicode.char(ka)
+ if unknownKeymapContains[ka] ~= kc then
+  unknownKeymapContains[ka] = kc
+  table.insert(keymaps["unknown"], {kc, ka})
+ else
+  return
+ end
+
+ -- 25% of used keys must be known to pass
+ local bestRatio = 0.25
+ local bestName = "unknown"
+ for k, _ in pairs(keymaps) do
+  if k ~= "unknown" then
+   local count = 0
+   local total = 0
+   for kCh, kc in pairs(unknownKeymapContains) do
+    if unicode.getKCByCh(kCh, k) == kc then
+     count = count + 1
+    end
+    total = total + 1
+   end
+   local r = count / math.max(1, total)
+   if r > bestRatio then
+    bestRatio = r
+    bestName = k
+   end
+  end
+ end
+ if currentKeymap ~= bestName then emergencyFunction("Switching to Keymap " .. bestName) end
+ currentKeymap = bestName
+end
+-- rtext, codes (codes can end up nil)
+-- rtext is text's letters switched over
+-- (for code that will still use the same keycodes,
+--   but wants to display correct text)
+-- codes is the keycodes mapped based on the letters
+unicode.keymap = function (text)
+ local km = unicode.getKeymap()
+ local rtext = ""
+ local codes = {}
+ for i = 1, unicode.len(text) do
+  local ch = unicode.sub(text, i, i)
+  local okc = unicode.getKCByCh(ch, "uk-qwerty") or 0
+  rtext = rtext .. (unicode.getChByKC(okc, currentKeymap) or unicode.getChByKC(okc, "unknown") or ch)
+  codes[i] = unicode.getKCByCh(ch, currentKeymap) or unicode.getKCByCh(ch, "unknown")
+ end
+ return rtext, codes
 end
 
 local function loadfile(s, e)
@@ -308,6 +472,7 @@ function baseProcEnv()
    totalIdleTime = function () return idleTime end,
    ensurePath = ensurePath,
    ensurePathComponent = ensurePathComponent,
+   ensureType = ensureType
   }
  }
 end
@@ -631,6 +796,9 @@ while true do
   if dist < 0.05 then dist = 0.05 end
  end
  local signal = {computer.pullSignal(dist)}
+ if signal[1] == "key_down" then
+  keymapDetect(signal[3], signal[4])
+ end
  idleTime = idleTime + (computer.uptime() - now)
  if signal[1] then
   distEvent(nil, "h." .. signal[1], select(2, table.unpack(signal)))

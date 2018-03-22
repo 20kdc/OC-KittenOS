@@ -3,9 +3,10 @@
 
 -- s-donkonit : config, shutdown, screens
 
--- Doesn't matter what calls this service, because there's a mutex here.
 local donkonitSPProvider = neo.requireAccess("r.neo.sys.manage", "creating NEO core APIs") -- Restrict to s-
+-- Doesn't matter what calls this service, because there's a mutex here.
 local donkonitRDProvider = neo.requireAccess("r.neo.sys.screens", "creating NEO core APIs")
+local glacierDCProvider = neo.requireAccess("r.neo.sys.randr", "creating NEO core APIs")
 
 local computer = neo.requireAccess("k.computer", "shutting down")
 local fs = neo.requireAccess("c.filesystem", "settings I/O")
@@ -21,6 +22,7 @@ end
 
 -- keys are pids
 local targs = {} -- settings notify targs
+local targsDC = {} -- displaycontrol settings notify targs
 local targsSD = {} -- shutdown notify targs
 local targsST = {} -- saving throws
 
@@ -70,9 +72,9 @@ local function saveSettings()
  st.close()
 end
 
--- Monitor management stuff
+-- [i] = screenProxy
 local monitorPool = {}
--- {gpu, claimedLoseCallback}
+-- [screenAddr] = {gpu, claimedLoseCallback}
 local monitorClaims = {}
 
 local function announceFreeMonitor(address, except)
@@ -97,17 +99,38 @@ local function getGPU(monitor)
  return bestG
 end
 
+local function sRattle(name, val)
+ for _, v in pairs(targs) do
+  v("set_setting", name, val)
+ end
+ if name:sub(1, 4) == "scr." then
+  for k, v in pairs(targsDC) do
+   if not targs[k] then
+    v("set_setting", name, val)
+   end
+  end
+ end
+end
+
+-- Settings integration w/ monitors
+local function getMonitorSettings(a)
+ local w = tonumber(settings["scr.w." .. a]) or 80
+ local h = tonumber(settings["scr.h." .. a]) or 25
+ local d = tonumber(settings["scr.d." .. a]) or 8
+ w, h, d = math.floor(w), math.floor(h), math.floor(d)
+ return w, h, d
+end
 local function setupMonitor(gpu, monitor)
  local maxW, maxH = gpu.maxResolution()
  local maxD = gpu.maxDepth()
- local w = tonumber(settings["scr.w." .. monitor.address]) or 80
- local h = tonumber(settings["scr.h." .. monitor.address]) or 25
- local d = tonumber(settings["scr.d." .. monitor.address]) or 8
- w, h, d = math.floor(w), math.floor(h), math.floor(d)
+ local w, h, d = getMonitorSettings(monitor.address)
  w, h, d = math.min(w, maxW), math.min(h, maxH), math.min(d, maxD)
  settings["scr.w." .. monitor.address] = tostring(w)
  settings["scr.h." .. monitor.address] = tostring(h)
  settings["scr.d." .. monitor.address] = tostring(d)
+ sRattle("scr.w." .. monitor.address, tostring(w))
+ sRattle("scr.h." .. monitor.address, tostring(h))
+ sRattle("scr.d." .. monitor.address, tostring(d))
  gpu.setResolution(w, h)
  gpu.setDepth(d)
  pcall(saveSettings)
@@ -132,18 +155,17 @@ donkonitSPProvider(function (pkg, pid, sendSig)
    local val = nil
    if name == "password" then val = "" end
    settings[name] = val
-   for _, v in pairs(targs) do
-    v("set_setting", name, val)
-   end
+   sRattle(name, val)
    pcall(saveSettings)
   end,
   setSetting = function (name, val)
    if type(name) ~= "string" then error("Setting name must be string") end
    if type(val) ~= "string" then error("Setting value must be string") end
    settings[name] = val
-   for _, v in pairs(targs) do
-    v("set_setting", name, val)
-   end
+   -- NOTE: Either a monitor is under application control,
+   --  or it's not under any control.
+   -- Monitor settings are applied on the transition to control.
+   sRattle(name, val)
    pcall(saveSettings)
    --saveSettings()
   end,
@@ -249,10 +271,11 @@ loadSettings()
 local function rescanDevs()
  monitorPool = {}
  local hasGPU = gpus.list()()
+ for k, v in pairs(monitorClaims) do
+  v[2](true)
+ end
+ monitorClaims = {}
  for m in screens.list() do
-  if monitorClaims[m.address] then
-   monitorClaims[m.address][2](true)
-  end
   table.insert(monitorPool, m)
   if hasGPU then
    announceFreeMonitor(m.address)
@@ -265,6 +288,45 @@ rescanDevs()
 saveSettings()
 -- --
 
+glacierDCProvider(function (pkg, pid, sendSig)
+ targsDC[pid] = sendSig
+ return {
+  getKnownMonitors = function ()
+   local tbl = {}
+   -- yes, this should work fine so long as GMS is the *last* one #luaquirks
+   for k, v in ipairs(monitorPool) do
+    tbl[k] = {v.address, false, getMonitorSettings(v.address)}
+   end
+   for k, v in pairs(monitorClaims) do
+    table.insert(tbl, {k, true, getMonitorSettings(v.address)})
+   end
+  end,
+  changeMonitorSetup = function (ma, w, h, d)
+   neo.ensureType(ma, "string")
+   neo.ensureType(w, "number")
+   neo.ensureType(h, "number")
+   neo.ensureType(d, "number")
+   w = math.floor(w)
+   h = math.floor(h)
+   d = math.floor(d)
+   if w < 1 then error("Invalid width") end
+   if h < 1 then error("Invalid height") end
+   if d < 1 then error("Invalid depth") end
+   w, h, d = tostring(w), tostring(h), tostring(d)
+   settings["scr.w." .. ma] = w
+   settings["scr.h." .. ma] = h
+   settings["scr.d." .. ma] = d
+   sRattle("scr.w." .. ma, w)
+   sRattle("scr.h." .. ma, h)
+   sRattle("scr.d." .. ma, d)
+   pcall(saveSettings)
+  end,
+  forceRescan = rescanDevs
+ }
+end)
+
+-- main loop
+
 while true do
  local s = {coroutine.yield()}
  if s[1] == "k.timer" then
@@ -272,13 +334,19 @@ while true do
   shutdownFin(shutdownMode)
  end
  if s[1] == "h.component_added" then
-  rescanDevs()
+  -- Before doing anything, is it worth it?
+  if s[3] == "gpu" or s[3] == "screen" then
+   rescanDevs()
+  end
  end
  if s[1] == "h.component_removed" then
-  rescanDevs()
+  if s[3] == "gpu" or s[3] == "screen" then
+   rescanDevs()
+  end
  end
  if s[1] == "k.procdie" then
   targs[s[3]] = nil
+  targsDC[s[3]] = nil
   targsSD[s[3]] = nil
   if targsST[s[3]] then
    if s[4] then
