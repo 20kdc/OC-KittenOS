@@ -54,8 +54,6 @@ local sW, sH = 37, #lines + 2
 local window = neo.requestAccess("x.neo.pub.window")(sW, sH)
 local flush
 
-local screenCache = {}
-
 local function splitCur()
  local s = lines[cursorY]
  local st = unicode.sub(s, 1, cursorX - 1)
@@ -378,14 +376,9 @@ local function ev_clipboard(t)
 end
 
 flush = function ()
- local newCache = {}
  for i = 1, sH do
-  newCache[i] = getline(i)
-  if newCache[i] ~= screenCache[i] then
-   window.span(1, i, newCache[i], 0xFFFFFF, 0)
-  end
+  window.span(1, i, getline(i), 0xFFFFFF, 0)
  end
- screenCache = newCache
 end
 local flash
 flash = function ()
@@ -393,9 +386,7 @@ flash = function ()
  -- reverse:
  --local rY = (y + cursorY) - math.ceil(sH / 2)
  local csY = math.ceil(sH / 2)
- local l = getline(csY)
- screenCache[csY] = l
- window.span(1, csY, l, 0xFFFFFF, 0)
+ window.span(1, csY, getline(csY), 0xFFFFFF, 0)
  event.runAt(os.uptime() + 0.5, flash)
 end
 event.runAt(os.uptime() + 0.5, flash)
