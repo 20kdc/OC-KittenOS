@@ -119,7 +119,15 @@ keymaps = {
   {45, "qjkxbmwvz"},
  },
 }
-local unknownKeymapContains = {}
+for k, v in pairs(keymaps) do
+ for k2, v2 in ipairs(v) do
+  for i = 1, unicode.len(v2[2]) do
+   v[unicode.sub(v2[2], i, i)] = i + v2[1] - 1
+  end
+  v2[k2] = nil
+ end
+end
+
 currentKeymap = "unknown"
 -- Not really part of this package, but...
 unicode.getKeymap = function ()
@@ -129,20 +137,12 @@ end
 -- Due to a fantastic oversight, unicode.byte or such doesn't exist in OCEmu,
 --  so things are managed via "Ch" internally.
 unicode.getKCByCh = function (ch, km)
- for _, v in ipairs(keymaps[km]) do
-  local spanLen = unicode.len(v[2])
-  for i = 1, spanLen do
-   if unicode.sub(v[2], i, i) == ch then
-    return v[1] + i - 1
-   end
-  end
- end
+ return keymaps[km][ch]
 end
 unicode.getChByKC = function (kc, km)
- for _, v in ipairs(keymaps[km]) do
-  local spanLen = unicode.len(v[2])
-  if kc >= v[1] and kc < v[1] + spanLen then
-   return unicode.sub(v[2], kc + 1 - v[1], kc + 1 - v[1])
+ for ach, akc in pairs(keymaps[km]) do
+  if akc == kc then
+   return ach
   end
  end
 end
@@ -152,9 +152,8 @@ local function keymapDetect(ka, kc)
  -- simple algorithm, does the job
  -- emergencyFunction("KD: " .. unicode.char(signal[3]) .. " " .. signal[4])
  ka = unicode.char(ka)
- if unknownKeymapContains[ka] ~= kc then
-  unknownKeymapContains[ka] = kc
-  table.insert(keymaps["unknown"], {kc, ka})
+ if keymaps["unknown"][ka] ~= kc then
+  keymaps["unknown"][ka] = kc
  else
   return
  end
@@ -166,7 +165,7 @@ local function keymapDetect(ka, kc)
   if k ~= "unknown" then
    local count = 0
    local total = 0
-   for kCh, kc in pairs(unknownKeymapContains) do
+   for kCh, kc in pairs(keymaps["unknown"]) do
     if unicode.getKCByCh(kCh, k) == kc then
      count = count + 1
     end
