@@ -57,14 +57,14 @@ monitors[0] = {nil, nil, 160, 50}
 -- line y
 local surfaces = {}
 
+-- Stops the main loop
+local shuttingDown = false
+
 local savingThrow = neo.requestAccess("x.neo.sys.manage")
 if savingThrow then
  savingThrow.registerForShutdownEvent()
  savingThrow.registerSavingThrow(function ()
-  if #monitors > 0 then
-   neo.executeAsync("sys-init", monitors[1][2])
-  end
-  neo.executeAsync("sys-everest")
+  neo.executeAsync("sys-init", monitors[1][2])
   -- In this case the surfaces are leaked and hold references here. They have to be removed manually.
   -- Do this via a "primary event" (k.deregistration) and "deathtrap events"
   -- If a process evades the deathtrap then it clearly has reason to stay alive regardless of Everest status.
@@ -76,9 +76,6 @@ if savingThrow then
   end
  end)
 end
-
--- Grab all available monitors when they become available
-local inSession = false
 
 local function renderingAllowed()
  -- This is a safety feature to prevent implosion due to missing monitors.
@@ -370,7 +367,7 @@ everestProvider(function (pkg, pid, sendSig)
   local m = 0
   if renderingAllowed() then m = 1 end
   if surfaces[1] then m = surfaces[1][1] end
-  local surf = {m, 1, 1, w, h}
+  local surf = {m, 1, 2, w, h}
   local focusState = false
   local llid = lid
   lid = lid + 1
@@ -423,8 +420,6 @@ everestProvider(function (pkg, pid, sendSig)
      handleSpan(surf, 1, 1, vtitle, bg, fg)
      return
     end
-    -- WCHAX : Wide-char-cleanup has to be done left-to-right, so this handles the important part of that.
-    handleSpan(surf, surf[4], a, " ", 0, 0)
     a = a - 1
    end
    sendSig(llid, ev, a, b, c, d, e)
@@ -476,26 +471,11 @@ end)
 -- THE EVEREST USER API ENDS (now for the session API, which just does boring stuff)
 everestSessionProvider(function (pkg, pid, sendSig)
  return {
-  startSession = function ()
-   inSession = true
-  end,
-  endSession = function (startBristol)
-   if not inSession then return end
-   local m = nil
-   if monitors[1] then
-    m = monitors[1][2]
-   end
-   inSession = false
-   for k = 1, #monitors do
-    screens.disclaim(monitors[k][2])
-    monitors[k] = nil
-   end
-   if startBristol then
-    neo.executeAsync("sys-init", m)
-   end
-   reconcileAll()
-   if not startBristol then
-    return m
+  endSession = function (gotoBristol)
+   shuttingDown = true
+   if gotoBristol then
+    -- Notably, savingThrow only triggers for error-death...
+    neo.executeAsync("sys-init", (monitors[1] or {})[2])
    end
   end
  }
@@ -562,7 +542,24 @@ local function key(ka, kc, down)
  end
 end
 
-while true do
+-- take all displays!
+local function performClaim(s3)
+ local gpu = screens.claim(s3)
+ local gpucb = gpu and (gpu())
+ if gpucb then
+  local w, h = gpucb.getResolution()
+  table.insert(monitors, {gpu, s3, w, h, -1, -1})
+  -- This is required to ensure windows are moved off of the null monitor.
+  -- Luckily, there's an obvious sign if they aren't - everest will promptly crash.
+  reconcileAll()
+ end
+end
+
+for _, v in ipairs(screens.getClaimable()) do
+ performClaim(v)
+end
+
+while not shuttingDown do
  local s = {coroutine.yield()}
  if renderingAllowed() then
   if s[1] == "h.key_down" then
@@ -634,17 +631,7 @@ while true do
  end
  if s[1] == "x.neo.sys.screens" then
   if s[2] == "available" then
-   if inSession then
-    local gpu = screens.claim(s[3])
-    local gpucb = gpu and (gpu())
-    if gpucb then
-     local w, h = gpucb.getResolution()
-     table.insert(monitors, {gpu, s[3], w, h, -1, -1})
-     -- This is required to ensure windows are moved off of the null monitor.
-     -- Luckily, there's an obvious sign if they aren't - everest will promptly crash.
-     reconcileAll()
-    end
-   end
+   performClaim(s[3])
   end
   if s[2] == "lost" then
    for k, v in ipairs(monitors) do

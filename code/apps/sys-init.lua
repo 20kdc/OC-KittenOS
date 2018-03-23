@@ -58,7 +58,8 @@ local function retrieveNssMonitor(nss)
  local subpool = {}
  while not gpuG do
   if performDisclaim then
-   performDisclaim()
+   performDisclaim(true)
+   performDisclaim = nil
   end
   -- nss available - this means the monitor pool is now ready.
   -- If no monitors are available, shut down now.
@@ -98,7 +99,9 @@ local function retrieveNssMonitor(nss)
    end
   end
  
-  if not subpool[1] then error("Unable to claim any monitor.") end
+  if not subpool[1] then
+   error("None of the GPUs we got were actually usable")
+  end
   gpuG = subpool[1][1]
   screen = subpool[1][2]
  end
@@ -107,9 +110,12 @@ local function retrieveNssMonitor(nss)
  scrW, scrH = gpu.getResolution()
  rstfbDraw(gpu)
  gpu.fill(1, 1, scrW, scrH, " ")
- performDisclaim = function ()
-  for _, v in ipairs(subpool) do
-   nss.disclaim(v[2])
+ performDisclaim = function (full)
+  nss.disclaim(subpool[1][2])
+  if full then
+   for _, v in ipairs(subpool) do
+    nss.disclaim(v[2])
+   end
   end
  end
  return gpu
@@ -137,6 +143,8 @@ local function finalPrompt()
  local nss = neo.requestAccess("x.neo.sys.screens")
  if nss then
   retrieveNssMonitor(nss)
+ else
+  error("no glacier to provide GPU for the prompt")
  end
  -- This is nsm's final chance to make itself available and thus allow the password to be set
  local nsm = neo.requestAccess("x.neo.sys.manage")
@@ -266,27 +274,28 @@ local function finalPrompt()
 end
 local function postPrompt()
  local gpu = gpuG()
+ local nsm = neo.requestAccess("x.neo.sys.manage")
+ local sh = "sys-everest"
+ warnings = {"Unable to get sys-init.shell due to no NSM, using sys-everest"}
+ if nsm then
+  sh = nsm.getSetting("sys-init.shell") or sh
+  warnings = {"Starting "  .. sh}
+ end
  rstfbDraw(gpu)
- -- Begin to finish login, or fail
- local everests = neo.requestAccess("x.neo.sys.session")
- if everests then
-  local s, e = pcall(everests.startSession)
-  if not s then
-   table.insert(warnings, "Everest failed to create a session")
-   table.insert(warnings, tostring(e))
-  else
-   warnings = {"Transferring to Everest..."}
-   advDraw(gpu)
-   if performDisclaim then
-    performDisclaim()
-    -- Give Everest time (this isn't perceptible, and is really just a safety measure)
-    sleep(1)
-   end
+ advDraw(gpu)
+ performDisclaim()
+ neo.executeAsync(sh)
+ sleep(0.5)
+ for i = 1, 9 do
+  local v = neo.requestAccess("x.neo.sys.session")
+  sleep(0.5) -- Important timing - allows it to take the monitor
+  if v then
    return
   end
- else
-  table.insert(warnings, "Couldn't communicate with Everest...")
  end
+ -- ...oh. hope this works then?
+ warnings = {"That wasn't a shell. Try Safe Mode."}
+ rstfbDraw(gpu)
  advDraw(gpu)
  sleep(1)
  shutdown(true)
@@ -305,16 +314,12 @@ local function initializeSystem()
   for s in screenAc.list() do
    for g in gpuAc.list() do
     g.bind(s.address, false)
-    local w, h = g.maxResolution()
-    local whd = w * h * g.maxDepth()
+    local whd = g.maxDepth()
     if whd > scrBestWHD then
      screen = s
      gpu = g
      scrBestWHD = whd
     end
-   end
-   if screen then
-    break
    end
   end
  end
@@ -413,7 +418,7 @@ end
 
 if callerPkg ~= nil then
  -- Everest can call into this to force a login screen
- -- In this case it locks Everest, then starts Bristol.
+ -- In this case Everest dies, then starts Bristol.
  -- 
  if callerPkg ~= "sys-everest" then
   return

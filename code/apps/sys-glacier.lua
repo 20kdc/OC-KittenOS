@@ -39,7 +39,7 @@ local settings = {
  -- The list of settings is here:
  -- password
  password = "",
- ["run.sys-everest"] = "yes",
+ ["sys-init.shell"] = "sys-everest",
  ["run.sys-icecap"] = "yes",
  -- scr.w/h/d.<uuid>
 }
@@ -78,6 +78,8 @@ local monitorPool = {}
 local monitorClaims = {}
 -- [gpuAddr] = monitorAddr
 local currentGPUBinding = {}
+-- [gpuAddr] = userCount
+local currentGPUUsers = {}
 
 local function announceFreeMonitor(address, except)
  for k, v in pairs(targsRD) do
@@ -92,10 +94,18 @@ local function getGPU(monitor)
  local bestD = 0
  for v in gpus.list() do
   v.bind(monitor.address, false)
+  currentGPUBinding[v.address] = monitor.address
   local d = v.maxDepth()
   if d > bestD then
    bestG = v
    bestD = d
+   bestU = currentGPUUsers[v.address] or 0
+  elseif d == bestD then
+   if (currentGPUUsers[v.address] or 0) < bestU then
+    bestG = v
+    bestD = d
+    bestU = currentGPUUsers[v.address] or 0
+   end
   end
  end
  return bestG
@@ -124,6 +134,7 @@ local function getMonitorSettings(a)
 end
 local function setupMonitor(gpu, monitor)
  gpu.bind(monitor.address, false)
+ currentGPUBinding[gpu.address] = monitor.address
  local maxW, maxH = gpu.maxResolution()
  local maxD = gpu.maxDepth()
  local w, h, d = getMonitorSettings(monitor.address)
@@ -208,8 +219,7 @@ donkonitRDProvider(function (pkg, pid, sendSig)
  targsRD[pid] = {sendSig, function ()
   for k, v in pairs(claimed) do
    -- Nothing to really do here
-   monitorClaims[k] = nil
-   announceFreeMonitor(k, pid)
+   v(false)
   end
  end}
  return {
@@ -231,11 +241,13 @@ donkonitRDProvider(function (pkg, pid, sendSig)
       setupMonitor(gpu, v)
       gpu = gpu.address
       currentGPUBinding[gpu] = address
+      currentGPUUsers[gpu] = (currentGPUUsers[gpu] or 0) + 1
       local disclaimer = function (wasDevLoss)
        -- we lost it
        monitorClaims[address] = nil
        claimed[address] = nil
        if not wasDevLoss then
+        currentGPUUsers[gpu] = currentGPUUsers[gpu] - 1
         table.insert(monitorPool, v)
         announceFreeMonitor(address, pid)
        else
@@ -249,10 +261,7 @@ donkonitRDProvider(function (pkg, pid, sendSig)
        for v in gpus.list() do
         if v.address == gpu then
          if currentGPUBinding[gpu] ~= address then
-          local _, v2 = v.bind(address, false)
-          if v2 then
-           return
-          end
+          v.bind(address, false)
          end
          currentGPUBinding[gpu] = address
          return v
@@ -277,6 +286,7 @@ loadSettings()
 local function rescanDevs()
  monitorPool = {}
  currentGPUBinding = {}
+ currentGPUUsers = {}
  local hasGPU = gpus.list()()
  for k, v in pairs(monitorClaims) do
   v[2](true)
