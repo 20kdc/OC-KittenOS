@@ -6,7 +6,7 @@
 local donkonitSPProvider = neo.requireAccess("r.neo.sys.manage", "creating NEO core APIs") -- Restrict to s-
 -- Doesn't matter what calls this service, because there's a mutex here.
 local donkonitRDProvider = neo.requireAccess("r.neo.sys.screens", "creating NEO core APIs")
-local glacierDCProvider = neo.requireAccess("r.neo.sys.randr", "creating NEO core APIs")
+local glacierDCProvider = neo.requireAccess("r.neo.pub.globals", "creating NEO core APIs")
 
 local computer = neo.requireAccess("k.computer", "shutting down")
 local fs = neo.requireAccess("c.filesystem", "settings I/O")
@@ -14,6 +14,7 @@ local gpus = neo.requireAccess("c.gpu", "screen control")
 local screens = neo.requireAccess("c.screen", "screen control")
 neo.requireAccess("s.h.component_added", "HW management")
 neo.requireAccess("s.h.component_removed", "HW management")
+neo.requireAccess("s.h.key_down", "Keymap guesswork")
 
 local function shutdownFin(reboot)
  -- any final actions donkonit needs to take here
@@ -39,6 +40,7 @@ local settings = {
  -- The list of settings is here:
  -- password
  password = "",
+ ["pub.clipboard"] = "",
  ["sys-init.shell"] = "sys-everest",
  ["run.sys-icecap"] = "yes",
  -- scr.w/h/d.<uuid>
@@ -115,7 +117,7 @@ local function sRattle(name, val)
  for _, v in pairs(targs) do
   v("set_setting", name, val)
  end
- if name:sub(1, 4) == "scr." then
+ if name:sub(1, 4) == "scr." or name:sub(1, 4) == "pub." then
   for k, v in pairs(targsDC) do
    if not targs[k] then
     v("set_setting", name, val)
@@ -160,6 +162,7 @@ donkonitSPProvider(function (pkg, pid, sendSig)
    end
    return s
   end,
+  -- NOTE: REPLICATED IN GB
   getSetting = function (name)
    if type(name) ~= "string" then error("Setting name must be string") end
    return settings[name]
@@ -167,7 +170,7 @@ donkonitSPProvider(function (pkg, pid, sendSig)
   delSetting = function (name)
    if type(name) ~= "string" then error("Setting name must be string") end
    local val = nil
-   if name == "password" then val = "" end
+   if name == "password" or name == "pub.clipboard" then val = "" end
    settings[name] = val
    sRattle(name, val)
    pcall(saveSettings)
@@ -181,8 +184,8 @@ donkonitSPProvider(function (pkg, pid, sendSig)
    -- Monitor settings are applied on the transition to control.
    sRattle(name, val)
    pcall(saveSettings)
-   --saveSettings()
   end,
+  --
   registerForShutdownEvent = function ()
    targsSD[pid] = sendSig
   end,
@@ -338,7 +341,27 @@ glacierDCProvider(function (pkg, pid, sendSig)
    sRattle("scr.d." .. ma, d)
    pcall(saveSettings)
   end,
-  forceRescan = rescanDevs
+  forceRescan = rescanDevs,
+  -- NOTE: "pub." prefixed version of functions in sys.manage
+  getSetting = function (name)
+   if type(name) ~= "string" then error("Setting name must be string") end
+   return settings["pub." .. name]
+  end,
+  delSetting = function (name)
+   if type(name) ~= "string" then error("Setting name must be string") end
+   local val = nil
+   if name == "clipboard" then val = "" end
+   settings["pub." .. name] = val
+   sRattle("pub." .. name, val)
+   pcall(saveSettings)
+  end,
+  setSetting = function (name, val)
+   if type(name) ~= "string" then error("Setting name must be string") end
+   if type(val) ~= "string" then error("Setting value must be string") end
+   settings["pub." .. name] = val
+   sRattle("pub." .. name, val)
+   pcall(saveSettings)
+  end
  }
 end)
 

@@ -5,24 +5,16 @@
 -- This was textedit (femto) from KittenOS 'ported' to NEO.
 -- It also has fixes for bugs involving wide text, and runs faster due to the chars -> lines change.
 
-local mapping, _ = unicode.keymap("ASQCVDJK")
-local mappingFinal = {}
-for i = 1, #mapping do
- mappingFinal[i] = unicode.sub(mapping, i, i)
-end
 local lines = {
  "Neolithic: Text Editor",
- "Keymap " .. unicode.getKeymap() .. ", to correct, type",
- " the alphabet in capitals.",
- "Then, restart the text editor.",
- "^" .. mappingFinal[1] .. ", ^" .. mappingFinal[2] .. ", ^" .. mappingFinal[3] .. ": Load, Save, New",
- "^" .. mappingFinal[4] .. ", ^" .. mappingFinal[5] .. ", ^" .. mappingFinal[6] .. ": Copy, Paste, Delete Line",
+ "F3, F4, F1: Load, Save, New",
+ "F5, F6, ^←: Copy, Paste, Delete Line",
  -- These two are meant to replace similar functionality in GNU Nano
  --  (which I consider the best console text editor out there - Neolithic is an *imitation* and a poor one at that),
  --  except fixing a UI flaw by instead making J responsible for resetting the append flag,
  --  so the user can more or less arbitrarily mash together lines
- "^" .. mappingFinal[7] .. ": Reset 'append' flag for Cut Lines",
- "^" .. mappingFinal[8] .. ": Cut Line(s)",
+ "F7: Reset 'append' flag for Cut Lines",
+ "F8: Cut Line(s)",
  "^<arrows>: Resize Win",
  "'^' is Control.",
  "Wide text & clipboard supported.",
@@ -35,14 +27,7 @@ local lines = {
 -- The way I have things setup is that you perform J then K(repeat) *instead*, which means you have to explicitly say "destroy current clipboard".
 
 local event = require("event")(neo)
-local clipboard = neo.requestAccess("x.neo.pub.clip.text")
-if not clipboard then
- local clipboardData = ""
- clipboard = {
-  copy = function (text) clipboardData = text end,
-  paste = function () return clipboardData end
- }
-end
+local clipsrc = neo.requireAccess("x.neo.pub.globals", "clipboard")
 
 local cursorX = 1
 local cursorY = math.ceil(#lines / 2)
@@ -207,8 +192,10 @@ local function ev_key(ka, kc, down)
   ctrlFlag = down
   return false
  end
+ -- Action keys
+ if not down then return false end
  if ctrlFlag then
-  if not down then return false end
+  -- Control Action Keys
   if kc == 200 then -- Up
    sH = sH - 1
    if sH == 0 then
@@ -231,40 +218,87 @@ local function ev_key(ka, kc, down)
    sW = sW + 1
    sW, sH = window.setSize(sW, sH)
   end
-  if kc == 31 then -- S
-   startSave()
+  if kc == 14 then -- ^Backspace
+   delLine()
+   return true
   end
-  if kc == 30 then -- A
-   startLoad()
+ else
+  -- Non-Control Action Keys
+  -- Basic Action Keys
+  if kc == 200 or kc == 201 then -- Go up one - go up page
+   local moveAmount = 1
+   if kc == 201 then
+    moveAmount = math.floor(sH / 2)
+   end
+   cursorY = cursorY - moveAmount
+   if cursorY < 1 then
+    cursorY = 1
+   end
+   clampCursorX()
+   return true
   end
-  if kc == 16 then -- Q
+  if kc == 208 or kc == 209 then -- Go down one - go down page
+   local moveAmount = 1
+   if kc == 209 then
+    moveAmount = math.floor(sH / 2)
+   end
+   cursorY = cursorY + moveAmount
+   if cursorY > #lines then
+    cursorY = #lines
+   end
+   clampCursorX()
+   return true
+  end
+  if kc == 203 then
+   if cursorX > 1 then
+    cursorX = cursorX - 1
+   else
+    if cursorY > 1 then
+     cursorY = cursorY - 1
+     cursorX = unicode.len(lines[cursorY]) + 1
+    else
+     return false
+    end
+   end
+   return true
+  end
+  if kc == 205 then
+   cursorX = cursorX + 1
+   if clampCursorX() then
+    if cursorY < #lines then
+     cursorY = cursorY + 1
+     cursorX = 1
+    end
+   end
+   return true
+  end
+  -- Extra Non-Control Keys
+  if kc == 199 then
+   cursorX = 1
+   return true
+  end
+  if kc == 207 then
+   cursorX = unicode.len(lines[cursorY]) + 1
+   return true
+  end
+  -- Major Actions
+  if kc == 59 then -- F1
    lines = {""}
    cursorX = 1
    cursorY = 1
    return true
   end
-  if kc == 32 then -- D
-   delLine()
-   return true
+  if kc == 61 then -- F3
+   startLoad()
   end
-  if kc == 46 then -- C
-   clipboard.copy(lines[cursorY])
+  if kc == 62 then -- F4
+   startSave()
   end
-  if kc == 36 then -- J
-   appendFlag = false
+  if kc == 63 then -- F5
+   clipsrc.setSetting("clipboard", lines[cursorY])
   end
-  if kc == 37 then -- K
-   if appendFlag then
-    local base = clipboard.paste()
-    clipboard.copy(base .. "\n" .. delLine())
-   else
-    clipboard.copy(delLine())
-   end
-   appendFlag = true
-   return true
-  end
-  if kc == 47 then -- V
-   local tx = clipboard.paste()
+  if kc == 64 then -- F6
+   local tx = clipsrc.getSetting("clipboard") or ""
    local txi = tx:find("\n")
    local nt = {}
    while txi do
@@ -278,85 +312,39 @@ local function ev_key(ka, kc, down)
    end
    return true
   end
-  return false
- end
- -- action keys
- if not down then
-  return false
- end
- if kc == 200 or kc == 201 then -- Go up one - go up page
-  local moveAmount = 1
-  if kc == 201 then
-   moveAmount = math.floor(sH / 2)
+  if kc == 65 then -- F7
+   appendFlag = false
   end
-  cursorY = cursorY - moveAmount
-  if cursorY < 1 then
-   cursorY = 1
+  if kc == 66 then -- F8
+   if appendFlag then
+    local base = clipsrc.getSetting("clipboard")
+    clipsrc.setSetting("clipboard", base .. "\n" .. delLine())
+   else
+    clipsrc.setSetting("clipboard", delLine())
+   end
+   appendFlag = true
+   return true
   end
-  clampCursorX()
-  return true
  end
- if kc == 208 or kc == 209 then -- Go down one - go down page
-  local moveAmount = 1
-  if kc == 209 then
-   moveAmount = math.floor(sH / 2)
-  end
-  cursorY = cursorY + moveAmount
-  if cursorY > #lines then
-   cursorY = #lines
-  end
-  clampCursorX()
-  return true
- end
- if kc == 203 then
-  if cursorX > 1 then
-   cursorX = cursorX - 1
-  else
-   if cursorY > 1 then
+ -- Letters
+ if ka ~= 0 then
+  if ka == 8 then
+   if cursorX == 1 then
+    if cursorY == 1 then
+     return false
+    end
+    local l = table.remove(lines, cursorY)
     cursorY = cursorY - 1
     cursorX = unicode.len(lines[cursorY]) + 1
+    lines[cursorY] = lines[cursorY] .. l
    else
-    return false
+    local a, b = splitCur()
+    a = unicode.sub(a, 1, unicode.len(a) - 1)
+    lines[cursorY] = a.. b
+    cursorX = cursorX - 1
    end
+   return true
   end
-  return true
- end
- if kc == 205 then
-  cursorX = cursorX + 1
-  if clampCursorX() then
-   if cursorY < #lines then
-    cursorY = cursorY + 1
-    cursorX = 1
-   end
-  end
-  return true
- end
- if kc == 199 then
-  cursorX = 1
-  return true
- end
- if kc == 207 then
-  cursorX = unicode.len(lines[cursorY]) + 1
-  return true
- end
- if ka == 8 then
-  if cursorX == 1 then
-   if cursorY == 1 then
-    return false
-   end
-   local l = table.remove(lines, cursorY)
-   cursorY = cursorY - 1
-   cursorX = unicode.len(lines[cursorY]) + 1
-   lines[cursorY] = lines[cursorY] .. l
-  else
-   local a, b = splitCur()
-   a = unicode.sub(a, 1, unicode.len(a) - 1)
-   lines[cursorY] = a.. b
-   cursorX = cursorX - 1
-  end
-  return true
- end
- if ka ~= 0 then
   putLetter(unicode.char(ka))
   return true
  end

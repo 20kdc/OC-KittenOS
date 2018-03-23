@@ -88,127 +88,6 @@ function unicode.undoSafeTextFormat(s)
  return res
 end
 
--- Yes, this is what I used the freed up SR space for.
--- Think of this as my apology for refusing translation support on NEO.
-keymaps = {
- -- 'synth' keymap
- ["unknown"] = {
- },
- ["??-qwerty"] = {
-  {16, "QWERTYUIOP"},
-  {16, "qwertyuiop"},
-  {30, "ASDFGHJKL"},
-  {30, "asdfghjkl"},
-  {44, "ZXCVBNM"},
-  {44, "zxcvbnm"},
- },
- ["??-qwertz"] = {
-  {16, "QWERTZUIOP"},
-  {16, "qwertzuiop"},
-  {30, "ASDFGHJKL"},
-  {30, "asdfghjkl"},
-  {44, "YXCVBNM"},
-  {44, "yxcvbnm"},
- },
- ["??-dvorak"] = {
-  {19, "PYFGCRL"},
-  {19, "pyfgcrl"},
-  {30, "AOEUIDHTNS"},
-  {30, "aoeuidhtns"},
-  {45, "QJKXBMWVZ"},
-  {45, "qjkxbmwvz"},
- },
-}
-for k, v in pairs(keymaps) do
- for k2, v2 in ipairs(v) do
-  for i = 1, unicode.len(v2[2]) do
-   v[unicode.sub(v2[2], i, i)] = i + v2[1] - 1
-  end
-  v2[k2] = nil
- end
-end
-
-currentKeymap = "unknown"
--- Not really part of this package, but...
-unicode.getKeymap = function ()
- return currentKeymap
-end
--- raw info functions, they return nil if they don't know
--- Due to a fantastic oversight, unicode.byte or such doesn't exist in OCEmu,
---  so things are managed via "Ch" internally.
-unicode.getKCByCh = function (ch, km)
- return keymaps[km][ch]
-end
-unicode.getChByKC = function (kc, km)
- for ach, akc in pairs(keymaps[km]) do
-  if akc == kc then
-   return ach
-  end
- end
-end
-local function keymapDetect(ka, kc)
- if ka == 0 then return end
- if kc == 0 then return end
- -- simple algorithm, does the job
- -- emergencyFunction("KD: " .. unicode.char(signal[3]) .. " " .. signal[4])
- ka = unicode.char(ka)
- if keymaps["unknown"][ka] ~= kc then
-  keymaps["unknown"][ka] = kc
- else
-  return
- end
-
- -- 25% of used keys must be known to pass
- local bestRatio = 0.25
- local bestName = "unknown"
- for k, _ in pairs(keymaps) do
-  if k ~= "unknown" then
-   local count = 0
-   local total = 0
-   for kCh, kc in pairs(keymaps["unknown"]) do
-    if unicode.getKCByCh(kCh, k) == kc then
-     count = count + 1
-    end
-    total = total + 1
-   end
-   local r = count / math.max(1, total)
-   if r > bestRatio then
-    bestRatio = r
-    bestName = k
-   end
-  end
- end
- if currentKeymap ~= bestName then emergencyFunction("Switching to Keymap " .. bestName) end
- currentKeymap = bestName
-end
--- rtext, codes (codes can end up nil)
--- rtext is text's letters switched over
--- (for code that will still use the same keycodes,
---   but wants to display correct text)
--- codes is the keycodes mapped based on the letters
-unicode.keymap = function (text)
- local km = unicode.getKeymap()
- local rtext = ""
- local codes = {}
- local notQ = false
- for i = 1, unicode.len(text) do
-  local ch = unicode.sub(text, i, i)
-  local okc = unicode.getKCByCh(ch, "??-qwerty") or 0
-  local ch2 = unicode.getChByKC(okc, currentKeymap) or unicode.getChByKC(okc, "unknown")
-  if not ch2 then
-   ch2 = "?"
-  else
-   notQ = true
-  end
-  rtext = rtext .. ch2
-  codes[i] = unicode.getKCByCh(ch, currentKeymap) or unicode.getKCByCh(ch, "unknown")
- end
- if not notQ then
-  rtext = text
- end
- return rtext, codes
-end
-
 local function loadfile(s, e)
  local h = primaryDisk.open(s)
  if h then
@@ -714,52 +593,48 @@ end
 if not start("sys-init") then error("Could not start sys-init") end
 
 while true do
- local tmr = nil
- for i = 1, 16 do
-  tmr = nil
-  local now = computer.uptime()
-  local breaking = false -- Used when a process dies - in this case it's assumed OC just did something drastic
-  local didAnything = false
-  local k = 1
-  while timers[k] do
-   local v = timers[k]
-   if v[1] <= now then
-    if v[2](table.unpack(v, 3)) then
-     breaking = true
-     tmr = 0.05
-     break
-    end
-    didAnything = true
-    v = nil
-   else
-    if not tmr then
-     tmr = v[1]
+ local ok, r = pcall(function()
+  local tmr = nil
+  for i = 1, 16 do
+   tmr = nil
+   local now = computer.uptime()
+   local breaking = false -- Used when a process dies - in this case it's assumed OC just did something drastic
+   local didAnything = false
+   local k = 1
+   while timers[k] do
+    local v = timers[k]
+    if v[1] <= now then
+     table.remove(timers, k)
+     if v[2](table.unpack(v, 3)) then
+      breaking = true
+      tmr = 0.05
+      break
+     end
+     didAnything = true
     else
-     tmr = math.min(tmr, v[1])
+     if not tmr then
+      tmr = v[1]
+     else
+      tmr = math.min(tmr, v[1])
+     end
+     k = k + 1
     end
    end
-   if v then
-    k = k + 1
-   else
-    table.remove(timers, k)
-   end
+   if breaking then break end
+   -- If the system didn't make any progress, then we're waiting for a signal (this includes timers)
+   if not didAnything then break end
   end
-  if breaking then break end
-  -- If the system didn't make any progress, then we're waiting for a signal (this includes timers)
-  if not didAnything then break end
- end
- now = computer.uptime() -- the above probably took a while
- local dist = nil
- if tmr then
-  dist = tmr - now
-  if dist < 0.05 then dist = 0.05 end
- end
- local signal = {computer.pullSignal(dist)}
- if signal[1] == "key_down" then
-  keymapDetect(signal[3], signal[4])
- end
- idleTime = idleTime + (computer.uptime() - now)
- if signal[1] then
-  distEvent(nil, "h." .. signal[1], select(2, table.unpack(signal)))
- end
+  now = computer.uptime() -- the above probably took a while
+  local dist = nil
+  if tmr then
+   dist = tmr - now
+   if dist < 0.05 then dist = 0.05 end
+  end
+  local signal = {computer.pullSignal(dist)}
+  idleTime = idleTime + (computer.uptime() - now)
+  if signal[1] then
+   distEvent(nil, "h." .. signal[1], select(2, table.unpack(signal)))
+  end
+ end)
+ if not ok then emergencyFunction("K-WARN " .. tostring(r)) end
 end

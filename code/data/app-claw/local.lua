@@ -109,6 +109,20 @@ return {
    "apps/app-textedit.lua"
   },
  },
+ ["app-flash"] = {
+  desc = "KittenOS NEO EEPROM Flasher",
+  v = 0,
+  app = "app-flash",
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/app-flash.lua"
+  },
+ },
  ["app-pass"] = {
   desc = "KittenOS NEO Password Setter & Logout",
   v = 0,
