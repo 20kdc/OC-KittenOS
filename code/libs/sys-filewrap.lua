@@ -4,7 +4,8 @@
 return function(dev, file, mode)
  local n = "rb"
  if mode then n = "wb" end
- local handle = dev.open(file, n)
+ local handle, r = dev.open(file, n)
+ if not handle then return nil, r end
  local open = true
  local function closer()
   if not open then return end
@@ -35,7 +36,8 @@ return function(dev, file, mode)
    close = closer,
    write = function (txt)
     if type(txt) ~= "string" then error("Write data must be string-bytearray") end
-    return dev.write(handle, txt)
+    local ok, b = dev.write(handle, txt)
+    if not ok then error(tostring(b)) end
    end
   }, closer
  end

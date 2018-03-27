@@ -28,7 +28,6 @@ for k, v in pairs(f) do
 end
 os.execute("mkdir -p work/data/app-claw")
 os.execute("cp code/data/app-claw/local.lua work/data/app-claw/local.lua")
-os.execute("cp code/libs/sys-secpolicy.lua work/libs/sys-secpolicy.lua")
 os.execute("cd code ; find . > ../imitclaw.treecode")
 os.execute("cd work ; find . > ../imitclaw.treework")
 os.execute("diff -u imitclaw.treecode imitclaw.treework")

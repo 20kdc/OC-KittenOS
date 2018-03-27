@@ -110,27 +110,24 @@ end)
 local rootAccess = neo.requireAccess("k.root", "installing GUI integration")
 local backup = rootAccess.securityPolicyINIT or rootAccess.securityPolicy
 rootAccess.securityPolicyINIT = backup
-rootAccess.securityPolicy = function (pid, proc, req)
+rootAccess.securityPolicy = function (pid, proc, perm, req)
  if neo.dead then
-  return backup(pid, proc, req)
+  return backup(pid, proc, perm, req)
  end
- req.result = proc.pkg:sub(1, 4) == "sys-"
+ local def = proc.pkg:sub(1, 4) == "sys-"
  local secpol, err = require("sys-secpolicy")
  if not secpol then
   -- Failsafe.
   neo.emergency("Used fallback policy because of load-err: " .. err)
-  req.service()
+  req(def)
   return
  end
  -- Push to ICECAP thread to avoid deadlock on neoux b/c wrong event-pull context
  event.runAt(0, function ()
-  local ok, err = pcall(secpol, neoux, settings, proc.pkg, pid, req.perm, function (r)
-   req.result = r
-   req.service()
-  end)
+  local ok, err = pcall(secpol, neoux, settings, proc.pkg, pid, perm, req)
   if not ok then
    neo.emergency("Used fallback policy because of run-err: " .. err)
-   req.service()
+   req(def)
   end
  end)
 end

@@ -36,7 +36,8 @@ local ctrlFlag = false
 local dialogLock = false
 local appendFlag = false
 local sW, sH = 37, #lines + 2
-local window = neo.requestAccess("x.neo.pub.window")(sW, sH)
+local windows = neo.requestAccess("x.neo.pub.window")
+local window = windows(sW, sH)
 local flush
 
 local function splitCur()
@@ -55,13 +56,24 @@ local function clampCursorX()
  return false
 end
 
+local cbs = {}
+
 local function fileDialog(writing, callback)
  local tag = neo.requestAccess("x.neo.pub.base").showFileDialogAsync(writing)
  local f
  function f(_, evt, tag2, res)
   if evt == "filedialog" then
    if tag == tag2 then
-    callback(res)
+    local ok, e = pcall(callback, res)
+    if not ok then
+     e = unicode.safeTextFormat(tostring(e))
+     local wnd = windows(unicode.len(e), 1, "ERROR")
+     cbs[wnd.id] = {
+      wnd.close,
+      wnd.span,
+      e
+     }
+    end
     event.ignore(f)
    end
   end
@@ -409,6 +421,14 @@ while true do
    if e[3] == "clipboard" then
     ev_clipboard(e[4])
     flush()
+   end
+  elseif cbs[e[2]] then
+   if e[3] == "line" then
+    cbs[e[2]][2](1, 1, cbs[e[2]][3], 0, 0xFFFFFF)
+   end
+   if e[3] == "close" then
+    cbs[e[2]][1]()
+    cbs[e[2]] = nil
    end
   end
  end

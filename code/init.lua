@@ -25,9 +25,7 @@ primaryDisk = component.proxy(computer.getBootAddress())
 timers = {}
 
 libraries = {}
-setmetatable(libraries, {
- __mode = "v"
-})
+setmetatable(libraries, {__mode = "v"})
 
 -- proc.co = coroutine.create(appfunc)
 -- proc.pkg = "pkg"
@@ -89,7 +87,7 @@ function unicode.undoSafeTextFormat(s)
 end
 
 local function loadfile(s, e)
- local h = primaryDisk.open(s)
+ local h, er = primaryDisk.open(s)
  if h then
   local ch = ""
   local c = primaryDisk.read(h, readBufSize)
@@ -100,7 +98,7 @@ local function loadfile(s, e)
   primaryDisk.close(h)
   return load(ch, "=" .. s, "t", e)
  end
- return nil, "File Unreadable"
+ return nil, tostring(er)
 end
 
 local wrapMeta = nil
@@ -320,6 +318,7 @@ function loadLibraryInner(library)
  library = "libs/" .. library .. ".lua"
  ensurePath(library, "libs/")
  if libraries[library] then return libraries[library] end
+ emergencyFunction("loading " .. library)
  local l, r = loadfile(library, baseProcEnv())
  if l then
   local ok, al = pcall(l)
@@ -335,10 +334,9 @@ end
 
 -- These two are hooks for k.root level applications to change policy.
 -- Only a k.root application is allowed to do this for obvious reasons.
-function securityPolicy(pid, proc, req)
+function securityPolicy(pid, proc, perm, req)
  -- Important safety measure : only sys-* gets anything at first
- req.result = proc.pkg:sub(1, 4) == "sys-"
- req.service()
+ req(proc.pkg:sub(1, 4) == "sys-")
 end
 function runProgramPolicy(ipkg, pkg, pid, ...)
  -- VERY specific injunction here:
@@ -489,13 +487,11 @@ function start(pkg, ...)
  local requestAccessAsync = function (perm)
   ensureType(perm, "string")
   -- Safety-checked, prepare security event.
-  local req = {}
-  req.perm = perm
-  req.service = function ()
+  local req = function (res)
    if processes[pid] then
     local n = nil
     local n2 = nil
-    if req.result then
+    if res then
      proc.access[perm] = true
      proc.denied[perm] = nil
      n, n2 = retrieveAccess(perm, pkg, pid)
@@ -509,16 +505,14 @@ function start(pkg, ...)
    end
   end
   -- outer security policy:
-  req.result = proc.access["k.root"] or not proc.denied[perm]
-
   if proc.access["k.root"] or proc.access[perm] or proc.denied[perm] then
    -- Use cached result to prevent possible unintentional security service spam
-   req.service()
+   req(proc.access["k.root"] or not proc.denied[perm])
    return
   end
   -- Denied goes to on to prevent spam
   proc.denied[perm] = true
-  securityPolicy(pid, proc, req)
+  securityPolicy(pid, proc, perm, req)
  end
  local env = baseProcEnv()
  env.neo.pid = pid
@@ -558,7 +552,7 @@ function start(pkg, ...)
  if not appfunc then
   return nil, r
  end
- proc.co = coroutine.create(appfunc)
+ proc.co = coroutine.create(function (...) local r = {xpcall(appfunc, debug.traceback)} if not r[1] then error(table.unpack(r, 2)) end return table.unpack(r, 2) end)
  proc.pkg = pkg
  proc.access = {
   -- These permissions are the "critical set".

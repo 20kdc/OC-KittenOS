@@ -7,7 +7,8 @@
 -- This function needs access to the caller's NEO in order to ensure that NEO system functions are covered.
 -- This can do less checks than usual as it only affects the caller.
 
-return function (neo)
+-- Global forces reference to prevent duplication
+newEvent = function (neo)
  local listeners = {}
  local translations = {}
  local timers = {}
@@ -102,3 +103,4 @@ return function (neo)
   end
  }
 end
+return newEvent

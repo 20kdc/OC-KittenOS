@@ -113,7 +113,11 @@ getFsNode = function (fs, parent, fsc, path, mode)
    end,
    unknownAvailable = mode ~= nil,
    selectUnknown = function (text)
-    return true, require("sys-filewrap")(fsc, path .. text, mode)
+    local rt, re = require("sys-filewrap")(fsc, path .. text, mode)
+    if not rt then
+     return false, dialog("Open Error: " .. tostring(re), parent)
+    end
+    return true, rt
    end
   }
   return t
@@ -127,11 +131,19 @@ getFsNode = function (fs, parent, fsc, path, mode)
    end})
    if mode ~= nil then
     table.insert(n, {"Open", function ()
-     return true, require("sys-filewrap")(fsc, path, mode)
+     local rt, re = require("sys-filewrap")(fsc, path, mode)
+     if not rt then
+      return false, dialog("Open Error: " .. tostring(re), parent)
+     end
+     return true, rt
     end})
    end
    table.insert(n, {"Copy", function ()
-    return nil, setupCopyVirtualEnvironment(fs, parent, require("sys-filewrap")(fsc, path, false))
+    local rt, re = require("sys-filewrap")(fsc, path, false)
+    if not rt then
+     return false, dialog("Open Error: " .. tostring(re), parent)
+    end
+    return nil, setupCopyVirtualEnvironment(fs, parent, rt)
    end})
    table.insert(n, {"Delete", function ()
     fsc.remove(path)

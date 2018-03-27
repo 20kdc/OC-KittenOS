@@ -263,11 +263,13 @@ donkonitRDProvider(function (pkg, pid, sendSig)
       return function ()
        for v in gpus.list() do
         if v.address == gpu then
+         local didBind = false
          if currentGPUBinding[gpu] ~= address then
           v.bind(address, false)
+          didBind = true
          end
          currentGPUBinding[gpu] = address
-         return v
+         return v, didBind
         end
        end
       end

@@ -26,9 +26,7 @@
 --     or this is a screensaver host, and has a saving-throw to start Bristol if it dies unexpectedly.
 --    In any case, this eventually returns to 2 or 4.
 
-local everestProvider = neo.requestAccess("r.neo.pub.window", "registering npw")
-if not everestProvider then return end
-
+local everestProvider = neo.requireAccess("r.neo.pub.window", "registering npw")
 local everestSessionProvider = neo.requireAccess("r.neo.sys.session", "registering nsse")
 
 -- Got mutexes. Now setup saving throw and shutdown callback
@@ -56,6 +54,9 @@ monitors[0] = {nil, nil, 160, 50}
 -- key ka kc down
 -- line y
 local surfaces = {}
+
+-- Last Interact Monitor
+local lIM = 1
 
 -- Stops the main loop
 local shuttingDown = false
@@ -98,7 +99,7 @@ local function surfaceAt(monitor, x, y)
  end
 end
 
--- Always use the first sometime before the second
+-- Always use the first if the GPU has been rebound
 local function monitorResetBF(m)
  m[5] = -1
  m[6] = -1
@@ -136,9 +137,11 @@ end
 local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
  if not renderingAllowed() then return end
  local m = monitors[monitorId]
- local mg = m[1]()
+ local mg, rb = m[1]()
  if not mg then return end
- monitorResetBF(m)
+ if rb then
+  monitorResetBF(m)
+ end
  -- The input region is the one that makes SENSE.
  -- Considering WC handling, that's not an option.
  -- WCHAX: start
@@ -198,7 +201,7 @@ local function ensureOnscreen(monitor, x, y, w, h)
  -- Failing anything else, revert to monitor 0
  if #monitors == 0 then monitor = 0 end
  x = math.min(math.max(1, x), monitors[monitor][3] - (w - 1))
- y = math.min(math.max(1, y), monitors[monitor][4] - (h - 1))
+ y = math.max(1, math.min(monitors[monitor][4] - (h - 1), y))
  return monitor, x, y
 end
 
@@ -209,7 +212,10 @@ local function reconcileAll()
   v[1], v[2], v[3] = ensureOnscreen(v[1], v[2], v[3], v[4], v[5])
  end
  for k, v in ipairs(monitors) do
-  local mon = v[1]()
+  local mon, rb = v[1]()
+  if rb then
+   monitorResetBF(v)
+  end
   if mon then
    v[3], v[4] = mon.getResolution()
   end
@@ -218,7 +224,8 @@ local function reconcileAll()
  updateStatus()
 end
 
-local function moveSurface(surface, m, x, y, w, h)
+-- NOTE: If the M, X, Y, W and H are the same, this function ignores you, unless you put , true on the end.
+local function moveSurface(surface, m, x, y, w, h, force)
  local om, ox, oy, ow, oh = table.unpack(surface, 1, 5)
  m = m or om
  x = x or ox
@@ -227,24 +234,18 @@ local function moveSurface(surface, m, x, y, w, h)
  h = h or oh
  surface[1], surface[2], surface[3], surface[4], surface[5] = m, x, y, w, h
  local cache = {}
- if om == m then
-  if ow == w then
-   if oh == h then
-    -- Cheat - perform a GPU copy
-    -- this increases "apparent" performance while we're inevitably waiting for the app to catch up,
-    -- CANNOT glitch since we're going to draw over this later,
-    -- and will usually work since the user can only move focused surfaces
-    if renderingAllowed() then
-     local cb = monitors[m][1]()
-     if cb then
-      cb.copy(ox, oy, w, h, x - ox, y - oy)
-     end
-    end
-    --because OC's widechar support sucks, comment out this perf. opt.
-    --if surfaces[1] == surface then
-    -- updateRegion(om, ox, oy, ow, oh, cache)
-    -- return
-    --end
+ if om == m and ow == w and oh == h then
+  if ox == x and oy == y and not force then
+   return
+  end
+  -- note: this doesn't always work due to WC support
+  if renderingAllowed() then
+   local cb, b = monitors[m][1]()
+   if b then
+    monitorResetBF(b)
+   end
+   if cb then
+    cb.copy(ox, oy, w, h, x - ox, y - oy)
    end
   end
  end
@@ -266,9 +267,11 @@ end
 local function handleSpan(target, x, y, text, bg, fg)
  if not renderingAllowed() then return end
  local m = monitors[target[1]]
- local cb = m[1]()
+ local cb, rb = m[1]()
  if not cb then return end
- monitorResetBF(m)
+ if rb then
+  monitorResetBF(m)
+ end
  -- It is assumed basic type checks were handled earlier.
  if y < 1 then return end
  if y > target[5] then return end
@@ -366,8 +369,7 @@ everestProvider(function (pkg, pid, sendSig)
   end
   local m = 0
   if renderingAllowed() then m = 1 end
-  if surfaces[1] then m = surfaces[1][1] end
-  local surf = {m, 1, 2, w, h}
+  local surf = {math.min(#monitors, math.max(1, lIM)), 1, 2, w, h}
   local focusState = false
   local llid = lid
   lid = lid + 1
@@ -380,6 +382,10 @@ everestProvider(function (pkg, pid, sendSig)
    if ev == "touch" then
     specialDragHandler = nil
     if math.floor(b) == 1 then
+     if e == 1 then
+      sendSig(llid, "close")
+      return
+     end
      specialDragHandler = function (x, y)
       local ofsX, ofsY = math.floor(x) - math.floor(a), math.floor(y) - math.floor(b)
       if (ofsX == 0) and (ofsY == 0) then return end
@@ -397,6 +403,7 @@ everestProvider(function (pkg, pid, sendSig)
     b = b - 1
    end
    if ev == "scroll" or ev == "drop" then
+    specialDragHandler = nil
     b = b - 1
    end
    if ev == "line" then
@@ -435,7 +442,7 @@ everestProvider(function (pkg, pid, sendSig)
     w = math.floor(math.max(w, 8))
     h = math.floor(math.max(h, 1)) + 1
     local _, x, y = ensureOnscreen(surf[1], surf[2], surf[3], w, h)
-    moveSurface(surf, nil, x, y, w, h)
+    moveSurface(surf, nil, x, y, w, h, true)
     return w, (h - 1)
    end,
    span = function (x, y, text, bg, fg)
@@ -538,6 +545,7 @@ local function key(ka, kc, down)
   end
  end
  if focus then
+  lIM = focus[1]
   focus[6]("key", ka, kc, down)
  end
 end
@@ -577,6 +585,7 @@ while not shuttingDown do
   if s[1] == "h.touch" then
    for k, v in ipairs(monitors) do
     if v[2] == s[2] then
+     lIM = k
      local x, y = math.floor(s[3]), math.floor(s[4])
      local ix, iy = s[3] - x, s[4] - y
      local sid, lx, ly = surfaceAt(k, x, y)
@@ -586,6 +595,8 @@ while not shuttingDown do
       table.insert(surfaces, 1, ns)
       changeFocus(os)
       ns[6]("touch", lx, ly, ix, iy, s[5])
+     else
+      if s[5] == 1 and not waitingShutdownCallback then neo.executeAsync("app-launcher") end
      end
      break
     end

@@ -11,13 +11,8 @@
 local event = require("event")(neo)
 local neoux = require("neoux")(event, neo)
 
-local eeprom = neo.requestAccess("c.eeprom")
-if eeprom then
- eeprom = eeprom.list()()
-end
-if not eeprom then
- error("No EEPROM access")
-end
+local eeprom = neo.requireAccess("c.eeprom", "EEPROM access")
+eeprom = eeprom.list()()
 
 neoux.startDialog("NOTE: If this program is used improperly, it can require EEPROM replacement.\nOnly use trusted EEPROMs.", "eeprom-flash", true)
 

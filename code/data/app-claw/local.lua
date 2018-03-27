@@ -2,7 +2,6 @@ return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
   v = 0,
-  app = false,
   deps = {
   },
   dirs = {
@@ -12,6 +11,7 @@ return {
   },
   files = {
    "init.lua",
+   "apps/sys-glacier.lua",
    "libs/event.lua",
    "libs/serial.lua",
    "libs/neoux.lua",
@@ -21,10 +21,8 @@ return {
  ["neo-init"] = {
   desc = "KittenOS NEO / sys-init (startup)",
   v = 0,
-  app = "app-launcher",
   deps = {
    "neo",
-   "neo-glacier",
    "neo-icecap",
    "neo-everest"
   },
@@ -38,7 +36,6 @@ return {
  ["neo-launcher"] = {
   desc = "KittenOS NEO / Default app-launcher",
   v = 0,
-  app = "app-launcher",
   deps = {
    "neo"
   },
@@ -50,9 +47,8 @@ return {
   },
  },
  ["neo-everest"] = {
-  desc = "KittenOS NEO / Everest (settings & monitor management)",
+  desc = "KittenOS NEO / Everest (windowing)",
   v = 0,
-  app = "sys-everest",
   deps = {
    "neo"
   },
@@ -66,7 +62,6 @@ return {
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
   v = 0,
-  app = "sys-icecap",
   deps = {
    "neo"
   },
@@ -81,24 +76,21 @@ return {
    "apps/app-fm.lua"
   },
  },
- ["neo-glacier"] = {
-  desc = "KittenOS NEO / Glacier (settings & monitor management)",
+ ["neo-secpolicy"] = {
+  desc = "KittenOS NEO / Secpolicy",
   v = 0,
-  app = "sys-glacier",
   deps = {
-   "neo"
   },
   dirs = {
-   "apps"
+   "libs"
   },
   files = {
-   "apps/sys-glacier.lua"
-  },
+   "libs/sys-secpolicy.lua"
+  }
  },
- ["app-textedit"] = {
-  desc = "KittenOS NEO Text Editor (Neolithic)",
+ ["neo-coreapps"] = {
+  desc = "KittenOS NEO Core Apps",
   v = 0,
-  app = "app-textedit",
   deps = {
    "neo"
   },
@@ -106,13 +98,14 @@ return {
    "apps"
   },
   files = {
-   "apps/app-textedit.lua"
-  },
+   "apps/app-textedit.lua",
+   "apps/app-pass.lua",
+   "apps/app-taskmgr.lua"
+  }
  },
  ["app-flash"] = {
   desc = "KittenOS NEO EEPROM Flasher",
   v = 0,
-  app = "app-flash",
   deps = {
    "neo"
   },
@@ -123,38 +116,9 @@ return {
    "apps/app-flash.lua"
   },
  },
- ["app-pass"] = {
-  desc = "KittenOS NEO Password Setter & Logout",
-  v = 0,
-  app = "app-pass",
-  deps = {
-   "neo"
-  },
-  dirs = {
-   "apps"
-  },
-  files = {
-   "apps/app-pass.lua"
-  },
- },
- ["app-taskmgr"] = {
-  desc = "KittenOS NEO Task Manager",
-  v = 0,
-  app = "app-taskmgr",
-  deps = {
-   "neo"
-  },
-  dirs = {
-   "apps"
-  },
-  files = {
-   "apps/app-taskmgr.lua"
-  },
- },
  ["app-claw"] = {
   desc = "KittenOS NEO Package Manager",
   v = 0,
-  app = "app-claw",
   deps = {
    "neo"
   },
@@ -166,5 +130,24 @@ return {
    "apps/app-claw.lua",
    "libs/claw.lua"
   },
+ },
+ ["neo-meta"] = {
+  desc = "KittenOS NEO: Use 'All' to install to other disks",
+  v = 0,
+  deps = {
+   "neo",
+   "neo-init",
+   "neo-launcher",
+   "neo-everest",
+   "neo-icecap",
+   "neo-secpolicy",
+   "neo-coreapps",
+   "app-flash",
+   "app-claw"
+  },
+  dirs = {
+  },
+  files = {
+  }
  }
 }

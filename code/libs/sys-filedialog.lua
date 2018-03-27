@@ -130,6 +130,19 @@ local function prepareNodeI(node)
   if evt == "key" then
    key(wnd, a, b, c)
   end
+  if evt == "touch" then
+   local ns = b + math.max(1, selection - 4) - 2
+   local max = #l
+   if node.unknownAvailable then
+    max = max + 1
+   end
+   if ns == selection and selection ~= #l + 1 then
+    key(wnd, 13, 0, true)
+   else
+    selection = math.min(math.max(1, ns), max)
+    flush(wnd)
+   end
+  end
   if evt == "line" then
    updateLine(wnd, a)
   end

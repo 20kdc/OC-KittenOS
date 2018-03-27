@@ -153,6 +153,9 @@ local function finalPrompt()
  local password = ""
  if nsm then
   password = nsm.getSetting("password")
+  if nsm.getSetting("sys-init.nologin") == "yes" then
+   return false
+  end
  end
  warnings[1] = "TAB to change option,"
  warnings[2] = "ENTER to select..."

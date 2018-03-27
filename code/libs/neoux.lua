@@ -3,7 +3,9 @@
 
 -- neoux: Implements utilities on top of Everest & event:
 -- Everest crash protection
-return function (event, neo)
+
+-- Global forces reference. Otherwise, nasty duplication happens.
+newNeoux = function (event, neo)
  -- this is why neo access is 'needed'
  local function retrieveIcecap()
   return neo.requestAccess("x.neo.pub.base")
@@ -448,8 +450,8 @@ return function (event, neo)
   }
  end
  neoux.startDialog = function (fmt, title, wait)
-  fmt = neoux.fmtText(unicode.safeTextFormat(fmt), 20)
-  neoux.create(20, #fmt, title, function (window, ev, a, b, c)
+  fmt = neoux.fmtText(unicode.safeTextFormat(fmt), 40)
+  neoux.create(40, #fmt, title, function (window, ev, a, b, c)
    if ev == "line" then
     window.span(1, a, fmt[a], 0xFFFFFF, 0)
    end
@@ -464,3 +466,4 @@ return function (event, neo)
  end
  return neoux
 end
+return newNeoux
