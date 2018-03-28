@@ -329,10 +329,10 @@ local function initializeSystem()
  if gpu then
   screen = screen.address
   gpu.bind(screen, true)
-  gpu.setDepth(gpu.maxDepth())
   local gW, gH = gpu.maxResolution()
   gW, gH = math.min(80, gW), math.min(25, gH)
   gpu.setResolution(gW, gH)
+  pcall(gpu.setDepth, gpu.maxDepth()) -- can crash on OCEmu if done at the "wrong time"
   gpu.setForeground(0x000000)
  end
  local w = 1
@@ -420,12 +420,6 @@ end
 -- Actual sequence
 
 if callerPkg ~= nil then
- -- Everest can call into this to force a login screen
- -- In this case Everest dies, then starts Bristol.
- -- 
- if callerPkg ~= "sys-everest" then
-  return
- end
  screen = callerScr
  -- Skip to "System initialized" (Everest either logged off, or died & used a Saving Throw to restart)
 else

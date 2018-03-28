@@ -62,20 +62,25 @@ local lIM = 1
 local shuttingDown = false
 
 local savingThrow = neo.requestAccess("x.neo.sys.manage")
+local function dying()
+ local primary = (monitors[1] or {})[2] or ""
+ for _, v in ipairs(monitors) do
+  pcall(screens.disclaim, v[2])
+ end
+ monitors = {}
+ neo.executeAsync("sys-init", primary)
+ -- In this case the surfaces are leaked and hold references here. They have to be removed manually.
+ -- Do this via a "primary event" (k.deregistration) and "deathtrap events"
+ -- If a process evades the deathtrap then it clearly has reason to stay alive regardless of Everest status.
+ -- Also note, should savingThrow fail, neo.dead is now a thing.
+ for _, v in ipairs(surfaces) do
+  pcall(v[6], "line", 1)
+  pcall(v[6], "line", 2)
+ end
+end
 if savingThrow then
  savingThrow.registerForShutdownEvent()
- savingThrow.registerSavingThrow(function ()
-  neo.executeAsync("sys-init", monitors[1][2])
-  -- In this case the surfaces are leaked and hold references here. They have to be removed manually.
-  -- Do this via a "primary event" (k.deregistration) and "deathtrap events"
-  -- If a process evades the deathtrap then it clearly has reason to stay alive regardless of Everest status.
-  -- Also note, should savingThrow fail, neo.dead is now a thing.
-  monitors = {}
-  for _, v in ipairs(surfaces) do
-   pcall(v[6], "line", 1)
-   pcall(v[6], "line", 2)
-  end
- end)
+ savingThrow.registerSavingThrow(dying)
 end
 
 local function renderingAllowed()
@@ -165,8 +170,8 @@ local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
      doBackgroundLine(m, mg, bdx, bdy, bdl)
      backgroundMarkStart = nil
     end
-    if not surfaceSpanCache[monitorId .. t .. "_" .. ty] then
-     surfaceSpanCache[monitorId .. t .. "_" .. ty] = true
+    if not surfaceSpanCache[monitorId .. "_" .. t .. "_" .. ty] then
+     surfaceSpanCache[monitorId .. "_" .. t .. "_" .. ty] = true
      surfaces[t][6]("line", ty)
     end
    elseif not backgroundMarkStart then
@@ -211,15 +216,26 @@ local function reconcileAll()
   -- About to update whole screen anyway so avoid the wait.
   v[1], v[2], v[3] = ensureOnscreen(v[1], v[2], v[3], v[4], v[5])
  end
- for k, v in ipairs(monitors) do
+ local k = 1
+ while k <= #monitors do
+  local v = monitors[k]
   local mon, rb = v[1]()
   if rb then
    monitorResetBF(v)
   end
   if mon then
+   -- This *can* return null if something went wonky. Let's detect that
    v[3], v[4] = mon.getResolution()
+   if not v[3] then
+    neo.emergency("everest: monitor went AWOL and nobody told me u.u")
+    table.remove(monitors, k)
+    v = nil
+   end
   end
-  updateRegion(k, 1, 1, v[3], v[4], {})
+  if v then
+   updateRegion(k, 1, 1, v[3], v[4], {})
+   k = k + 1
+  end
  end
  updateStatus()
 end
@@ -246,6 +262,14 @@ local function moveSurface(surface, m, x, y, w, h, force)
    end
    if cb then
     cb.copy(ox, oy, w, h, x - ox, y - oy)
+    if surface == surfaces[1] then
+     local cacheControl = {}
+     for i = 1, h do
+      cacheControl[om .. "_1_" .. i] = true
+     end
+     updateRegion(om, ox, oy, ow, oh, cacheControl)
+     return
+    end
    end
   end
  end
@@ -445,6 +469,17 @@ everestProvider(function (pkg, pid, sendSig)
     moveSurface(surf, nil, x, y, w, h, true)
     return w, (h - 1)
    end,
+   getDepth = function ()
+    if neo.dead then return false end
+    local m = monitors[surf[1]]
+    if not m then return false end
+    local cb, rb = m[1]()
+    if not cb then return false end
+    if rb then
+     monitorResetBF(m)
+    end
+    return cb.getDepth()
+   end,
    span = function (x, y, text, bg, fg)
     if neo.dead then error("everest died") end
     if type(x) ~= "number" then error("X must be number.") end
@@ -481,8 +516,7 @@ everestSessionProvider(function (pkg, pid, sendSig)
   endSession = function (gotoBristol)
    shuttingDown = true
    if gotoBristol then
-    -- Notably, savingThrow only triggers for error-death...
-    neo.executeAsync("sys-init", (monitors[1] or {})[2])
+    dying()
    end
   end
  }
@@ -545,14 +579,16 @@ local function key(ka, kc, down)
   end
  end
  if focus then
-  lIM = focus[1]
+  if kc ~= 56 then
+   lIM = focus[1]
+  end
   focus[6]("key", ka, kc, down)
  end
 end
 
 -- take all displays!
 local function performClaim(s3)
- local gpu = screens.claim(s3)
+ local gpu, _ = screens.claim(s3)
  local gpucb = gpu and (gpu())
  if gpucb then
   local w, h = gpucb.getResolution()
@@ -571,6 +607,12 @@ while not shuttingDown do
  local s = {coroutine.yield()}
  if renderingAllowed() then
   if s[1] == "h.key_down" then
+   local m = screens.getMonitorByKeyboard(s[2])
+   for k, v in ipairs(monitors) do
+    if v[2] == m then
+     lIM = k
+    end
+   end   
    key(s[3], s[4], true)
   end
   if s[1] == "h.key_up" then

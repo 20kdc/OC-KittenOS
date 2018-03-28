@@ -4,6 +4,10 @@
 local event = require("event")(neo)
 local neoux = require("neoux")(event, neo)
 
--- label
--- [           ]
--- <read><write>
+-- 1234567890123456789012345
+-- ABCDEF12 Lua BIOS
+-- <get><set> <data> <label>
+-- 21FEDCBA Nuclear Disk
+-- <get><set> <data> <label>
+
+

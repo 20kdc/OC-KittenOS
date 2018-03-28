@@ -4,6 +4,15 @@
 -- neoux: Implements utilities on top of Everest & event:
 -- Everest crash protection
 
+-- Control reference
+-- x/y/w/h: ints, position/size, 1,1 TL
+-- selectable: boolean
+-- key(window, update, char, code, down)
+-- touch(window, update, x, y, xI, yI, button)
+-- drag(window, update, x, y, xI, yI, button)
+-- drop(window, update, x, y, xI, yI, button)
+-- scroll(window, update, x, y, xI, yI, amount)
+
 -- Global forces reference. Otherwise, nasty duplication happens.
 newNeoux = function (event, neo)
  -- this is why neo access is 'needed'
@@ -105,6 +114,12 @@ newNeoux = function (event, neo)
   end
   window.getSize = function ()
    return windowCore[2], windowCore[3]
+  end
+  window.getDepth = function ()
+   if windowCore[1] then
+    return windowCore[1].getDepth()
+   end
+   return 1
   end
   window.setSize = function (w, h)
    windowCore[2] = w
@@ -286,7 +301,10 @@ newNeoux = function (event, neo)
    if c1 then doZone(window, c1, cache) end
    if c2 then doZone(window, c2, cache) end
   end
-
+  -- Attach .update for external interference
+  for k, v in ipairs(controls) do
+   v.update = function (window) doZone(window, v, {}) end
+  end
   return function (window, ev, a, b, c, d, e)
    -- X,Y,Xi,Yi,B
    if ev == "touch" then
@@ -372,7 +390,7 @@ newNeoux = function (event, neo)
    selectable = false,
    line = function (window, x, y, lined, bg, fg, selected)
     -- Can't be selected normally so ignore that flag
-    window.span(x, y, lines[lined], bg, fg)    
+    window.span(x, y, lines[lined], bg, fg)
    end
   }
  end
@@ -401,7 +419,7 @@ newNeoux = function (event, neo)
      end
     end
    end,
-   touch = function (window, update, x, y)
+   touch = function (window, update, x, y, button)
     callback(window)
    end,
    line = function (window, x, y, lind, bg, fg, selected)

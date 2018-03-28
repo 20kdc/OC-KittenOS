@@ -15,6 +15,7 @@ return {
    "libs/event.lua",
    "libs/serial.lua",
    "libs/neoux.lua",
+   "libs/braille.lua",
    "libs/sys-filewrap.lua"
   },
  },
@@ -103,6 +104,22 @@ return {
    "apps/app-taskmgr.lua"
   }
  },
+ ["app-klogo"] = {
+  desc = "KittenOS NEO Logo",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps",
+   "data",
+   "data/app-klogo"
+  },
+  files = {
+   "apps/app-klogo.lua",
+   "data/app-klogo/logo.data"
+  },
+ },
  ["app-flash"] = {
   desc = "KittenOS NEO EEPROM Flasher",
   v = 0,
@@ -142,6 +159,7 @@ return {
    "neo-icecap",
    "neo-secpolicy",
    "neo-coreapps",
+   "app-klogo",
    "app-flash",
    "app-claw"
   },

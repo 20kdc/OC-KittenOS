@@ -209,21 +209,11 @@ local function execEvent(k, ...)
   local r, reason = coroutine.resume(v.co, ...)
   -- Mostly reliable accounting
   v.cpuUsage = v.cpuUsage + (computer.uptime() - timerA)
-  local dead = not r
-  local hasReason = dead
-  if not dead then
-   if coroutine.status(v.co) == "dead" then
-    dead = true
-   end
-  end
+  reason = ((not r) and tostring(reason)) or nil
+  local dead = (not not reason) or coroutine.status(v.co) == "dead"
   if dead then
-   if hasReason then
-    reason = tostring(reason)
-   else
-    reason = nil
-   end
    termProc(k, reason)
-   return hasReason
+   return not not reason
   end
  end
 end
@@ -349,6 +339,7 @@ function runProgramPolicy(ipkg, pkg, pid, ...)
    return nil, "non-sys app trying to start sys app"
   end
  end
+ return true
 end
 
 function retrieveAccess(perm, pkg, pid)
@@ -459,22 +450,26 @@ end
 local start = nil
 
 function start(pkg, ...)
- local args = {...}
  local proc = {}
  local pid = lastPID
  lastPID = lastPID + 1
 
  local function startFromUser(ipkg, ...)
-  ensureType(pkg, "string")
-  ensurePathComponent(pkg .. ".lua")
-  runProgramPolicy(ipkg, pkg, pid, ...)
-  return start(ipkg, pkg, pid, ...)
+  ensureType(ipkg, "string")
+  ensurePathComponent(ipkg .. ".lua")
+  local k, r = runProgramPolicy(ipkg, pkg, pid, ...)
+  if k then
+   return start(ipkg, pkg, pid, ...)
+  else
+   return k, r
+  end
  end
 
  local function osExecuteCore(handler, ...)
   local pid, err = startFromUser(...)
   while pid do
    local sig = {coroutine.yield()}
+   handler(table.unpack(sig))
    if sig[1] == "k.procdie" then
     if sig[3] == pid then
      return 0, sig[4]
@@ -528,11 +523,11 @@ function start(pkg, ...)
   if not handler then handler = function() end end
   while true do
    local n = {coroutine.yield()}
+   handler(table.unpack(n))
    if n[1] == "k.securityresponse" then
     -- Security response - if it involves the permission, then take it
     if n[2] == perm then return n[3] end
    end
-   handler(table.unpack(n))
   end
  end
  env.neo.requireAccess = function (perm, reason)
@@ -552,7 +547,7 @@ function start(pkg, ...)
  if not appfunc then
   return nil, r
  end
- proc.co = coroutine.create(function (...) local r = {xpcall(appfunc, debug.traceback)} if not r[1] then error(table.unpack(r, 2)) end return table.unpack(r, 2) end)
+ proc.co = coroutine.create(function (...) local r = {xpcall(appfunc, debug.traceback, ...)} if not r[1] then error(table.unpack(r, 2)) end return table.unpack(r, 2) end)
  proc.pkg = pkg
  proc.access = {
   -- These permissions are the "critical set".

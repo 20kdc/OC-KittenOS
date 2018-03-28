@@ -43,7 +43,7 @@ local settings = {
  ["pub.clipboard"] = "",
  ["sys-init.shell"] = "sys-everest",
  ["run.sys-icecap"] = "yes",
- -- scr.w/h/d.<uuid>
+ -- scr.w/h/d/t.<uuid>
 }
 
 local function loadSettings()
@@ -96,8 +96,9 @@ local function getGPU(monitor)
  local bestD = 0
  for v in gpus.list() do
   v.bind(monitor.address, false)
-  currentGPUBinding[v.address] = monitor.address
-  local d = v.maxDepth()
+  currentGPUBinding[v.address] = nil
+  local w, h = v.maxResolution()
+  local d = v.maxDepth() * w * h
   if d > bestD then
    bestG = v
    bestD = d
@@ -131,22 +132,27 @@ local function getMonitorSettings(a)
  local w = tonumber(settings["scr.w." .. a]) or 80
  local h = tonumber(settings["scr.h." .. a]) or 25
  local d = tonumber(settings["scr.d." .. a]) or 8
+ local t = ((settings["scr.t." .. a] == "yes") and "yes") or "no"
  w, h, d = math.floor(w), math.floor(h), math.floor(d)
- return w, h, d
+ return w, h, d, t
 end
 local function setupMonitor(gpu, monitor)
+ monitor.setPrecise(true)
+ monitor.turnOn()
  gpu.bind(monitor.address, false)
  currentGPUBinding[gpu.address] = monitor.address
  local maxW, maxH = gpu.maxResolution()
  local maxD = gpu.maxDepth()
- local w, h, d = getMonitorSettings(monitor.address)
+ local w, h, d, t = getMonitorSettings(monitor.address)
  w, h, d = math.min(w, maxW), math.min(h, maxH), math.min(d, maxD)
+ monitor.setTouchModeInverted(t == "yes")
  settings["scr.w." .. monitor.address] = tostring(w)
  settings["scr.h." .. monitor.address] = tostring(h)
  settings["scr.d." .. monitor.address] = tostring(d)
  sRattle("scr.w." .. monitor.address, tostring(w))
  sRattle("scr.h." .. monitor.address, tostring(h))
  sRattle("scr.d." .. monitor.address, tostring(d))
+ sRattle("scr.t." .. monitor.address, t)
  gpu.setResolution(w, h)
  gpu.setDepth(d)
  pcall(saveSettings)
@@ -226,6 +232,15 @@ donkonitRDProvider(function (pkg, pid, sendSig)
   end
  end}
  return {
+  getMonitorByKeyboard = function (kb)
+   for v in screens.list() do
+    for _, v2 in ipairs(v.getKeyboards()) do
+     if v2 == kb then
+      return v.address
+     end
+    end
+   end
+  end,
   getClaimable = function ()
    local c = {}
    -- do we have gpu?
@@ -272,7 +287,7 @@ donkonitRDProvider(function (pkg, pid, sendSig)
          return v, didBind
         end
        end
-      end
+      end, v
      end
     end
    end

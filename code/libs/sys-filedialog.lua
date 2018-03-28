@@ -46,7 +46,7 @@ local function prepareNodeI(node)
   if a <= 1 then
    return true, true, node.name
   end
-  local camY = math.max(1, selection - 4)
+  local camY = math.max(1, selection - 3)
   local idx = a + camY - 2
   if node.unknownAvailable then
    if idx == #l + 1 then
@@ -131,7 +131,7 @@ local function prepareNodeI(node)
    key(wnd, a, b, c)
   end
   if evt == "touch" then
-   local ns = b + math.max(1, selection - 4) - 2
+   local ns = b + math.max(1, selection - 3) - 2
    local max = #l
    if node.unknownAvailable then
     max = max + 1

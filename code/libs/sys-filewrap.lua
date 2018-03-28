@@ -14,9 +14,14 @@ return function(dev, file, mode)
    dev.close(handle)
   end)
  end
+ local function seeker(whence, point)
+  if not open then return end
+  return dev.seek(handle, whence, point)
+ end
  if not mode then
   return {
    close = closer,
+   seek = seeker,
    read = function (len)
     if len == "*a" then
      local ch = ""
@@ -34,6 +39,7 @@ return function(dev, file, mode)
  else
   return {
    close = closer,
+   seek = seeker,
    write = function (txt)
     if type(txt) ~= "string" then error("Write data must be string-bytearray") end
     local ok, b = dev.write(handle, txt)
