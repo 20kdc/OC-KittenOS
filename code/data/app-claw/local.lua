@@ -86,7 +86,8 @@ return {
    "libs"
   },
   files = {
-   "libs/sys-secpolicy.lua"
+   "libs/sys-secpolicy.lua",
+   "libs/sys-criticals.lua"
   }
  },
  ["neo-coreapps"] = {
@@ -100,7 +101,7 @@ return {
   },
   files = {
    "apps/app-textedit.lua",
-   "apps/app-pass.lua",
+   "apps/app-control.lua",
    "apps/app-taskmgr.lua"
   }
  },

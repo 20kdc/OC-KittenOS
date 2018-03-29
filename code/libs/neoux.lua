@@ -12,6 +12,7 @@
 -- drag(window, update, x, y, xI, yI, button)
 -- drop(window, update, x, y, xI, yI, button)
 -- scroll(window, update, x, y, xI, yI, amount)
+-- clipboard(window, update, contents)
 
 -- Global forces reference. Otherwise, nasty duplication happens.
 newNeoux = function (event, neo)
@@ -102,9 +103,10 @@ newNeoux = function (event, neo)
   local k = #windows + 1
   table.insert(windows, windowCore)
   pushWindowToEverest(k)
-  window.reset = function (w, h, cb)
+  -- API convenience: args compatible with .create
+  window.reset = function (nw, nh, _, cb)
    callback = cb
-   if mw or nh then
+   if nw or nh then
     windowCore[2] = nw
     windowCore[3] = nh
    end
@@ -210,11 +212,7 @@ newNeoux = function (event, neo)
   return {neoux.pad(text, w)}
  end
  -- UI FRAMEWORK --
- neoux.tcwindow = function (w, h, controls, closing, bg, fg)
-  local selIndex = #controls
-  if #controls == 0 then
-   selIndex = 1
-  end
+ neoux.tcwindow = function (w, h, controls, closing, bg, fg, selIndex)
   local function rotateSelIndex()
    local original = selIndex
    while true do
@@ -232,7 +230,13 @@ newNeoux = function (event, neo)
     end
    end
   end
-  rotateSelIndex()
+  if not selIndex then
+   selIndex = #controls
+   if #controls == 0 then
+    selIndex = 1
+   end
+   rotateSelIndex()
+  end
   local function moveIndex(vertical, negative)
    if not controls[selIndex] then return end
    local currentMA, currentOA = controls[selIndex].y, controls[selIndex].x
@@ -372,6 +376,12 @@ newNeoux = function (event, neo)
     elseif controls[selIndex] then
      if controls[selIndex].key then
       controls[selIndex].key(window, function () doZone(window, controls[selIndex]) end, a, b, c)
+     end
+    end
+   elseif ev == "clipboard" then
+    if controls[selIndex] then
+     if controls[selIndex].clipboard then
+      controls[selIndex].clipboard(window, function () doZone(window, controls[selIndex]) end, a)
      end
     end
    elseif ev == "line" then

@@ -9,6 +9,7 @@
 --  drag(window, update, x, y, button)
 --  drop(window, update, x, y, button)
 --  scroll(window, update, x, y, button)
+--  clipboard(window, update, contents)
 --  get(window, x, y, bg, fg, selected) -> r,g,b (REQUIRED)
 -- REMINDER:
 -- 03
@@ -82,7 +83,89 @@ end
 local function packRGB(r, g, b)
  return (r * 65536) + (g * 256) + b
 end
+-- span is a NeoUX-like span function (x, y, str, bg, fg)
+-- x, y are character-cell start coordinates for this.
+-- w is character-cell count.
+-- colour is nil to disable colour,
+-- otherwise the colour-change threshold (best 0)
+-- get is a function r,g,b = get(xo, yo)
+-- NOTE: xo/yo are 0-based!
+local function calcLine(x, y, w, span, get, colour)
+ local str = ""
+ local bgR = 0
+ local bgG = 0
+ local bgB = 0
+ local fgR = 255
+ local fgG = 255
+ local fgB = 255
+ local bg = 0
+ local fg = 0xFFFFFF
+ local ca = 0
+ for p = 1, w do
+  local i = 0x2800
+  local xb = (p - 1) * 2
+  local dot0R, dot0G, dot0B = get(xb + 0, 0)
+  local dot1R, dot1G, dot1B = get(xb + 0, 1)
+  local dot2R, dot2G, dot2B = get(xb + 0, 2)
+  local dot3R, dot3G, dot3B = get(xb + 1, 0)
+  local dot4R, dot4G, dot4B = get(xb + 1, 1)
+  local dot5R, dot5G, dot5B = get(xb + 1, 2)
+  local dot6R, dot6G, dot6B = get(xb + 0, 3)
+  local dot7R, dot7G, dot7B = get(xb + 1, 3)
+  if colour then
+   local obgR, obgG, obgB = colourize(nil,
+    {dot0R, dot0G, dot0B},
+    {dot1R, dot1G, dot1B},
+    {dot2R, dot2G, dot2B},
+    {dot3R, dot3G, dot3B},
+    {dot4R, dot4G, dot4B},
+    {dot5R, dot5G, dot5B},
+    {dot6R, dot6G, dot6B},
+    {dot7R, dot7G, dot7B}
+   )
+   local ofgR, ofgG, ofgB = colourize({obgR, obgG, obgB},
+    {dot0R, dot0G, dot0B},
+    {dot1R, dot1G, dot1B},
+    {dot2R, dot2G, dot2B},
+    {dot3R, dot3G, dot3B},
+    {dot4R, dot4G, dot4B},
+    {dot5R, dot5G, dot5B},
+    {dot6R, dot6G, dot6B},
+    {dot7R, dot7G, dot7B}
+   )
+   if ((dotDist(obgR, obgG, obgB, bgR, bgG, bgB) > colour) and
+      (dotDist(obgR, obgG, obgB, fgR, fgG, fgB) > colour)) or
+      ((dotDist(ofgR, ofgG, ofgB, bgR, bgG, bgB) > colour) and
+      (dotDist(ofgR, ofgG, ofgB, fgR, fgG, fgB) > colour)) then
+    if ca ~= 0 then
+     span(x, y, str, bg, fg)
+     str = ""
+    end
+    x = x + ca
+    ca = 0
+    bg = packRGB(obgR, obgG, obgB)
+    fg = packRGB(ofgR, ofgG, ofgB)
+    bgR, bgG, bgB = obgR, obgG, obgB
+    fgR, fgG, fgB = ofgR, ofgG, ofgB
+   end
+  end
+  i = i + dotGet(1, dot0R, dot0G, dot0B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
+  i = i + dotGet(2, dot1R, dot1G, dot1B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
+  i = i + dotGet(4, dot2R, dot2G, dot2B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
+  i = i + dotGet(8, dot3R, dot3G, dot3B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
+  i = i + dotGet(16, dot4R, dot4G, dot4B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
+  i = i + dotGet(32, dot5R, dot5G, dot5B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
+  i = i + dotGet(64, dot6R, dot6G, dot6B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
+  i = i + dotGet(128, dot7R, dot7G, dot7B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
+  str = str .. unicode.char(i)
+  ca = ca + 1
+ end
+ if str ~= "" then
+  span(x, y, str, bg, fg)
+ end
+end
 heldRef = neo.wrapMeta({
+ calcLine = calcLine,
  new = function (x, y, w, h, cbs, colour)
   local control
   control = {
@@ -92,83 +175,16 @@ heldRef = neo.wrapMeta({
    h = h,
    selectable = cbs.selectable,
    key = cbs.key,
+   clipboard = cbs.clipboard,
    touch = cbs.touch and cTransform(cbs.touch),
    drag = cbs.drag and cTransform(cbs.drag),
    drop = cbs.drop and cTransform(cbs.drop),
    scroll = cbs.scroll and cTransform(cbs.scroll),
    line = function (window, x, y, iy, bg, fg, selected)
-    local colour = (window.getDepth() > 1) and colour
-    local str = ""
-    local bgR = 0
-    local bgG = 0
-    local bgB = 0
-    local fgR = 255
-    local fgG = 255
-    local fgB = 255
-    bg = 0
-    fg = 0xFFFFFF
-    local ca = 0
-    for p = 1, control.w do
-     local i = 0x2800
-     local xb = (p * 2) - 1
-     local yb = (iy * 4) - 3
-     local dot0R, dot0G, dot0B = cbs.get(window, xb, yb, bg, fg, selected, colour)
-     local dot1R, dot1G, dot1B = cbs.get(window, xb, yb + 1, bg, fg, selected, colour)
-     local dot2R, dot2G, dot2B = cbs.get(window, xb, yb + 2, bg, fg, selected, colour)
-     local dot3R, dot3G, dot3B = cbs.get(window, xb + 1, yb, bg, fg, selected, colour)
-     local dot4R, dot4G, dot4B = cbs.get(window, xb + 1, yb + 1, bg, fg, selected, colour)
-     local dot5R, dot5G, dot5B = cbs.get(window, xb + 1, yb + 2, bg, fg, selected, colour)
-     local dot6R, dot6G, dot6B = cbs.get(window, xb, yb + 3, bg, fg, selected, colour)
-     local dot7R, dot7G, dot7B = cbs.get(window, xb + 1, yb + 3, bg, fg, selected, colour)
-     if colour then
-      local obgR, obgG, obgB = colourize(nil,
-       {dot0R, dot0G, dot0B},
-       {dot1R, dot1G, dot1B},
-       {dot2R, dot2G, dot2B},
-       {dot3R, dot3G, dot3B},
-       {dot4R, dot4G, dot4B},
-       {dot5R, dot5G, dot5B},
-       {dot6R, dot6G, dot6B},
-       {dot7R, dot7G, dot7B}
-      )
-      local ofgR, ofgG, ofgB = colourize({obgR, obgG, obgB},
-       {dot0R, dot0G, dot0B},
-       {dot1R, dot1G, dot1B},
-       {dot2R, dot2G, dot2B},
-       {dot3R, dot3G, dot3B},
-       {dot4R, dot4G, dot4B},
-       {dot5R, dot5G, dot5B},
-       {dot6R, dot6G, dot6B},
-       {dot7R, dot7G, dot7B}
-      )
-      if ((dotDist(obgR, obgG, obgB, bgR, bgG, bgB) > colour) and
-         (dotDist(obgR, obgG, obgB, fgR, fgG, fgB) > colour)) or
-         ((dotDist(ofgR, ofgG, ofgB, bgR, bgG, bgB) > colour) and
-         (dotDist(ofgR, ofgG, ofgB, fgR, fgG, fgB) > colour)) then
-       if ca ~= 0 then
-        window.span(x, y, str, bg, fg)
-        str = ""
-       end
-       x = x + ca
-       ca = 0
-       bg = packRGB(obgR, obgG, obgB)
-       fg = packRGB(ofgR, ofgG, ofgB)
-       bgR, bgG, bgB = obgR, obgG, obgB
-       fgR, fgG, fgB = ofgR, ofgG, ofgB
-      end
-     end
-     i = i + dotGet(1, dot0R, dot0G, dot0B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-     i = i + dotGet(2, dot1R, dot1G, dot1B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-     i = i + dotGet(4, dot2R, dot2G, dot2B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-     i = i + dotGet(8, dot3R, dot3G, dot3B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-     i = i + dotGet(16, dot4R, dot4G, dot4B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-     i = i + dotGet(32, dot5R, dot5G, dot5B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-     i = i + dotGet(64, dot6R, dot6G, dot6B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-     i = i + dotGet(128, dot7R, dot7G, dot7B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-     str = str .. unicode.char(i)
-     ca = ca + 1
-    end
-    window.span(x, y, str, bg, fg)
+    local colour = ((window.getDepth() <= 1) or nil) and colour
+    calcLine(x, y, control.w, window.span, function (xb, yb)
+     return cbs.get(window, xb + 1, yb + (iy * 4) - 3, bg, fg, selected, colour)
+    end, colour)
    end,
   }
   return control

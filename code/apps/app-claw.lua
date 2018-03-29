@@ -114,9 +114,12 @@ local windows = 1
 local primarySearchTx = ""
 local primaryPage = 1
 local primaryList = {}
+local primaryNextMinus = false
+
 -- package
 local packageLock = nil
 local packageId = "FIXME"
+
 
 local function describe(pkg)
  local weHave = claw.getInfo(pkg, "local")
@@ -135,13 +138,14 @@ local function describe(pkg)
 end
 
 local function primaryWindowRegenCore()
- return neoux.tcwindow(25, 12, genCurrent(), function (w)
+ local gen, gens = genCurrent()
+ return 25, 12, "claw", neoux.tcwindow(25, 12, gen, function (w)
    w.close()
    windows = windows - 1
-  end, 0xFF8F00, 0)
+  end, 0xFF8F00, 0, gens)
 end
 local function primaryWindowRegen()
- primaryWindow.reset(25, 12, primaryWindowRegenCore())
+ primaryWindow.reset(primaryWindowRegenCore())
 end
 
 -- Use all non-primary filesystems
@@ -174,6 +178,8 @@ primaryList = claw.getList()
 -- Sections
 
 function genPrimary()
+ local minus = (primaryNextMinus and 3) or nil
+ primaryNextMinus = false
  local pgs = 10
  local pages = math.ceil(#primaryList / pgs)
  local elems = {
@@ -186,6 +192,7 @@ function genPrimary()
   neoux.tcrawview(4, 1, {neoux.pad(primaryPage .. " / " .. pages, 19, true, true)}),
   neoux.tcbutton(1, 1, "-", function (w)
    if primaryPage > 1 then
+    primaryNextMinus = true
     primaryPage = primaryPage - 1
     primaryWindowRegen()
    end
@@ -221,7 +228,7 @@ function genPrimary()
   primaryList = n
   primaryWindowRegen()
  end))
- return elems
+ return elems, minus
 end
 
 --
@@ -325,7 +332,7 @@ end
 --
 
 genCurrent = genPrimary
-primaryWindow = neoux.create(25, 12, "claw", primaryWindowRegenCore())
+primaryWindow = neoux.create(primaryWindowRegenCore())
 
 while windows > 0 do
  event.pull()

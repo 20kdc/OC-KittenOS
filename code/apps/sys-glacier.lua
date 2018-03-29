@@ -335,17 +335,20 @@ glacierDCProvider(function (pkg, pid, sendSig)
     tbl[k] = {v.address, false, getMonitorSettings(v.address)}
    end
    for k, v in pairs(monitorClaims) do
-    table.insert(tbl, {k, true, getMonitorSettings(v.address)})
+    table.insert(tbl, {k, true, getMonitorSettings(k)})
    end
+   return tbl
   end,
-  changeMonitorSetup = function (ma, w, h, d)
+  changeMonitorSetup = function (ma, w, h, d, t)
    neo.ensureType(ma, "string")
    neo.ensureType(w, "number")
    neo.ensureType(h, "number")
    neo.ensureType(d, "number")
+   neo.ensureType(t, "string")
    w = math.floor(w)
    h = math.floor(h)
    d = math.floor(d)
+   if t ~= "yes" then t = "no" end
    if w < 1 then error("Invalid width") end
    if h < 1 then error("Invalid height") end
    if d < 1 then error("Invalid depth") end
@@ -353,9 +356,11 @@ glacierDCProvider(function (pkg, pid, sendSig)
    settings["scr.w." .. ma] = w
    settings["scr.h." .. ma] = h
    settings["scr.d." .. ma] = d
+   settings["scr.t." .. ma] = t
    sRattle("scr.w." .. ma, w)
    sRattle("scr.h." .. ma, h)
    sRattle("scr.d." .. ma, d)
+   sRattle("scr.t." .. ma, t)
    pcall(saveSettings)
   end,
   forceRescan = rescanDevs,

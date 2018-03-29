@@ -62,6 +62,15 @@ local lIM = 1
 local shuttingDown = false
 
 local savingThrow = neo.requestAccess("x.neo.sys.manage")
+
+local function suggestAppsStop()
+ for k, v in ipairs(surfaces) do
+  for i = 1, 4 do
+   v[6]("close")
+  end
+ end
+end
+
 local function dying()
  local primary = (monitors[1] or {})[2] or ""
  for _, v in ipairs(monitors) do
@@ -77,6 +86,7 @@ local function dying()
   pcall(v[6], "line", 1)
   pcall(v[6], "line", 2)
  end
+ surfaces = {}
 end
 if savingThrow then
  savingThrow.registerForShutdownEvent()
@@ -185,7 +195,7 @@ local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
 end
 
 local function updateStatus()
- statusLine = "Λ-¶: menu (launch 'pass' to logout)"
+ statusLine = "Λ-¶: menu (launch 'control' to logout)"
  if surfaces[1] then
   if #monitors > 1 then
    --            123456789X123456789X123456789X123456789X123456789X
@@ -254,8 +264,8 @@ local function moveSurface(surface, m, x, y, w, h, force)
   if ox == x and oy == y and not force then
    return
   end
-  -- note: this doesn't always work due to WC support
-  if renderingAllowed() then
+  -- note: this doesn't always work due to WC support, and due to resize-to-repaint
+  if renderingAllowed() and not force then
    local cb, b = monitors[m][1]()
    if b then
     monitorResetBF(b)
@@ -384,6 +394,7 @@ everestProvider(function (pkg, pid, sendSig)
  local lid = 0
  return function (w, h, title)
   if neo.dead then error("everest died") end
+  if shuttingDown or waitingShutdownCallback then error("system shutting down") end
   w = math.floor(math.max(w, 8))
   h = math.floor(math.max(h, 1)) + 1
   if type(title) ~= "string" then
@@ -516,6 +527,7 @@ everestSessionProvider(function (pkg, pid, sendSig)
   endSession = function (gotoBristol)
    shuttingDown = true
    if gotoBristol then
+    suggestAppsStop()
     dying()
    end
   end
@@ -699,9 +711,7 @@ while not shuttingDown do
  if s[1] == "x.neo.sys.manage" then
   if s[2] == "shutdown" then
    waitingShutdownCallback = s[4]
-   for k, v in ipairs(surfaces) do
-    v[6]("close")
-   end
+   suggestAppsStop()
    checkWSC()
   end
  end
