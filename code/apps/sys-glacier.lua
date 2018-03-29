@@ -412,7 +412,7 @@ while true do
   targsSD[s[3]] = nil
   if targsST[s[3]] then
    if s[4] then
-    pcall(targsST[s[3]])
+    coroutine.resume(coroutine.create(targsST[s[3]]))
    end
   end
   targsST[s[3]] = nil

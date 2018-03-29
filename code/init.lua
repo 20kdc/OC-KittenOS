@@ -4,16 +4,14 @@
 
 -- NOTE: local is considered unnecessary in kernel since 21 March
 
--- Debugging option, turns process errors into actual errors (!)
-local criticalFailure = false
 -- In case of OpenComputers configuration abnormality
-local readBufSize = 2048
+readBufSize = 2048
 
 -- A function used for logging, usable by programs.
-local emergencyFunction = function () end
+emergencyFunction = function () end
 -- Comment this out if you don't want programs to have
 --  access to ocemu's logger.
-local ocemu = component.list("ocemu", true)()
+ocemu = component.list("ocemu", true)()
 if ocemu then
  ocemu = component.proxy(ocemu)
  emergencyFunction = ocemu.log
@@ -37,10 +35,10 @@ setmetatable(libraries, {__mode = "v"})
 processes = {}
 -- Maps registration-accesses to function(pkg, pid)
 accesses = {}
-local lastPID = 0
+lastPID = 0
 
 -- Kernel global "idle time" counter, useful for accurate performance data
-local idleTime = 0
+idleTime = 0
 
 -- This function is critical to wide text support.
 function unicode.safeTextFormat(s, ptr)
@@ -86,7 +84,7 @@ function unicode.undoSafeTextFormat(s)
  return res
 end
 
-local function loadfile(s, e)
+function loadfile(s, e)
  local h, er = primaryDisk.open(s)
  if h then
   local ch = ""
@@ -101,8 +99,8 @@ local function loadfile(s, e)
  return nil, tostring(er)
 end
 
-local wrapMeta = nil
-local uniqueNEOProtectionObject = {}
+uniqueNEOProtectionObject = {}
+
 function wrapMeta(t)
  if type(t) == "table" then
   local t2 = {}
@@ -132,20 +130,20 @@ function wrapMeta(t)
  end
 end
 
-local function ensureType(a, t)
+function ensureType(a, t)
  if type(a) ~= t then error("Invalid parameter, expected a " .. t) end
  if t == "table" then
   if getmetatable(a) then error("Invalid parameter, has metatable") end
  end
 end
 
-local function ensurePathComponent(s)
+function ensurePathComponent(s)
  if not s:match("^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+") then error("chars disallowed") end
  if s == "." then error("single dot disallowed") end
  if s == ".." then error("double dot disallowed") end
 end
 
-local function ensurePath(s, r)
+function ensurePath(s, r)
  -- Filter filename for anything "worrying". Note / is allowed, see further filters
  if not s:match("^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^%/]+") then error("chars disallowed") end
  if s:sub(1, r:len()) ~= r then error("base disallowed") end
@@ -158,23 +156,21 @@ local function ensurePath(s, r)
  if s:match("/%.$") then error("/. disallowed") end
 end
 
-local wrapMath = wrapMeta(math)
-local wrapTable = wrapMeta(table)
-local wrapString = wrapMeta(string)
-local wrapUnicode = wrapMeta(unicode)
-local wrapCoroutine = wrapMeta(coroutine)
-local wrapOs = wrapMeta({
+wrapMath = wrapMeta(math)
+wrapTable = wrapMeta(table)
+wrapString = wrapMeta(string)
+wrapUnicode = wrapMeta(unicode)
+wrapCoroutine = wrapMeta(coroutine)
+wrapOs = wrapMeta({
   totalMemory = computer.totalMemory, freeMemory = computer.freeMemory,
   energy = computer.energy, maxEnergy = computer.maxEnergy,
   clock = os.clock, date = os.date, difftime = os.difftime,
   time = os.time, uptime = computer.uptime
  })
 
-local distEvent = nil
-
 -- Use with extreme care.
 -- (A process killing itself will actually survive until the next yield... before any of the death events have run.)
-local function termProc(pid, reason)
+function termProc(pid, reason)
  if processes[pid] then
   -- Immediately prepare for GC, it's possible this is out of memory.
   -- If out of memory, then to reduce risk of memory leak by error, memory needs to be freed ASAP.
@@ -189,9 +185,6 @@ local function termProc(pid, reason)
   end
   -- This finishes off that.
   dcbs = nil
-  if reason and criticalFailure then
-   error(tostring(reason)) -- This is a debugging aid to give development work an easy-to-get-at outlet. Icecap is for most cases
-  end
   if reason then
    emergencyFunction("d1 " .. pkg .. "/" .. pid)
    emergencyFunction("d2 " .. reason)
@@ -202,7 +195,7 @@ local function termProc(pid, reason)
  end
 end
 
-local function execEvent(k, ...)
+function execEvent(k, ...)
  if processes[k] then
   local v = processes[k]
   local timerA = computer.uptime()
@@ -237,7 +230,18 @@ function distEvent(pid, s, ...)
  end
 end
 
-local loadLibraryInner = nil
+function lister(pfx)
+ return function ()
+  local n = primaryDisk.list(pfx)
+  local n2 = {}
+  for k, v in ipairs(n) do
+   if v:sub(#v - 3) == ".lua" then
+    table.insert(n2, v:sub(1, #v - 4))
+   end
+  end
+  return n2
+ end
+end
 
 function baseProcEnv()
  return {math = wrapMath,
@@ -275,26 +279,8 @@ function baseProcEnv()
     end
     return n
    end,
-   listApps = function ()
-    local n = primaryDisk.list("apps/")
-    local n2 = {}
-    for k, v in ipairs(n) do
-     if v:sub(#v - 3) == ".lua" then
-      table.insert(n2, v:sub(1, #v - 4))
-     end
-    end
-    return n2
-   end,
-   listLibs = function ()
-    local n = primaryDisk.list("libs/")
-    local n2 = {}
-    for k, v in ipairs(n) do
-     if v:sub(#v - 3) == ".lua" then
-      table.insert(n2, v:sub(1, #v - 4))
-     end
-    end
-    return n2
-   end,
+   listApps = lister("apps/"),
+   listLibs = lister("libs/"),
    totalIdleTime = function () return idleTime end,
    ensurePath = ensurePath,
    ensurePathComponent = ensurePathComponent,
@@ -447,8 +433,6 @@ function retrieveAccess(perm, pkg, pid)
  end
 end
 
-local start = nil
-
 function start(pkg, ...)
  local proc = {}
  local pid = lastPID
@@ -567,12 +551,8 @@ function start(pkg, ...)
  pcall(distEvent, nil, "k.procnew", pkg, pid)
  processes[pid] = proc
  -- For processes waiting on others, this at least tries to guarantee some safety.
- if criticalFailure then
-  execEvent(pid, ...)
- else
-  if not pcall(execEvent, pid, ...) then
-   return nil, "neocore"
-  end
+ if not pcall(execEvent, pid, ...) then
+  return nil, "neocore"
  end
  return pid
 end
@@ -614,11 +594,7 @@ while true do
    if not didAnything then break end
   end
   now = computer.uptime() -- the above probably took a while
-  local dist = nil
-  if tmr then
-   dist = tmr - now
-   if dist < 0.05 then dist = 0.05 end
-  end
+  local dist = tmr and math.max(0.05, tmr - now)
   local signal = {computer.pullSignal(dist)}
   idleTime = idleTime + (computer.uptime() - now)
   if signal[1] then
