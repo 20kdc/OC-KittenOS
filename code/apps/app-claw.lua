@@ -10,7 +10,6 @@ if not neoux then error(err) end
 neoux = neoux(event, neo)
 local claw = require("claw")()
 
--- HTTP-only because OCEmu SUCKS
 local source = "http://20kdc.duckdns.org/neo/"
 local disks = neo.requireAccess("c.filesystem", "searching disks for packages")
 local primaryDisk = disks.primary
@@ -37,7 +36,6 @@ local function download(url, cb)
   cb(nil)
   return nil, tostring(err)
  end
- local dt = ""
  while true do
   local n, n2 = req.read()
   local o, r = cb(n)
@@ -58,7 +56,6 @@ local function download(url, cb)
    end
   end
  end
- req.close()
  return true
 end
 

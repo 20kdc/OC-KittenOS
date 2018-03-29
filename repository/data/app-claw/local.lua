@@ -1,3 +1,9 @@
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
+
+-- local.lua : CLAW Repository Metadata
+-- Authors: 20kdc
+
 return {
  ["app-eeprog"] = {
   desc = "EEPROM programmer / copier",
@@ -11,17 +17,5 @@ return {
   files = {
    "apps/app-eeprog.lua"
   },
- },
- ["mtd"] = {
-  desc = "Multi-Track Drifting",
-  v = 1337,
-  deps = {
-   "app-eeprog"
-  },
-  dirs = {
-  },
-  files = {
-   "oreproc.txt"
-  }
  }
 }

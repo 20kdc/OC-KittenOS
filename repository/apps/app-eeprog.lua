@@ -1,7 +1,9 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- app-eeprom: Tiny EEPROM flasher
+-- app-eeprog.lua : Tiny EEPROM flasher
+-- Authors: 20kdc
+
 -- Example of a tiny app a user could write relatively quickly if they have NEO system knowledge
 -- Note the high amount of synchronous routines used here.
 -- For a tiny app like this, it's fine, and KittenOS NEO makes sure it won't interfere.

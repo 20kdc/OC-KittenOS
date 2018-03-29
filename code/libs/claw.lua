@@ -152,11 +152,12 @@ return function ()
     ifo = ifo .. (t or "")
     return true
    end)
+   e = e or "local.lua parse error"
    ifo = ifok and require("serial").deserialize(ifo)
    if not (dst or ifo) then return false, e end
    table.insert(sourceList, {name, not not dst})
    sources[name] = {src, dst, ifo or {}}
-   return not not ifo, e or "local.lua parse error"
+   return not not ifo, e
   end,
   remove = remove,
   installTo = installTo,
