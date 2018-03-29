@@ -1,10 +1,5 @@
--- This is released into the public domain where possible.
+-- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
-
--- SYSTEM HEROES.
--- Nabbed Sonic Heroes lyrics follow:
---  "What comes up, must come down... "
---  "Yet, my feet don't touch the ground..."
 
 -- arg is the size of the code.tar file
 local arg = ...

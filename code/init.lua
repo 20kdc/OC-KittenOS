@@ -244,7 +244,9 @@ function lister(pfx)
 end
 
 function baseProcEnv()
- return {math = wrapMath,
+ local pe = {
+  _VERSION = _VERSION,
+  math = wrapMath,
   table = wrapTable,
   string = wrapString,
   unicode = wrapUnicode,
@@ -287,6 +289,9 @@ function baseProcEnv()
    ensureType = ensureType
   }
  }
+ pe._G = pe
+ pe._ENV = pe
+ return pe
 end
 
 function loadLibraryInner(library)
@@ -562,44 +567,41 @@ end
 if not start("sys-init") then error("Could not start sys-init") end
 
 while true do
- local ok, r = pcall(function()
-  local tmr = nil
-  for i = 1, 16 do
-   tmr = nil
-   local now = computer.uptime()
-   local breaking = false -- Used when a process dies - in this case it's assumed OC just did something drastic
-   local didAnything = false
-   local k = 1
-   while timers[k] do
-    local v = timers[k]
-    if v[1] <= now then
-     table.remove(timers, k)
-     if v[2](table.unpack(v, 3)) then
-      breaking = true
-      tmr = 0.05
-      break
-     end
-     didAnything = true
-    else
-     if not tmr then
-      tmr = v[1]
-     else
-      tmr = math.min(tmr, v[1])
-     end
-     k = k + 1
+ local tmr = nil
+ for i = 1, 16 do
+  tmr = nil
+  local now = computer.uptime()
+  local breaking = false -- Used when a process dies - in this case it's assumed OC just did something drastic
+  local didAnything = false
+  local k = 1
+  while timers[k] do
+   local v = timers[k]
+   if v[1] <= now then
+    table.remove(timers, k)
+    if v[2](table.unpack(v, 3)) then
+     breaking = true
+     tmr = 0.05
+     break
     end
+    didAnything = true
+   else
+    if not tmr then
+     tmr = v[1]
+    else
+     tmr = math.min(tmr, v[1])
+    end
+    k = k + 1
    end
-   if breaking then break end
-   -- If the system didn't make any progress, then we're waiting for a signal (this includes timers)
-   if not didAnything then break end
   end
-  now = computer.uptime() -- the above probably took a while
-  local dist = tmr and math.max(0.05, tmr - now)
-  local signal = {computer.pullSignal(dist)}
-  idleTime = idleTime + (computer.uptime() - now)
-  if signal[1] then
-   distEvent(nil, "h." .. signal[1], select(2, table.unpack(signal)))
-  end
- end)
- if not ok then emergencyFunction("K-WARN " .. tostring(r)) end
+  if breaking then break end
+  -- If the system didn't make any progress, then we're waiting for a signal (this includes timers)
+  if not didAnything then break end
+ end
+ now = computer.uptime() -- the above probably took a while
+ local dist = tmr and math.max(0.05, tmr - now)
+ local signal = {computer.pullSignal(dist)}
+ idleTime = idleTime + (computer.uptime() - now)
+ if signal[1] then
+  distEvent(nil, "h." .. signal[1], select(2, table.unpack(signal)))
+ end
 end

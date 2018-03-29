@@ -157,8 +157,13 @@ local function finalPrompt()
    return false
   end
  end
- warnings[1] = "TAB to change option,"
- warnings[2] = "ENTER to select..."
+ if _VERSION == "Lua 5.2" then
+  warnings[1] = "NOTE: It's recommended you use Lua 5.3."
+  warnings[2] = "Shift-right-click while holding the CPU item."
+ else
+  warnings[1] = "TAB to change option,"
+  warnings[2] = "ENTER to select..."
+ end
  -- The actual main prompt loop
  while waiting do
   local gpu = gpuG()

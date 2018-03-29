@@ -145,10 +145,15 @@ local function setupMonitor(gpu, monitor)
  local maxD = gpu.maxDepth()
  local w, h, d, t = getMonitorSettings(monitor.address)
  w, h, d = math.min(w, maxW), math.min(h, maxH), math.min(d, maxD)
- monitor.setTouchModeInverted(t == "yes")
+ if monitor.setTouchModeInverted then
+  monitor.setTouchModeInverted(t == "yes")
+ else
+  t = "no"
+ end
  settings["scr.w." .. monitor.address] = tostring(w)
  settings["scr.h." .. monitor.address] = tostring(h)
  settings["scr.d." .. monitor.address] = tostring(d)
+ settings["scr.t." .. monitor.address] = t
  sRattle("scr.w." .. monitor.address, tostring(w))
  sRattle("scr.h." .. monitor.address, tostring(h))
  sRattle("scr.d." .. monitor.address, tostring(d))
