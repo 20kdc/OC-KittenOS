@@ -83,6 +83,9 @@ local currentGPUBinding = {}
 -- [gpuAddr] = userCount
 local currentGPUUsers = {}
 
+-- Thanks to Skye for this!
+local keyboardMonCacheK, keyboardMonCacheV = nil
+
 local function announceFreeMonitor(address, except)
  for k, v in pairs(targsRD) do
   if k ~= except then
@@ -238,14 +241,19 @@ donkonitRDProvider(function (pkg, pid, sendSig)
  end}
  return {
   getMonitorByKeyboard = function (kb)
+   if keyboardMonCacheK == kb.address then
+    return keyboardMonCacheV
+   end
    for v in screens.list() do
     for _, v2 in ipairs(v.getKeyboards()) do
      if v2 == kb then
+      keyboardMonCacheK, keyboardMonCacheV = kb.address, v.address
       return v.address
      end
     end
    end
   end,
+
   getClaimable = function ()
    local c = {}
    -- do we have gpu?
@@ -312,6 +320,7 @@ local function rescanDevs()
  monitorPool = {}
  currentGPUBinding = {}
  currentGPUUsers = {}
+ keyboardMonCacheK, keyboardMonCacheV = nil, nil
  local hasGPU = gpus.list()()
  for k, v in pairs(monitorClaims) do
   v[2](true)

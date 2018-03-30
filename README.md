@@ -23,10 +23,6 @@ This includes if you copied a sufficiently large bit of text into the persistent
 The catch is, it wipes your settings. As the settings are always in RAM, and contain just about every *fixable* thing that can break your boot,
  nuking them should bring you to defaults.
 
-It seems to take just under a second for a key event to get through, yet drags are fine.
-I don't know why this is, but I suspect the answer involves the timing of a `computer.pullSignal()` with no timeout.
-If you particularly find performance important, and don't mind the energy costs, you can modify the `init.lua` to make it so that the kernel wakes up every tick.
-
 And finally, just because a system can multitask somewhat on 192K doesn't mean it can do the impossible regarding memory usage.
 Lesson learned: Cleaner design -> Higher memory usage.
 So anyone who wants the design to be made even cleaner should probably reread this paragraph.
