@@ -92,7 +92,7 @@ return {
  },
  ["neo-coreapps"] = {
   desc = "KittenOS NEO Core Apps",
-  v = 1,
+  v = 2,
   deps = {
    "neo"
   },

@@ -113,11 +113,10 @@ local advPage = 1
 local advPlusH = false
 
 local function advAsker(info, def, r, parent)
+ info = unicode.safeTextFormat(info)
  return function ()
   return 25, 2, nil, neoux.tcwindow(25, 2, {
-   neoux.tcrawview(1, 1, {
-    unicode.safeTextFormat(info)
-   }),
+   neoux.tcrawview(1, 1, {info}),
    neoux.tcfield(1, 2, 25, function (tx)
     def = tx or def
     return def
@@ -152,7 +151,7 @@ local function advGen()
    currentGen = advAsker("setting ID", "my.setting", function (r)
     settings.setSetting(r, "")
    end, currentGen)
-   w.reset(advGen())
+   w.reset(currentGen())
   end),
  }
  local ofs = (advPage - 1) * 7
