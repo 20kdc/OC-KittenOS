@@ -6,6 +6,32 @@ The first commit is after I got the installer working again after the new compre
 
 That's what the "SYSTEM HEROES" thing is about.
 
+## Known Issues (That Aren't KittenOS NEO's Fault)
+
+Touch calibration is off because OC's setPrecise seems to offset coordinates down and right by a character. OCEmu's does not. I consider this an OC bug. This is known to occur on at least `OpenComputers-MC1.12.2-1.7.2.67.jar`. If you want to check my routines, see sys-everest, search for the lowest instance of `"touch"`. Or just use OCEmu, which doesn't change anything when precise is set, and thus can't be doing anything different than the setPrecise(false) behavior.
+
+Wide character support *may* encounter issues due to performance-saving tricks in some old OC versions. The 1.12.2 version being used at LimboCon doesn't have the issue, so it's been dealt with. Point is, not a KittenOS NEO bug if it happens.
+
+## Known Issues (That Are KittenOS NEO's Fault But Aren't Really Fixable)
+
+If you move a window over another window, that window has to rerender. The alternative is buffering the window. Since memory is a concern, that is not going to happen. Some windows are more expensive to render than others (`klogo` tries to use less RAM if the system is 192K, at the expense of disk access) - move the most expensive window out of the way, since once a window is top-most, moving it around is usually "free".
+
+If the system runs out of memory, the kernel could crash, or alternatively the system goes into a limbo state. You're more or less doomed. Given that almost everything in Lua causes a memory allocation, I'm not exactly sure how I'd be supposed to fix this properly.
+
+Any situation where the system fails to boot *may* be fixable with Safe Mode.
+This includes if you copied a sufficiently large bit of text into the persistent clipboard, and now Icecap or Everest won't start.
+The catch is, it wipes your settings. As the settings are always in RAM, and contain just about every *fixable* thing that can break your boot,
+ nuking them should bring you to defaults.
+
+It seems to take just under a second for a key event to get through, yet drags are fine.
+I don't know why this is, but I suspect the answer involves the timing of a `computer.pullSignal()` with no timeout.
+If you particularly find performance important, and don't mind the energy costs, you can modify the `init.lua` to make it so that the kernel wakes up every tick.
+
+And finally, just because a system can multitask somewhat on 192K doesn't mean it can do the impossible regarding memory usage.
+Lesson learned: Cleaner design -> Higher memory usage.
+So anyone who wants the design to be made even cleaner should probably reread this paragraph.
+(In R0, editing the kernel causes 192K systems to fail to open filedialogs. I've fixed this in R1.)
+
 ## Description
 
 At least in theory: "efficient. multi-tasking. clean. security-oriented".

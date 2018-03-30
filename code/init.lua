@@ -106,12 +106,12 @@ function wrapMeta(t)
   local t2 = {}
   setmetatable(t2, {
    __index = function (a, k) return wrapMeta(t[k]) end,
-   __newindex = function (a, k, v) end,
+   __newindex = error,
    __pairs = function (a)
     return function (x, key)
      local k, v = next(t, k)
      if k then return k, wrapMeta(v) end
-    end, {}, nil
+    end, 9, nil
    end,
    __ipairs = function (a)
     return function (x, key)
@@ -119,7 +119,7 @@ function wrapMeta(t)
      if t[key] then
       return key, wrapMeta(t[key])
      end
-    end, {}, 0
+    end, 9, 0
    end,
    __metatable = uniqueNEOProtectionObject
    -- Don't protect this table - it'll make things worse
@@ -138,35 +138,16 @@ function ensureType(a, t)
 end
 
 function ensurePathComponent(s)
- if not s:match("^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+") then error("chars disallowed") end
+ if not string.match(s, "^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+") then error("chars disallowed") end
  if s == "." then error("single dot disallowed") end
  if s == ".." then error("double dot disallowed") end
 end
 
 function ensurePath(s, r)
- -- Filter filename for anything "worrying". Note / is allowed, see further filters
- if not s:match("^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^%/]+") then error("chars disallowed") end
+ string.gsub(s, "[^/]+", ensurePathComponent)
  if s:sub(1, r:len()) ~= r then error("base disallowed") end
  if s:match("//") then error("// disallowed") end
- if s:match("^%.%./") then error("../ disallowed") end
- if s:match("/%.%./") then error("/../ disallowed") end
- if s:match("/%.%.$") then error("/.. disallowed") end
- if s:match("^%./") then error("./ disallowed") end
- if s:match("/%./") then error("/./ disallowed") end
- if s:match("/%.$") then error("/. disallowed") end
 end
-
-wrapMath = wrapMeta(math)
-wrapTable = wrapMeta(table)
-wrapString = wrapMeta(string)
-wrapUnicode = wrapMeta(unicode)
-wrapCoroutine = wrapMeta(coroutine)
-wrapOs = wrapMeta({
-  totalMemory = computer.totalMemory, freeMemory = computer.freeMemory,
-  energy = computer.energy, maxEnergy = computer.maxEnergy,
-  clock = os.clock, date = os.date, difftime = os.difftime,
-  time = os.time, uptime = computer.uptime
- })
 
 -- Use with extreme care.
 -- (A process killing itself will actually survive until the next yield... before any of the death events have run.)
@@ -218,7 +199,7 @@ function distEvent(pid, s, ...)
   if not v then
    return
   end
-  if not (v.access["s." .. s] or v.access["k.root"]) then
+  if not (s:sub(1, 2) == "k." or v.access["s." .. s] or v.access["k.root"]) then
    return
   end
   -- Schedule the timer to carry the event.
@@ -243,57 +224,6 @@ function lister(pfx)
  end
 end
 
-function baseProcEnv()
- local pe = {
-  _VERSION = _VERSION,
-  math = wrapMath,
-  table = wrapTable,
-  string = wrapString,
-  unicode = wrapUnicode,
-  coroutine = wrapCoroutine,
-  os = wrapOs,
-  -- Note raw-methods are gone - these can interfere with the metatable safeties.
-  require = loadLibraryInner,
-  assert = assert,     ipairs = ipairs,
-  load = load,         next = next,
-  pairs = pairs,       pcall = pcall,
-  xpcall = xpcall,     select = select,
-  type = type,         error = error,
-  tonumber = tonumber, tostring = tostring,
-  setmetatable = setmetatable, getmetatable = function (n)
-   local mt = getmetatable(n)
-   if mt == uniqueNEOProtectionObject then return "NEO-Protected Object" end
-   return mt
-  end,
-  rawset = function (t, i, v)
-   local mt = getmetatable(n)
-   if mt == uniqueNEOProtectionObject then error("NEO-Protected Object") end
-   return rawset(t, i, v)
-  end, rawget = rawget, rawlen = rawlen, rawequal = rawequal,
-  neo = {
-   emergency = emergencyFunction,
-   readBufSize = readBufSize,
-   wrapMeta = wrapMeta,
-   listProcs = function ()
-    local n = {}
-    for k, v in pairs(processes) do
-     table.insert(n, {k, v.pkg, v.cpuUsage})
-    end
-    return n
-   end,
-   listApps = lister("apps/"),
-   listLibs = lister("libs/"),
-   totalIdleTime = function () return idleTime end,
-   ensurePath = ensurePath,
-   ensurePathComponent = ensurePathComponent,
-   ensureType = ensureType
-  }
- }
- pe._G = pe
- pe._ENV = pe
- return pe
-end
-
 function loadLibraryInner(library)
  ensureType(library, "string")
  library = "libs/" .. library .. ".lua"
@@ -311,6 +241,87 @@ function loadLibraryInner(library)
   end
  end
  return nil, r
+end
+
+wrapMath = wrapMeta(math)
+wrapTable = wrapMeta(table)
+wrapString = wrapMeta(string)
+wrapUnicode = wrapMeta(unicode)
+wrapCoroutine = wrapMeta(coroutine)
+wrapOs = wrapMeta({
+  totalMemory = computer.totalMemory, freeMemory = computer.freeMemory,
+  energy = computer.energy, maxEnergy = computer.maxEnergy,
+  clock = os.clock, date = os.date, difftime = os.difftime,
+  time = os.time, uptime = computer.uptime
+ })
+wrapDebug = wrapMeta(debug)
+
+baseProcEnvCore = {
+ _VERSION = _VERSION,
+ math = wrapMath,
+ table = wrapTable,
+ string = wrapString,
+ unicode = wrapUnicode,
+ coroutine = wrapCoroutine,
+ os = wrapOs,
+ debug = wrapDebug,
+ require = loadLibraryInner,
+ assert = assert,     ipairs = ipairs,
+ load = load,
+ next = function (t, k)
+  local mt = getmetatable(t)
+  if mt == uniqueNEOProtectionObject then error("NEO-Protected Object") end
+  return next(t, k)
+ end,
+ pairs = pairs,       pcall = pcall,
+ xpcall = xpcall,     select = select,
+ type = type,         error = error,
+ tonumber = tonumber, tostring = tostring,
+ setmetatable = setmetatable, getmetatable = function (n)
+  local mt = getmetatable(n)
+  if mt == uniqueNEOProtectionObject then return "NEO-Protected Object" end
+  return mt
+ end,
+ rawset = function (t, i, v)
+  local mt = getmetatable(t)
+  if mt == uniqueNEOProtectionObject then error("NEO-Protected Object") end
+  return rawset(t, i, v)
+ end, rawget = rawget, rawlen = rawlen, rawequal = rawequal,
+}
+baseProcNeo = {
+ emergency = emergencyFunction,
+ readBufSize = readBufSize,
+ wrapMeta = wrapMeta,
+ listProcs = function ()
+  local n = {}
+  for k, v in pairs(processes) do
+   table.insert(n, {k, v.pkg, v.cpuUsage})
+  end
+  return n
+ end,
+ listApps = lister("apps/"),
+ listLibs = lister("libs/"),
+ totalIdleTime = function () return idleTime end,
+ ensurePath = ensurePath,
+ ensurePathComponent = ensurePathComponent,
+ ensureType = ensureType
+}
+
+baseProcEnvMT = {
+ __index = baseProcEnvCore,
+ __metatable = uniqueNEOProtectionObject
+}
+baseProcNeoMT = {
+ __index = baseProcNeo,
+ __metatable = uniqueNEOProtectionObject
+}
+
+function baseProcEnv()
+ local pe = setmetatable({}, baseProcEnvMT)
+ pe.neo = setmetatable({}, baseProcNeoMT)
+ pe._G = pe
+ pe._ENV = pe
+ return pe
 end
 
 -- These two are hooks for k.root level applications to change policy.
@@ -500,7 +511,6 @@ function start(pkg, ...)
  end
  local env = baseProcEnv()
  env.neo.pid = pid
- env.neo.dead = false
  env.neo.executeAsync = startFromUser
  env.neo.execute = function (...)
   return osExecuteCore(function () end, ...)
@@ -538,16 +548,7 @@ function start(pkg, ...)
  end
  proc.co = coroutine.create(function (...) local r = {xpcall(appfunc, debug.traceback, ...)} if not r[1] then error(table.unpack(r, 2)) end return table.unpack(r, 2) end)
  proc.pkg = pkg
- proc.access = {
-  -- These permissions are the "critical set".
-  ["s.k.securityresponse"] = true,
-  ["s.k.timer"] = true,
-  ["s.k.procnew"] = true,
-  ["s.k.procdie"] = true,
-  -- Used when a registration is updated, in particular, as this signifies "readiness"
-  ["s.k.registration"] = true,
-  ["s.k.deregistration"] = true
- }
+ proc.access = {}
  proc.denied = {}
  -- You are dead. Not big surprise.
  proc.deathCBs = {function () pcall(function () env.neo.dead = true end) end}
@@ -571,15 +572,14 @@ while true do
  for i = 1, 16 do
   tmr = nil
   local now = computer.uptime()
-  local breaking = false -- Used when a process dies - in this case it's assumed OC just did something drastic
-  local didAnything = false
+  local didAnything = false -- for early exit
   local k = 1
   while timers[k] do
    local v = timers[k]
    if v[1] <= now then
     table.remove(timers, k)
     if v[2](table.unpack(v, 3)) then
-     breaking = true
+     didAnything = false -- to break
      tmr = 0.05
      break
     end
@@ -593,8 +593,6 @@ while true do
     k = k + 1
    end
   end
-  if breaking then break end
-  -- If the system didn't make any progress, then we're waiting for a signal (this includes timers)
   if not didAnything then break end
  end
  now = computer.uptime() -- the above probably took a while
