@@ -4,8 +4,7 @@
 -- app-taskmgr: Task manager
 -- a-hello : simple test program for Everest.
 
-local everest = neo.requestAccess("x.neo.pub.window")
-if not everest then error("no everest") return end
+local everest = neo.requireAccess("x.neo.pub.window", "main window")
 
 local kill = neo.requestAccess("k.kill")
 
@@ -13,7 +12,6 @@ local sW, sH = 20, 8
 local headlines = 2
 
 local window = everest(sW, sH)
-if not window then error("no window") end
 
 local lastIdleTimeTime = os.uptime()
 local lastIdleTime = neo.totalIdleTime()

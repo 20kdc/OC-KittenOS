@@ -1,7 +1,7 @@
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
-  v = 0,
+  v = 1,
   deps = {
   },
   dirs = {
@@ -14,6 +14,7 @@ return {
    "apps/sys-glacier.lua",
    "libs/event.lua",
    "libs/serial.lua",
+   "libs/fmttext.lua",
    "libs/neoux.lua",
    "libs/braille.lua",
    "libs/sys-filewrap.lua"
@@ -62,7 +63,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 0,
+  v = 1,
   deps = {
    "neo"
   },
@@ -79,20 +80,19 @@ return {
  },
  ["neo-secpolicy"] = {
   desc = "KittenOS NEO / Secpolicy",
-  v = 0,
+  v = 1,
   deps = {
   },
   dirs = {
    "libs"
   },
   files = {
-   "libs/sys-secpolicy.lua",
-   "libs/sys-criticals.lua"
+   "libs/sys-secpolicy.lua"
   }
  },
  ["neo-coreapps"] = {
   desc = "KittenOS NEO Core Apps",
-  v = 0,
+  v = 1,
   deps = {
    "neo"
   },
@@ -136,7 +136,7 @@ return {
  },
  ["app-claw"] = {
   desc = "KittenOS NEO Package Manager",
-  v = 0,
+  v = 1,
   deps = {
    "neo"
   },

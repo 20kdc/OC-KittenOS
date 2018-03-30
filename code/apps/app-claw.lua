@@ -20,7 +20,7 @@ if primaryINet then primaryINet = primaryINet.list()() end
 
 local function yielder()
  -- slightly dangerous, but what can we do?
- event.sleepTo(os.uptime() + 0.05)
+ pcall(event.sleepTo, os.uptime() + 0.05)
 end
 
 local function download(url, cb)
@@ -28,16 +28,12 @@ local function download(url, cb)
  local req, err = primaryINet.request(source .. url)
  if not req then
   cb(nil)
-  return nil, tostring(err)
+  return nil, "dlR/" .. tostring(err)
  end
- local ok, err = req.finishConnect()
- if not req.finishConnect() then
-  req.close()
-  cb(nil)
-  return nil, tostring(err)
- end
+ -- OpenComputers#535
+ req.finishConnect()
  while true do
-  local n, n2 = req.read()
+  local n, n2 = req.read(neo.readBufSize)
   local o, r = cb(n)
   if not o then
    req.close()

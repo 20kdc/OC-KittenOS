@@ -12,6 +12,14 @@ work/*/
 work/*/*
 work/*/*/
 work/*/*/*
+repobuild
+repobuild/
+repobuild/*
+repobuild/*/
+repobuild/*/*
+repobuild/*/*/
+repobuild/*/*/*
+
 inst.lua
 com2/code.tar.bd
 upldr.sh

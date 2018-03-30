@@ -2,8 +2,8 @@
 -- No warranty is provided, implied or otherwise.
 
 -- just don't bother with proper indent here
-return function (event, neoux, retFunc, fs, pkg, mode)
-
+return function (event, nexus, retFunc, fs, pkg, mode)
+local fmt = require("fmttext")
 local class = "manage"
 if mode ~= nil then
  if mode then
@@ -23,7 +23,7 @@ local function cb(...)
    name = "F.M. Error",
    list = function ()
     local l = {}
-    for k, v in ipairs(neoux.fmtText(unicode.safeTextFormat(e), 25)) do
+    for k, v in ipairs(fmt.fmtText(unicode.safeTextFormat(e), 25)) do
      l[k] = {v, function () return true end}
     end
     return l
@@ -64,7 +64,7 @@ local function prepareNodeI(node)
   if sel then
    colB, colA = 0xFFFFFF, 0
   end
-  wnd.span(1, a, neoux.pad(unicode.safeTextFormat(text), w, cen, true), colA, colB)
+  wnd.span(1, a, fmt.pad(unicode.safeTextFormat(text), w, cen, true), colA, colB)
  end
  local function flush(wnd)
   for i = 1, h do
@@ -108,7 +108,7 @@ local function prepareNodeI(node)
    end
    if aResult then
     retFunc(res)
-    wnd.close()
+    nexus.close(wnd)
    else
     prepareNode(res)
    end
@@ -148,13 +148,13 @@ local function prepareNodeI(node)
   end
   if evt == "close" then
    retFunc(nil)
-   wnd.close()
+   nexus.close(wnd)
   end
  end
 end
 
 local text = class .. " " .. pkg
-local window = neoux.create(25, 10, text, cb)
+local window
 
 function prepareNode(node)
  local w, h, c = prepareNodeI(node)
@@ -162,10 +162,24 @@ function prepareNode(node)
  window.setSize(w, h)
 end
 
-prepareNode(require("sys-filevfs")(fs, mode))
+local closer = nexus.createNexusThread(function ()
+ window = nexus.create(25, 10, text)
+ prepareNode(require("sys-filevfs")(fs, mode))
+ while window do
+  cb(window, coroutine.yield())
+ end
+end)
+if not closer then
+ retFunc()
+ return
+end
 return function ()
  retFunc()
- window.close()
+ closer()
+ if window then
+  nexus.close(window)
+  window = nil
+ end
 end
 
 -- end bad indent

@@ -51,39 +51,92 @@ local actualPolicy = function (pkg, pid, perm)
  return "ask"
 end
 
-return function (neoux, settings, pkg, pid, perm, rsp)
+return function (nexus, settings, pkg, pid, perm, rsp)
  local res = actualPolicy(pkg, pid, perm)
  if res == "ask" and settings then
   res = settings.getSetting("perm|" .. pkg .. "|" .. perm) or "ask"
  end
- if res == "ask" and neoux then
-  local fmt = neoux.fmtText(unicode.safeTextFormat(string.format("%s/%i wants:\n%s\nAllow this?", pkg, pid, perm)), 20)
-  local always = "Always"
-  local yes = "Yes"
-  local no = "No"
-  local totalW = (#yes) + (#always) + (#no) + 8
-  neoux.create(20, #fmt + 2, "security", neoux.tcwindow(20, #fmt + 3, {
-   neoux.tcbutton(1, #fmt + 2, no, function (w)
+ if res == "ask" and nexus then
+  local totalW = 3 + 6 + 2 + 8
+  local fmt = require("fmttext").fmtText(unicode.safeTextFormat(string.format("%s/%i wants:\n%s\nAllow this?\n\n", pkg, pid, perm)), totalW)
+  local buttons = {
+   {"<No>", function (w)
     rsp(false)
-    w.close()
-   end),
-   neoux.tcbutton(totalW - ((#yes) + 1), #fmt + 2, yes, function (w)
-    rsp(true)
-    w.close()
-   end),
-   neoux.tcbutton((#yes) + 3, #fmt + 2, always, function (w)
+    nexus.close(w)
+   end},
+   {"<Always>", function (w)
     if settings then
      settings.setSetting("perm|" .. pkg .. "|" .. perm, "allow")
     end
     rsp(true)
-    w.close()
-   end),
-   neoux.tchdivider(1, #fmt + 1, 21),
-   neoux.tcrawview(1, 1, fmt),
-  }, function (w)
-   rsp(false)
-   w.close()
-  end, 0xFFFFFF, 0))
+    nexus.close(w)
+   end},
+   {"<Yes>", function (w)
+    rsp(true)
+    nexus.close(w)
+   end}
+  }
+  nexus.createNexusThread(function ()
+   local window = nexus.create(totalW, #fmt, "security")
+   local cButton = 0
+   local ev, a, b, c
+   while true do
+    if not ev then
+     ev, a, b, c = coroutine.yield()
+    end
+    if ev == "line" or ev == "touch" then
+     local cor = b
+     if ev == "line" then
+      cor = a
+      if fmt[a] then
+       window.span(1, a, fmt[a], 0xFFFFFF, 0)
+      end
+     end
+     if cor == #fmt then
+      local x = 1
+      for k, v in ipairs(buttons) do
+       if ev == "line" then
+        if k ~= cButton + 1 then
+         window.span(x, a, v[1], 0xFFFFFF, 0)
+        else
+         window.span(x, a, v[1], 0, 0xFFFFFF)
+        end
+       elseif a >= x and a < (x + #v[1]) then
+        cButton = k - 1
+        ev = "key"
+        a = 32
+        b = 0
+        c = true
+        break
+       end
+       x = x + #v[1] + 1
+      end
+     end
+    elseif ev == "close" then
+     rsp(false)
+     nexus.close(window)
+     return
+    end
+    if ev == "key" then
+     if c and (a == 9 or b == 205) then
+      cButton = (cButton + 1) % #buttons
+      ev = "line"
+      a = #fmt
+     elseif c and b == 203 then
+      cButton = (cButton - 1) % #buttons
+      ev = "line"
+      a = #fmt
+     elseif c and (a == 13 or a == 32) then
+      buttons[cButton + 1][2](window)
+      ev = nil
+     else
+      ev = nil
+     end
+    else
+     ev = nil
+    end
+   end
+  end)
  else
   rsp(res == "allow")
  end

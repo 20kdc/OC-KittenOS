@@ -101,12 +101,23 @@ end
 
 uniqueNEOProtectionObject = {}
 
+wrapMetaCache = {}
+setmetatable(wrapMetaCache, {__mode = "v"})
+
 function wrapMeta(t)
  if type(t) == "table" then
+  if wrapMetaCache[t] then
+   return wrapMetaCache[t]
+  end
   local t2 = {}
+  wrapMetaCache[t] = t2
   setmetatable(t2, {
    __index = function (a, k) return wrapMeta(t[k]) end,
    __newindex = error,
+   -- WTF
+   __call = function (_, ...)
+    return t(...)
+   end,
    __pairs = function (a)
     return function (x, key)
      local k, v = next(t, k)
@@ -392,8 +403,8 @@ function retrieveAccess(perm, pkg, pid)
   local temporary = nil
   local t = perm:sub(3)
   if t == "filesystem" then
-   primary = primaryDisk
-   temporary = component.proxy(computer.tmpAddress())
+   primary = wrapMeta(primaryDisk)
+   temporary = wrapMeta(component.proxy(computer.tmpAddress()))
   end
   return {
    list = function ()
@@ -401,7 +412,7 @@ function retrieveAccess(perm, pkg, pid)
     return function ()
      local ii = i()
      if not ii then return nil end
-     return component.proxy(ii)
+     return wrapMeta(component.proxy(ii))
     end
    end,
    primary = primary,
@@ -556,10 +567,7 @@ function start(pkg, ...)
  -- Note the target process doesn't get the procnew (the dist occurs before it's creation)
  pcall(distEvent, nil, "k.procnew", pkg, pid)
  processes[pid] = proc
- -- For processes waiting on others, this at least tries to guarantee some safety.
- if not pcall(execEvent, pid, ...) then
-  return nil, "neocore"
- end
+ table.insert(timers, {0, execEvent, pid, ...})
  return pid
 end
 

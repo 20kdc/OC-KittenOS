@@ -4,11 +4,6 @@
 -- s-icecap : Responsible for x.neo.pub API, crash dialogs, and security policy that isn't "sys- has ALL access, anything else has none"
 --            In general, this is what userspace will be interacting with in some way or another to get stuff done
 
-local event = require("event")(neo)
-local neoux, err = require("neoux")
-if not neoux then error(err) end -- This app is basically neoux's testcase
-neoux = neoux(event, neo)
-
 local settings = neo.requireAccess("x.neo.sys.manage", "security sysconf access")
 
 local fs = neo.requireAccess("c.filesystem", "file managers")
@@ -16,6 +11,72 @@ local fs = neo.requireAccess("c.filesystem", "file managers")
 local donkonitDFProvider = neo.requireAccess("r.neo.pub.base", "creating basic NEO APIs")
 
 local targsDH = {} -- data disposal
+
+local todo = {}
+
+local onEverest = {}
+local everestWindows = {}
+
+local nexus
+
+local function resumeWF(...)
+ local ok, e = coroutine.resume(...)
+ if not ok then
+  e = tostring(e)
+  neo.emergency(e)
+  nexus.startDialog(e, "ice")
+ end
+ return ok
+end
+
+nexus = {
+ createNexusThread = function (f, ...)
+  local t = coroutine.create(f)
+  if not resumeWF(t, ...) then return end
+  local early = neo.requestAccess("x.neo.pub.window")
+  if early then
+   onEverest[#onEverest] = nil
+   resumeWF(t, early)
+  end
+  return function ()
+   for k, v in ipairs(onEverest) do
+    if v == t then
+     table.remove(onEverest, k)
+     return
+    end
+   end
+  end
+ end,
+ create = function (w, h, t)
+  local thr = coroutine.running()
+  table.insert(onEverest, thr)
+  local everest = coroutine.yield()
+  local dw = everest(w, h, title)
+  everestWindows[dw.id] = thr
+  return dw
+ end,
+ startDialog = function (tx, ti)
+  local fmt = require("fmttext")
+  local txl = fmt.fmtText(unicode.safeTextFormat(tx), 40)
+  fmt = nil
+  nexus.createNexusThread(function ()
+   local w = nexus.create(40, #txl, ti)
+   while true do
+    local ev, a = coroutine.yield()
+    if ev == "line" then
+     w.span(1, a, txl[a], 0xFFFFFF, 0)
+    elseif ev == "close" then
+     w.close()
+     return
+    end
+   end
+  end)
+ end,
+ close = function (wnd)
+  wnd.close()
+  everestWindows[wnd.id] = nil
+ end
+}
 
 donkonitDFProvider(function (pkg, pid, sendSig)
  local prefixNS = "data/" .. pkg
@@ -32,9 +93,10 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    -- Not hooked into the event API, so can't safely interfere
    -- Thus, this is async and uses a return event.
    local tag = {}
-   event.runAt(0, function ()
+   neo.scheduleTimer(0)
+   table.insert(todo, function ()
     -- sys-filedialog is yet another "library to control memory usage".
-    local closer = require("sys-filedialog")(event, neoux, function (res) openHandles[tag] = nil sendSig("filedialog", tag, res) end, fs, pkg, forWrite)
+    local closer = require("sys-filedialog")(event, nexus, function (res) openHandles[tag] = nil sendSig("filedialog", tag, res) end, fs, pkg, forWrite)
     openHandles[tag] = closer
    end)
    return tag
@@ -122,9 +184,10 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
   req(def)
   return
  end
- -- Push to ICECAP thread to avoid deadlock on neoux b/c wrong event-pull context
- event.runAt(0, function ()
-  local ok, err = pcall(secpol, neoux, settings, proc.pkg, pid, perm, req)
+ -- Push to ICECAP thread to avoid deadlock b/c wrong event-pull context
+ neo.scheduleTimer(0)
+ table.insert(todo, function ()
+  local ok, err = pcall(secpol, nexus, settings, proc.pkg, pid, perm, req)
   if not ok then
    neo.emergency("Used fallback policy because of run-err: " .. err)
    req(def)
@@ -132,19 +195,41 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  end)
 end
 
-event.listen("k.procdie", function (evt, pkg, pid, reason)
- if targsDH[pid] then
-  targsDH[pid]()
- end
- targsDH[pid] = nil
- if reason then
-  -- Process death logging in console (for lifecycle dbg)
-  -- neo.emergency(n[2])
-  -- neo.emergency(n[4])
-  neoux.startDialog(string.format("%s/%i died:\n%s", pkg, pid, reason), "error")
- end
-end)
-
 while true do
- event.pull()
+ local ev = {coroutine.yield()}
+ if ev[1] == "k.procdie" then
+  local _, pkg, pid, reason = table.unpack(ev)
+  if targsDH[pid] then
+   targsDH[pid]()
+  end
+  targsDH[pid] = nil
+  if reason then
+   nexus.startDialog(string.format("%s/%i died:\n%s", pkg, pid, reason), "error")
+  end
+ elseif ev[1] == "k.timer" then
+  local nt = todo
+  todo = {}
+  for _, v in ipairs(nt) do
+   local ok, e = pcall(v)
+   if not ok then
+    nexus.startDialog(tostring(e), "terr")
+   end
+  end
+ elseif ev[1] == "k.registration" then
+  if ev[2] == "x.neo.pub.window" then
+   local nt = onEverest
+   onEverest = {}
+   for _, v in ipairs(nt) do
+    coroutine.resume(v, neo.requestAccess("x.neo.pub.window"))
+   end
+  end
+ elseif ev[1] == "x.neo.pub.window" then
+  local v = everestWindows[ev[2]]
+  if v then
+   resumeWF(v, table.unpack(ev, 3))
+   if coroutine.status(v) == "dead" then
+    everestWindows[ev[2]] = nil
+   end
+  end
+ end
 end

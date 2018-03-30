@@ -16,57 +16,12 @@
 
 -- Global forces reference. Otherwise, nasty duplication happens.
 newNeoux = function (event, neo)
- -- this is why neo access is 'needed'
- local function retrieveIcecap()
-  return neo.requestAccess("x.neo.pub.base")
- end
- local function retrieveEverest()
-  return neo.requestAccess("x.neo.pub.window")
- end
- -- id -> {lclEv, w, h, title, callback}
- local windows = {}
+ -- id -> callback
  local lclEvToW = {}
- retrieveEverest()
- local function everestDied()
-  for _, v in pairs(windows) do
-   v[1] = nil
-  end
-  lclEvToW = {}
- end
- local function pushWindowToEverest(k)
-  local everest = retrieveEverest()
-  if not everest then
-   everestDied()
-   return
-  end
-  local v = windows[k]
-  local r, res = pcall(everest, v[2], v[3], v[4])
-  if not r then
-   everestDied()
-   return
-  else
-   -- res is the window!
-   lclEvToW[res.id] = k
-   windows[k][1] = res
-  end
- end
- event.listen("k.registration", function (_, xe)
-  if #windows > 0 then
-   if xe == "x.neo.pub.window" then
-    for k, v in pairs(windows) do
-     pushWindowToEverest(k)
-    end
-   end
-  end
- end)
- event.listen("k.deregistration", function (_, xe)
-  if xe == "x.neo.pub.window" then
-   everestDied()
-  end
- end)
+ local everest = neo.requireAccess("x.neo.pub.window", "windowing")
  event.listen("x.neo.pub.window", function (_, window, tp, ...)
   if lclEvToW[window] then
-   windows[lclEvToW[window]][5](tp, ...)
+   lclEvToW[window](tp, ...)
   end
  end)
  local neoux = {}
@@ -80,7 +35,7 @@ newNeoux = function (event, neo)
     rtt = rt
    end
   end
-  local tag = retrieveIcecap().showFileDialogAsync(forWrite)
+  local tag = neo.requestAccess("x.neo.pub.base").showFileDialogAsync(forWrite)
   local f
   f = function (_, fd, tg, re)
    if fd == "filedialog" then
@@ -99,117 +54,40 @@ newNeoux = function (event, neo)
  -- Creates a wrapper around a window.
  neoux.create = function (w, h, title, callback)
   local window = {}
-  local windowCore = {nil, w, h, title, function (...) callback(window, ...) end}
-  local k = #windows + 1
-  table.insert(windows, windowCore)
-  pushWindowToEverest(k)
+  local windowCore = everest(w, h, title)
+  -- res is the window!
+  lclEvToW[windowCore.id] = function (...) callback(window, ...) end
   -- API convenience: args compatible with .create
   window.reset = function (nw, nh, _, cb)
    callback = cb
-   if nw or nh then
-    windowCore[2] = nw
-    windowCore[3] = nh
-   end
-   if windowCore[1] then
-    windowCore[1].setSize(windowCore[2], windowCore[3])
-   end
+   w = nw or w
+   h = nh or h
+   windowCore.setSize(w, h)
   end
   window.getSize = function ()
-   return windowCore[2], windowCore[3]
+   return w, h
   end
-  window.getDepth = function ()
-   if windowCore[1] then
-    return windowCore[1].getDepth()
-   end
-   return 1
+  window.getDepth = windowCore.getDepth
+  window.setSize = function (nw, nh)
+   w = nw
+   h = nh
+   windowCore.setSize(w, h)
   end
-  window.setSize = function (w, h)
-   windowCore[2] = w
-   windowCore[3] = h
-   if windowCore[1] then
-    windowCore[1].setSize(w, h)
-   end
-  end
-  window.span = function (x, y, text, bg, fg)
-   if windowCore[1] then
-    pcall(windowCore[1].span, x, y, text, bg, fg)
-   end
-  end
+  window.span = windowCore.span
   window.close = function ()
-   if windowCore[1] then
-    windowCore[1].close()
-    lclEvToW[windowCore[1].id] = nil
-    windowCore[1] = nil
-   end
-   windows[k] = nil
+   windowCore.close()
+   lclEvToW[windowCore.id] = nil
+   windowCore = nil
   end
   return window
  end
  -- Padding function
- neoux.pad = function (t, len, centre, cut)
-  local l = unicode.len(t)
-  local add = len - l
-  if add > 0 then
-   if centre then
-    t = (" "):rep(math.floor(add / 2)) .. t .. (" "):rep(math.ceil(add / 2))
-   else
-    t = t .. (" "):rep(add)
-   end
-  end
-  if cut then
-   t = unicode.sub(t, 1, len)
-  end
-  return t
- end
+ neoux.pad = require("fmttext").pad
  -- Text dialog formatting function.
  -- Assumes you've run unicode.safeTextFormat if need be
- neoux.fmtText = function (text, w)
-  local nl = text:find("\n")
-  if nl then
-   local base = text:sub(1, nl - 1)
-   local ext = text:sub(nl + 1)
-   local baseT = neoux.fmtText(base, w)
-   local extT = neoux.fmtText(ext, w)
-   for _, v in ipairs(extT) do
-    table.insert(baseT, v)
-   end
-   return baseT
-  end
-  if unicode.len(text) > w then
-   local lastSpace
-   for i = 1, w do
-    if unicode.sub(text, i, i) == " " then
-     -- Check this isn't an inserted space (unicode safe text format)
-     local ok = true
-     if i > 1 then
-      if unicode.charWidth(unicode.sub(text, i - 1, i - 1)) ~= 1 then
-       ok = false
-      end
-     end
-     if ok then
-      lastSpace = i
-     end
-    end
-   end
-   local baseText, extText
-   if not lastSpace then
-    -- Break at a 1-earlier boundary 
-    local wEffect = w
-    if unicode.charWidth(unicode.sub(text, w, w)) ~= 1 then
-     -- Guaranteed to be safe, so
-     wEffect = wEffect - 1
-    end
-    baseText = unicode.sub(text, 1, wEffect)
-    extText = unicode.sub(text, wEffect + 1)
-   else
-    baseText = unicode.sub(text, 1, lastSpace - 1)
-    extText = unicode.sub(text, lastSpace + 1) 
-   end
-   local full = neoux.fmtText(extText, w)
-   table.insert(full, 1, neoux.pad(baseText, w))
-   return full
-  end
-  return {neoux.pad(text, w)}
+ neoux.fmtText = function (...)
+  local fmt = require("fmttext")
+  return fmt.fmtText(...)
  end
  -- UI FRAMEWORK --
  neoux.tcwindow = function (w, h, controls, closing, bg, fg, selIndex)
