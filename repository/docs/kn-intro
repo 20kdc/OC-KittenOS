@@ -1,0 +1,92 @@
+The KittenOS NEO Kernel,
+ aka "init.lua", or as I like to call
+ it, "KNOSKRNL", is what happens when
+ someone tries to write a microkernel
+ in Lua, and make it efficient.
+
+Obviously, the result is not entirely
+ what would be expected from a kernel
+ at all, nevermind a microkernel.
+
+In particular, it borrows an
+ important concept, specifically fast
+ yet secure IPC.
+
+By which I of course mean that the
+ IPC consists of programs giving Lua
+ values to each other directly, and
+ the kernel giving the programs some
+ mechanisms to help secure this.
+
+Not what you expected, I assume.
+
+The "kn-" group of documents is about
+ the KittenOS NEO kernel.
+
+This is specifically ONLY about the
+ kernel, and only about features the
+ kernel provides directly.
+
+As the kernel provides many things to
+ everything under it, I believe this
+ is of great use.
+
+It's now time for the notes about the
+ kernel side of the boot process.
+
+Firstly, the startup of sys-init is
+ unlike any other - specifically, it
+ has a nil callerPid/callerPkg pair.
+
+This is because no application ran a
+ function to create the process - it
+ was created by the kernel.
+
+Secondly, here's what goes on in the
+ kernel when an Access is registered,
+ and when it's accessed:
+
+1. The service requests access with
+    an AID starting with "r.".
+2. The security policy presumably
+    accepts the registration.
+3. A blank registration in the table
+    "accesses" is made immediately.
+   This registration always fails to
+    be retrieved, but exists.
+4. A function is returned to reset
+    the registration.
+5. The service calls the function,
+    thus the registration is now
+    completed.
+
+6. The user-process requests access
+    with an AID starting with "x.",
+    everything after matching that
+    in the "r." registration.
+7. The security policy presumably
+    accepts the use of that API.
+8. The callback in the registration
+    is called.
+   It's first return value is sent
+    back to the user-process.
+   If it errors, then nil is given
+    instead (the error is not sent).
+
+Thirdly, the security policy is set
+ by getting the kernel global table
+ with "k.root", and then changing the
+ global "securityPolicy".
+
+Given this operation is only ever
+ performed once in typical use, and
+ having control over it is equivalent
+ to instant root, it seems fitting
+ that it is done this way.
+
+(Making absolute power absolute is
+ also why the kernel loves globals.)
+
+Finally, the kernel prevents those
+ processes that aren't "sys-" from
+ calling "sys-" processes.

@@ -1,7 +1,7 @@
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
-  v = 1,
+  v = 2,
   deps = {
   },
   dirs = {
@@ -50,7 +50,7 @@ return {
  },
  ["neo-everest"] = {
   desc = "KittenOS NEO / Everest (windowing)",
-  v = 0,
+  v = 2,
   deps = {
    "neo"
   },

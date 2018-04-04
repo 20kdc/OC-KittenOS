@@ -1,0 +1,282 @@
+This is a full reference on those
+ functions and fields exposed by the
+ kernel to processes and libraries.
+
+Firstly, it is important to note that
+ a process runs within a coroutine.
+
+This allows a highly "traditional"
+ form of mixing async and synchronous
+ code with event-loop nesting and
+ such designs. If this is not to your
+ taste then you can just use one, not
+ nested event loop.
+
+As it runs in a coroutine, events are
+ received via coroutine.yield() -
+ sandboxers beware! You may have to
+ use coroutine.running() in order to
+ successfully hide the implementation
+ details of your sandbox (also events
+ and potentially accesses headed in
+ its direction...)
+
+An example KittenOS NEO program,
+ solely using kernel APIs,
+ that you will likely have to kill:
+
+neo.scheduleTimer(os.uptime() + 1)
+while true do
+ local ev = coroutine.yield()
+ if ev == "k.timer" then
+  neo.emergency("Hello...")
+  neo.scheduleTimer(os.uptime() + 1)
+ end
+end
+
+This will say "Hello..." via the
+ neo.emergency mechanism once every
+ second, independently of anything
+ else on the system.
+
+While this is obviously not a sane
+ sys-init for actual use, if you have
+ a disk that you can copy the kernel
+ to and a copy of this, it might make
+ a fun experiment.
+
+The way to exit the program is to
+ return from your process's main
+ function.
+
+The first field to note is:
+
+_VERSION: _VERSION from the host.
+
+The following are just wrapMeta'd
+ host libraries (*: altered):
+
+math, table, string, unicode*,
+ coroutine, os*, debug
+
+unicode is extended with:
+ safeTextFormat(s, p):
+  Takes a string s, and a position p,
+   (the position is optional, and is
+     assumed to be 1 otherwise)
+   and returns a space-padded string,
+    with a space after each wide char
+    to make unicode.len & co. act in
+    screen units, along with the
+    position translated.
+ undoSafeTextFormat(s):
+  Takes a string in padded-widechar
+   format, and gets rid of the pad.
+  Note that if padding is *missing*,
+   wide characters become spaces.
+  This leaves a string that's usually
+   safe to pass to a GPU without any
+   odd graphical glitches.
+
+os is replaced with:
+ totalMemory = computer.totalMemory,
+ freeMemory = computer.freeMemory,
+ energy = computer.energy,
+ maxEnergy = computer.maxEnergy,
+ clock = os.clock, date = os.date,
+ difftime = os.difftime,
+ time = os.time,
+ uptime = computer.uptime,
+ address = computer.address
+
+The following are just wrapMeta'd
+ host functions
+ (*: wrapped for security):
+
+ assert, ipairs, load, next*,
+ pairs, pcall, xpcall, select,
+ type, error, tonumber, tostring,
+ setmetatable, getmetatable*,
+ rawset*, rawget, rawlen, rawequal
+
+"require" and "neo" are the parts of
+ the environment where a NEO-specific
+ nature presents itself.
+
+require takes a string, and returns
+ the value returned by the library at
+ "libs/" .. str .. ".lua" on the
+ primary disk.
+The library name must be a valid path
+ component, and the library path must
+ also be valid - see
+ ensurePathComponent, ensurePath for
+ more info.
+
+The "neo" table is where most of the
+ NEO-specificness is hiding, which is
+ probably shown by its name.
+
+It is also where libraries differ to
+ processes, as libraries get a subset
+ of the table.
+
+For libraries, it contains:
+ emergency: Equals ocemu.log, if
+  available on the system. Else, NOP.
+ readBufSize: The readBufSize kernel
+  configuration value. Default: 2048.
+  Adjusting this in the kernel allows
+   adjusting how much the system will
+   read at any given time, which can
+   have non-obvious memory usage
+   effects.
+  Do note, following this limit is
+   not a requirement and is not
+   enforced - it's not a security
+   matter, just optimization/memory.
+ wrapMeta: A function that takes a
+  value, and wraps it in such a way
+  as to be immutable, returning the
+   wrapped value.
+  This is the first line of defense
+   against memory use - by using this
+   to protect a table, the result can
+   be shared between untrusted code.
+ listProcs: A function that returns a
+  table of processes. Index is ipairs
+  -friendly, values are:
+  {pid, pkg, cpuUsageInSeconds}
+ listApps: Returns an ipairs-friendly
+  list of applications on the system,
+  such as:
+  {"app-out-of-sight-is-out-of-mind",
+   "svc-i-see-the-ones-that-play"}
+ listLibs: Returns an ipairs-friendly
+  list of libraries on the system,
+  such as:
+  {"fmttext",
+   "braille"}
+ totalIdleTime: Returns the current
+  kernel idle time total, useful for
+  measuring current CPU usage, and in
+  turn comparing to application CPU
+  time to get various statistics.
+ ensurePath: (s, root)
+  Attempts to verify the
+  safety of a path, and errors if any
+  aspect seems incorrect.
+  The root must be a prefix to the
+   path, and the path must follow a
+   strict standardized form that is
+   guaranteed to always be supported
+   and handled in the same way on any
+   OC system.
+  Essentially, "//" must not occur,
+   and all "[^/]+" matches must be
+   valid path components.
+ ensurePathComponent: (s)
+  Ensures that a string is a safe
+   filename via a character list and
+   some special filename checks.
+  UTF-8 characters are just flat out
+   disallowed until someone can give
+   me proof they won't blow up
+   something somewhere.
+  (This restriction is Windows's
+   fault - I can't trust the encoding
+   mess to not find some new and
+   imaginative way of breaking
+   filenames, so I'd rather that they
+   get avoided until someone can try
+   actually using them.)
+  This does NOT ACCOUNT for *all* the
+   Windows total nonsense (aux, com1)
+   because if OC doesn't cover up
+   that then you're kinda doomed.
+ ensureType: (v, ts)
+  Checks that a value is of a given
+   type, and errors otherwise. If the
+   type is "table", it also errors if
+   a metatable exists.
+
+The additional things available to
+ processes are those things that
+ require a process to use:
+
+ pid: A field that specifies the
+  process ID of this process.
+  Harmless, but not entirely useful.
+ dead: Actually a field, that isn't
+  set at first, but is set later to
+  indicate deadness. Useful if your
+  process does anything that might
+  lead to functions being called in
+  the afterlife, such as providing an
+  API.
+ executeAsync: Function that takes
+  an app name (aka: pkg), and a
+  set of arguments to give it.
+  NOTE: sys- apps cannot be started
+   from non sys- apps no matter how
+   hard you try, without k.root
+   alterations to runProgramPolicy.
+  Your process pkg and ID is
+   prepended to the arguments.
+  NOTE: This uses the result, err
+   return format, except for security
+   errors in which case it uses a
+   full error, because you might just
+   ignore the return value.
+  A successful result is the PID.
+ executeExt: Like executeAsync, but
+  firstly, synchronous, and secondly,
+  with an extra first parameter that
+  contains a function to call on
+  events encountered during the time.
+  As for the return values, it tries
+   to emulate os.execute, so it
+   returns -1 & reason on load error,
+   and 0 & death-reason otherwise.
+ execute: executeExt, but with the
+  first parameter set to a blank
+  function.
+ requestAccessAsync: A function that
+  takes an access ID (aka 'perm') as
+  a string (see kn-perms for info),
+  and starts a security request that
+  is responded to with a
+  k.securityresponse such as:
+  "k.securityresponse", perm, obj
+ requestAccess: A function with
+  (perm, handler) as the arguments -
+  runs requestAccessAsync, then sends
+  events to handler (if any) while
+  waiting for the response.
+ requireAccess: requestAccess, but
+  (perm, reason) - the reason is used
+   in an error if the access cannot
+   be gained.
+ scheduleTimer: Given an os.uptime
+  value, creates a timer and returns
+  a completely meaningless table that
+  is never touched by the kernel
+  directly, called the "tag".
+  The resulting event:
+  "k.timer", tag, time, ofs
+  These events are ONLY EVER sent as
+   a consequence of this function,
+   and this can be relied on safely.
+  NOTE: Setting timers too far in the
+   future has effects on system
+   stability. So does using memory,
+   and there's no way for me to stop
+   that, either. So long as the timer
+   is reached, alive or dead, things
+   will work, but spamming timers has
+   the consequence of memory use,
+   and timers stick around after the
+   process that owns them is dead.
+
+With that, I hope I have documented
+ the kernel's interface to programs.

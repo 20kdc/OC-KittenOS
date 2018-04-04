@@ -1,0 +1,245 @@
+Welcome to the documentation for your
+ KittenOS NEO system.
+
+These documents are written to a 37-
+ column standard, in order to match
+ the Neolithic text editor.
+
+If editing them, please set a right
+ margin of 37, or an equivalent,
+ in order to ensure that the
+ documents do not require horizontal
+ scroll in order to read.
+
+This documentation is aimed at those
+ who wish to develop things for the
+ KittenOS NEO system.
+
+Due to the size of the system, it is
+ divided into several sections,
+ each section being a file.
+
+This section will cover an overview
+ of the KittenOS NEO system.
+
+It is an abstract overview, but one
+ that will give you a framework in
+ which the components make sense,
+ should you simply skip to them.
+
+The KittenOS NEO system is divided
+ into three things - the kernel,
+ libraries, and the processes.
+
+The kernel is always loaded at all
+ times, and is the root of all system
+ activity.
+
+The libraries are essentially Lua
+ values that are kept in memory by a
+ weak-valued table.
+
+This allows them to be reused,
+ and memory saved, if possible,
+ while also allowing unloading.
+
+This is a critical memory management
+ technique in KittenOS NEO, as it
+ allows certain libraries to be
+ loaded only when in active use.
+
+(This also means libraries can have
+  security side-effects, but they
+  always can in any system, arguably,
+  and it's worth it for the memory.)
+
+The processes are applications and
+ services, that communicate with the
+ kernel via the NEO Kernel API, and
+ that communicate with others via
+ Lua values and tables shared between
+ the processes, that also constitute
+ a form of API.
+
+These APIs are shared and retrieved
+ via Accesses - anything that causes
+ a permissions check is an Access.
+
+Accesses are easy to replace in the
+ system, should you wish to heavily
+ customize the system in some way.
+
+The ability to receive given events,
+ is also an Access, though all "k."
+ events are always accessible for
+ simplicity reasons.
+
+"All components are replacable, as
+ long as you implement it correctly."
+
+Regarding the KittenOS NEO system
+ that you are now possibly running,
+ it likely has 3 critical services.
+
+I refer to these as the Trinity, just
+ because it seemed to fit.
+
+The following list notes which APIs
+ they provide and require, but only
+ from those in the "x." space.
+
+Anything else is an implementation
+ detail, subject to change - indeed,
+ these are only listed for the sake
+ of those who need to find code for
+ a given API.
+
+-------------------------------------
+
+Glacier: sys-glacier
+         * formerly sys-donkonit
+ Shell-independent parts of NEO, such
+  as screen management and settings,
+  and the "saving throw" recovery
+  mechanism.
+
+ Provides x.neo.sys.manage
+          x.neo.sys.screens
+          x.neo.pub.globals
+
+Everest: sys-everest
+ This is the default shell.
+
+ Provides x.neo.sys.session
+          x.neo.pub.window
+
+ Requires x.neo.sys.screens
+ Prefers  x.neo.sys.manage
+
+Icecap: sys-icecap
+ Shell-dependent component that
+  gains k.root and uses Everest
+  to implement the security policy.
+
+ Provides x.neo.pub.base
+ Requires x.neo.sys.manage
+ Prefers  x.neo.pub.window
+
+-------------------------------------
+
+The bootup process, meanwhile, is
+ rather simple.
+
+The kernel first designates the
+ primaryDisk based on the boot disk,
+ via the "deprecated" computer API
+ that has no replacement and is thus
+ nowhere near safe to remove.
+
+The primaryDisk is *the*
+ KittenOS NEO system disk - it holds
+ the system, in full.
+
+Inelegance here falls to the greater
+ power of practicality, as a VFS is
+ an unnecessary component here.
+
+After moving it's many globals into
+ place, it then immediately loads and
+ runs sys-init.
+
+sys-init's job is to firstly display
+ the KittenOS NEO boot screen -
+ this is where it got it's original
+ name from, s-bristol (see: Plymouth)
+
+It chooses the screen / GPU based on
+ the best combination it can find.
+
+The screen that it displays on is
+ then noted as the primary screen.
+
+During this boot screen, it firstly
+ starts Glacier, which is always a
+ necessary component for sys-init to
+ operate correctly.
+
+It then starts all services that have
+ "run." entries set to "yes".
+
+By default this means sys-icecap.
+
+Note that sys- entries occur first.
+
+This allows a security policy to be
+ installed, typically by sys-icecap,
+ that allows non-sys- parts to
+ perform useful operations.
+
+Finally, screen control is passed to
+ Glacier, and sys-init resets the
+ screens to their login-screen-state.
+
+If the settings daemon is not around
+ by this point, sys-init fails-safe
+ and allows login & safe-mode.
+
+(If you happen to be able to cause a
+ sys-glacier error, during early boot
+ in a way that does not require any
+ permissions with other ways of
+ creating havoc, then, this may be a
+ flaw in the system security model.
+ The risk is considered worth the
+  ability to theoretically use the
+  system.)
+
+If the setting "sys-init.nologin" is
+ set to "yes", then the login screen
+ is skipped.
+
+If the password is not empty, then
+ a password prompt is used.
+
+If Lua 5.2 is in use, the usual set
+ of instructions are replaced with a
+ warning to use Lua 5.3.
+
+After the login screen finishes,
+ sys-init disclaims the primary
+ screen, and runs the shell, dictated
+ by the setting "sys-init.shell" -
+ if settings are not available, then
+ sys-everest is used as a guess.
+
+Up to 5 seconds later, sys-init
+ confirms that "x.neo.sys.session" is
+ an existing API, and thus a shell is
+ currently running.
+
+If this does not occur in time,
+ then sys-init provides the:
+"That wasn't a shell. Try Safe Mode."
+ message, and causes a reboot.
+
+If it does, then sys-init finally
+ exits, with the "Trinity" in place,
+ and all screens automatically
+ disclaimed by sys-init's quit.
+
+(NOTE: If your particularly beady
+ service happens to get ahold of a
+ screen during startup, then that
+ screen is of course unaffected,
+ unless your service dies. This is of
+ course intentional in case you want
+ a service to control a screen.)
+
+This should summarize the system.
+Good luck. - 20kdc
+
+All of the KittenOS NEO documentation
+ is released into the public domain.
+
+No warranty is provided, implied,
+ or otherwise.

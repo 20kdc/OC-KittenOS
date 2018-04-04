@@ -1,0 +1,70 @@
+This is an overview of what a program
+ can expect from the scheduler.
+
+The kernel's scheduling is entirely,
+ and I mean entirely, timer-based.
+
+Everything in the kernel,
+ that has to occur the next time the
+ CPU has reached the main loop,
+ is, without exception, a timer,
+ apart from the timer system itself.
+
+That last note is important, since as
+ the timer system controls sleeping,
+ it must use computer.pullSignal -
+ thus, that part of the mechanism is
+ not in itself a timer - it is the
+ mechanism that waits for timers.
+
+Signals that have been retrieved with
+ computer.pullSignal, however, do
+ become timers.
+
+Timers are kept in a list, and have
+ their "target uptime" - the
+ computer.uptime() at which they are
+ due to be executed, their callback,
+ and after the callback, a list of
+ arguments to give to the callback.
+
+The current time as KittenOS NEO
+ sees it is available as os.uptime().
+ (and the address, as os.address() -
+ bit of a cheat, but who's counting?)
+
+This source is always in seconds, and
+ so KittenOS NEO timing is always in
+ seconds.
+
+The scheduling loop's precise details
+ are in the kernel itself, and any
+ precise description would be a
+ translation into pseudocode of what
+ is already there.
+
+But it suffices to note that the
+ scheduling loop works by, 16 times
+ at most, executing and removing all
+ timers from first defined to last
+ that have passed their time,
+ and getting the minimum time of all
+ unexecuted timers during each loop.
+
+The last minimum time, if it exists,
+ is then bounded to at least 0.05,
+ an OC minimum value for a yield.
+
+The pullSignal is then called with
+ the bounded time, if any.
+
+(If no bounded time exists, then the
+ system goes into more or less a deep
+ freeze, which is useful to conserve
+ energy, even when apps are "running"
+ but aren't using timers.)
+
+If there is any signal, distEvent is
+ called to distribute it to those
+ processes with the right accessses,
+ with an "h." prefix.

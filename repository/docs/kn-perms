@@ -1,0 +1,76 @@
+This is the list of Accesses natively
+ supported by the KittenOS NEO
+ kernel. It does not include those
+ that are handled by services,
+ but does include the mechanism for
+ creating & using services.
+
+For the services, see us-perms.
+
+Here, "*" means that everything after
+ this point is considered an argument
+ to the access.
+
+"c.*": Component. Returns:
+ list: Returns iterator over proxies.
+       These proxies may be set up to
+        be unalterable for obvious
+        security reasons.
+ For "filesystem", additionally:
+  primary: The primaryDisk proxy.
+  temporary: The RAM-FS proxy.
+  (These entries are included in the
+    above list - these fields serve
+    to identify the components.)
+
+"s.*": Allows receiving a signal.
+       Totally useless for any signal
+        prefixed with "k." or "x." -
+        "k." is always let through,
+        and "x." can't be sent to you
+        in a situation where you
+        don't have permission,
+        under normal circumstances.
+
+"k.root": The kernel's _ENV table.
+
+"k.computer": The "computer" table,
+               with wrapMeta applied,
+               pullSignal removed,
+               and also pushSignal.
+
+"k.kill": function (pid) to kill any
+           process on the system.
+
+"r.*": Registers a service's API for
+ retrieval via the "x." mechanism.
+ Returns a:
+ function (function (pkg, pid, send))
+ While the registration is locked on
+  success, attempting to use it will
+  fail, as no handler has been given.
+ The returned function finishes the
+  registration with a callback used
+  for when a process tries to use the
+  registered API.
+ What that API returns goes to the
+  target process.
+ The given "sendSig" function can be
+  used to send an event to the target
+  process, the type of which matches
+  the "x." name of the access, and
+  the parameters being those given to
+  sendSig.
+ So sendSig(1) from a service
+  registered via "r.carrot" would
+  generate the event: "x.carrot", 1.
+ (NOTE: Regarding management of
+  processes that die, just make sure
+  to check for k.procdie events and
+  handle as necessary.)
+
+"x.*": Accesses a registered service
+ API, returning whatever that service
+ intends to give you. Also gives you
+ "s.x.*" automatically to receive the
+ output of sendSig.

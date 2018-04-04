@@ -15,16 +15,13 @@
 --  though with automatically closing windows on process death.
 
 -- How Bristol talks to this is:
--- 1. Bristol starts up Everest. Everest does not claim new monitors by default.
--- 2. Bristol claims all available monitors to blank out the display
--- 3. The user logs in
--- 4. Bristol runs "startSession", enabling claiming of free monitors, and then promptly dies.
+-- 1. The user logs in
+-- 2. Bristol starts up Everest, and frees the primary monitor
+-- 3. The primary monitor is claimed by Everest and becomes monitor 1
+-- 4. After a small time, Bristol dies, unclaiming all monitors
 -- 5. Everest claims the new monitors, and the desktop session begins
--- 6. Everest dies/respawns, or endSession is called - in both cases,
---    Everest is now essentially back at the state in 1.
--- 7. Either this is Bristol, so go to 2,
---     or this is a screensaver host, and has a saving-throw to start Bristol if it dies unexpectedly.
---    In any case, this eventually returns to 2 or 4.
+-- 6. Everest shuts down for some reason,
+--     sys-init gets started UNLESS endSession(false) was used
 
 local everestProvider = neo.requireAccess("r.neo.pub.window", "registering npw")
 local everestSessionProvider = neo.requireAccess("r.neo.sys.session", "registering nsse")
@@ -46,7 +43,7 @@ neo.requestAccess("s.h.key_down")
 local monitors = {}
 
 -- NULL VIRTUAL MONITOR!
--- This is where we stuff processes while Bristol isn't online
+-- This is where we stuff processes until monitors show up
 monitors[0] = {nil, nil, 160, 50}
 
 -- {monitor, x, y, w, h, callback}

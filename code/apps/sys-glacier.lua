@@ -14,7 +14,6 @@ local gpus = neo.requireAccess("c.gpu", "screen control")
 local screens = neo.requireAccess("c.screen", "screen control")
 neo.requireAccess("s.h.component_added", "HW management")
 neo.requireAccess("s.h.component_removed", "HW management")
-neo.requireAccess("s.h.key_down", "Keymap guesswork")
 
 local function shutdownFin(reboot)
  -- any final actions donkonit needs to take here

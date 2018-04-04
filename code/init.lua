@@ -263,7 +263,7 @@ wrapOs = wrapMeta({
   totalMemory = computer.totalMemory, freeMemory = computer.freeMemory,
   energy = computer.energy, maxEnergy = computer.maxEnergy,
   clock = os.clock, date = os.date, difftime = os.difftime,
-  time = os.time, uptime = computer.uptime
+  time = os.time, uptime = computer.uptime, address = computer.address
  })
 wrapDebug = wrapMeta(debug)
 
@@ -530,7 +530,7 @@ function start(pkg, ...)
  env.neo.requestAccessAsync = requestAccessAsync
  env.neo.requestAccess = function (perm, handler)
   requestAccessAsync(perm)
-  if not handler then handler = function() end end
+  handler = handler or function() end
   while true do
    local n = {coroutine.yield()}
    handler(table.unpack(n))
