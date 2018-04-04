@@ -68,7 +68,7 @@ Secondly, here's what goes on in the
     accepts the use of that API.
 8. The callback in the registration
     is called.
-   It's first return value is sent
+   Its first return value is sent
     back to the user-process.
    If it errors, then nil is given
     instead (the error is not sent).
@@ -90,3 +90,9 @@ Given this operation is only ever
 Finally, the kernel prevents those
  processes that aren't "sys-" from
  calling "sys-" processes.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

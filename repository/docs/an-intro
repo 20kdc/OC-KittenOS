@@ -144,13 +144,13 @@ Inelegance here falls to the greater
  power of practicality, as a VFS is
  an unnecessary component here.
 
-After moving it's many globals into
+After moving its many globals into
  place, it then immediately loads and
  runs sys-init.
 
 sys-init's job is to firstly display
  the KittenOS NEO boot screen -
- this is where it got it's original
+ this is where it got its original
  name from, s-bristol (see: Plymouth)
 
 It chooses the screen / GPU based on
@@ -238,8 +238,8 @@ If it does, then sys-init finally
 This should summarize the system.
 Good luck. - 20kdc
 
-All of the KittenOS NEO documentation
- is released into the public domain.
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
 
-No warranty is provided, implied,
- or otherwise.

@@ -149,7 +149,7 @@ function ensureType(a, t)
 end
 
 function ensurePathComponent(s)
- if not string.match(s, "^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+") then error("chars disallowed") end
+ if not string.match(s, "^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+$") then error("chars disallowed") end
  if s == "." then error("single dot disallowed") end
  if s == ".." then error("double dot disallowed") end
 end

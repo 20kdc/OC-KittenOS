@@ -1,0 +1,57 @@
+The "event" library is meant to
+ mirror that of OpenOS in some ways,
+ while being distinct in others, such
+ as its optional nature.
+
+The event library returns a function,
+ which you then call with the process
+ NEO table, which then actually gives
+ the event table, after wrapping
+ the neo.requestAccess function in
+ order to ensure that events are
+ caught during that loop (as the only
+  direct event-loop in the kernel
+  API, with requireAccess using the
+  requestAccess in your NEO table).
+
+This amounts to:
+
+local event = require("event")(neo)
+
+This is what's in the event table:
+
+ listen([p1, ] cb): This has 2 forms.
+  It can be first-arg string, second
+   callback, or just a callback.
+  This is determined by the type of
+   the second argument.
+  If it's a function, then that - the
+   callback - is only called for
+   events of the type in the first
+   argument.
+  Otherwise, the callback is the 1st
+   argument, and the function is the
+   second argument.
+
+ ignore(cb): Deletes a callback. Yes,
+  this works even if a filter was
+  added onto it.
+
+ pull(...): Waits for an event whose
+  first parameters are.
+  Rather than using this for sleep,
+   you should use runAt or sleepTo.
+
+ runAt(time, func): At a given uptime
+  in os.uptime() units, runs func.
+
+ sleepTo(time[, earlyWake]): Runs
+  until either earlyWake() returns
+  true (if given), or os.uptime() >=
+  the time given, using a timer.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

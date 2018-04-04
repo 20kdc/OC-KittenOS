@@ -68,3 +68,9 @@ If there is any signal, distEvent is
  called to distribute it to those
  processes with the right accessses,
  with an "h." prefix.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

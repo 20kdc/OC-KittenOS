@@ -1,1 +1,67 @@
-Hello World.
+The "braille" library, contrary to
+ its name, in fact a library for the
+ drawing of graphics using the...
+ "repurposed" Braille characters in
+ OC's font. This library is meant to
+ be usable easily from applications,
+ including those that mix text and
+ graphics in a normal UI.
+
+Upon requiring, you get a wrapMeta'd
+ table, which consists of two
+ functions at this time:
+
+calcLine(x, y, w, span, get
+ [, colour]) -> calc:
+ Given an X/Y character position,
+  and a given width in characters,
+  along with the get function:
+   get(xp, yp) -> r, g, b
+   (NOTE: These coords are 0-based!)
+  and colour (a number, the amount of
+   difference required to cause an
+   FG/BG change - not giving this
+   disables colour output),
+  output spans to the span function:
+   span(x, y, str, bg, fg)
+
+new(x, y, w, h, cbs, colour) -> nux:
+ Creates a NeoUX component for an
+  embedded braille image.
+ X, Y, W and H are in characters,
+  each character offering 2x4 pixels.
+ cbs is a table that may have the
+  following fields:
+
+  selectable : The selectable flag.
+  key/clipboard :
+   Identical to NeoUX's.
+  touch/drag/drop/scroll: See NeoUX
+   for full details, but the xI and
+   yI parameters are gone, and the
+   X/Y coordinates are in Braille
+   pixels. The button/direction value
+   if any remains unchanged, but in
+   an earlier position.
+  
+ and must have a "get" function:
+  get(window, x, y) -> r, g, b
+  Gets the R/G/B of a pixel on the
+   image, with a 1-based pixel X/Y.
+  Details of conversion are hidden
+   from the user of this library for
+   future improvement by the end-user
+   or another party, but in no-colour
+   mode, 255, 255, 255 will always
+   show white and 0, 0, 0 will always
+   show black.
+ colour enables colour (see above),
+  though if displayed on a screen
+  without colour, this option is
+  ignored for that time.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

@@ -44,8 +44,8 @@ local function dotGet(p, ra, ga, ba, rb, gb, bb, rc, gc, bc, pos, col)
 end
 local function cTransform(core)
  return function (window, update, x, y, xI, yI, blah)
-  x = x + math.ceil(xI - 0.5)
-  y = y + math.ceil((yI - 0.25) * 4)
+  x = (x * 2) + math.ceil(xI - 0.5)
+  y = (y * 4) + math.ceil((yI - 0.25) * 4)
   core(window, update, x, y, blah)
  end
 end

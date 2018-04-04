@@ -33,6 +33,24 @@ Here, "*" means that everything after
         under normal circumstances.
 
 "k.root": The kernel's _ENV table.
+ Two things in particular
+  that are actually part of
+  the documented API for this:
+
+ securityPolicy(pid, proc, perm, req)
+ Setting this sets the security
+  policy used. Since this is root-by-
+  proxy, it's in k.root (this also
+   saves the memory another mechanism
+   would require, and complexity)
+ runProgramPolicy(ipkg, ...) :
+ Setting this sets the run-program
+  policy used, which prevents a
+  program being run in certain cases.
+ The varargs are the same as those
+  that would go to the new process -
+  the 'ipkg' is the name of the
+  program to start up.
 
 "k.computer": The "computer" table,
                with wrapMeta applied,
@@ -74,3 +92,9 @@ Here, "*" means that everything after
  intends to give you. Also gives you
  "s.x.*" automatically to receive the
  output of sendSig.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+
