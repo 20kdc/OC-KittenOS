@@ -1,8 +1,11 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- Braille Neoux Component
--- Callbacks :
+-- Braille Converter & NeoUX component
+-- While the Neoux part isn't OS-independent,
+--  the converter itself is. Enjoy.
+
+-- Braille Neoux Component Callbacks :
 --  selectable (boolean)
 --  key(window, update, a, c, d)
 --  touch(window, update, x, y, button)
@@ -164,7 +167,7 @@ local function calcLine(x, y, w, span, get, colour)
   span(x, y, str, bg, fg)
  end
 end
-heldRef = neo.wrapMeta({
+heldRef = {
  calcLine = calcLine,
  new = function (x, y, w, h, cbs, colour)
   local control
@@ -189,5 +192,5 @@ heldRef = neo.wrapMeta({
   }
   return control
  end,
-})
+}
 return heldRef

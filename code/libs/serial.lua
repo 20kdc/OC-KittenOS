@@ -26,12 +26,16 @@ function doSerialize(s)
  end
  error("Cannot serialize " .. type(s))
 end
-return neo.wrapMeta({
+return {
  serialize = function (x) return "return " .. doSerialize(x) end,
  deserialize = function (s)
-  local r1, r2 = pcall(function() return load(s, "=serial", "t", {})() end)
+  local r1, r2 = pcall(function()
+   return load(s, "=serial", "t", {})()
+  end)
   if r1 then
    return r2
+  else
+   return nil, tostring(r2)
   end
  end
-})
+}

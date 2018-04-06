@@ -78,7 +78,21 @@ unicode is extended with:
    safe to pass to a GPU without any
    odd graphical glitches.
 
-os is replaced with:
+The KittenOS NEO kernel also reserves
+ the ability to take advantage of any
+ full de-UTF16'd support for Unicode
+ available on the system, but will
+ not include such support as a shim
+ for memory usage reasons.
+
+Programs that thus try to work around
+ this problem should delegate this
+ task to a library, in a separate
+ package, which can then be updated
+ as-needed if and when the issue is
+ resolved.
+
+os is replaced with (wrapMeta'd):
  totalMemory = computer.totalMemory,
  freeMemory = computer.freeMemory,
  energy = computer.energy,
@@ -89,15 +103,29 @@ os is replaced with:
  uptime = computer.uptime,
  address = computer.address
 
-The following are just wrapMeta'd
- host functions
- (*: wrapped for security):
+The following are just host functions
+ (*: wrapped for security - these
+  functions detect metatable abuse):
 
  assert, ipairs, load, next*,
  pairs, pcall, xpcall, select,
  type, error, tonumber, tostring,
  setmetatable, getmetatable*,
  rawset*, rawget, rawlen, rawequal
+
+(NOTE: Before you consider that load
+ has no checks: The policy regarding
+ load is taken from the host system.
+ Which means bytecode loading is
+  almost certainly off. If it's not
+  off, then this is the user's fault,
+  as doing so is marked as a security
+  risk for very obvious reasons.
+ As for trying to use the environment
+  to bypass a metatable, I tested.
+ Metatables do apply to environments,
+  including global creation.
+ There is no way to win.)
 
 "require" and "neo" are the parts of
  the environment where a NEO-specific
@@ -107,6 +135,13 @@ require takes a string, and returns
  the value returned by the library at
  "libs/" .. str .. ".lua" on the
  primary disk.
+ Since R2, the value is automatically
+  wrapMeta'd, just in case.
+ Before R2, libraries did this on
+  their own, but this caused NEO-only
+  code to crop up in libraries that
+  did not need NEO-only code.
+
 The library name must be a valid path
  component, and the library path must
  also be valid - see
@@ -285,4 +320,3 @@ With that, I hope I have documented
  the public domain.
 -- No warranty is provided,
  implied or otherwise.
-

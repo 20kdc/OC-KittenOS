@@ -17,6 +17,16 @@ if ocemu then
  emergencyFunction = ocemu.log
 end
 
+if load(string.dump(function()end)) then
+ -- This is your first and only warning.
+ -- allowBytecode has effects *outside the game.*
+ -- If it is enabled, any program with load can take over your host system.
+ -- I refuse to allow KittenOS NEO to operate in this environment for your safety.
+ -- If you are truly unable to change it, tell someone who can.
+ emergencyFunction("Please set allowBytecode = false in OCEmu config.")
+ error("Please set allowBytecode = false in OC config.")
+end
+
 primaryDisk = component.proxy(computer.getBootAddress())
 
 -- {{time, func, arg1...}...}
@@ -149,7 +159,7 @@ function ensureType(a, t)
 end
 
 function ensurePathComponent(s)
- if not string.match(s, "^[a-zA-Z0-9_%-%+%,%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+$") then error("chars disallowed") end
+ if not string.match(s, "^[a-zA-Z0-9_%-%+%,%.%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+$") then error("chars disallowed: " .. s) end
  if s == "." then error("single dot disallowed") end
  if s == ".." then error("double dot disallowed") end
 end
@@ -245,6 +255,7 @@ function loadLibraryInner(library)
  if l then
   local ok, al = pcall(l)
   if ok then
+   al = wrapMeta(al)
    libraries[library] = al
    return al
   else
@@ -353,6 +364,15 @@ function runProgramPolicy(ipkg, pkg, pid, ...)
   end
  end
  return true
+end
+
+-- This is hidden here to protect you.
+-- I beg of you, don't remove it.
+if load(string.dump(function()end)) then
+ local oldLoad = load
+ load = function (c, n, m, ...)
+  return oldLoad(c, n, "t", ...)
+ end
 end
 
 function retrieveAccess(perm, pkg, pid)
@@ -467,7 +487,8 @@ function start(pkg, ...)
 
  local function startFromUser(ipkg, ...)
   ensureType(ipkg, "string")
-  ensurePathComponent(ipkg .. ".lua")
+  local ok, n = pcall(ensurePathComponent, ipkg .. ".lua")
+  if not ok then return nil, n end
   local k, r = runProgramPolicy(ipkg, pkg, pid, ...)
   if k then
    return start(ipkg, pkg, pid, ...)

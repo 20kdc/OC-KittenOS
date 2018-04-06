@@ -1,0 +1,35 @@
+A Quick Note On NeoUX Application
+ Structure
+
+A typical NeoUX application has one
+ window, which it uses .reset on in
+ order to change the window contents
+ to different things.
+
+This is typically achieved with a
+ callback to regenerate the window,
+ used like this:
+
+window = neoux.create(mainWin())
+
+ and to regenerate the window:
+
+window.reset(mainWin())
+
+This allows a simple way to write big
+ UI trees without going totally nuts.
+
+A good example of this is app-flash,
+ but unlike most of the examples, it
+ does not change the regeneration
+ callback (it never has to - the
+ labelling window never needs to be
+ regenerated after it's switched to,
+ so the only regeneration is for the
+ main window)
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

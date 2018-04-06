@@ -21,6 +21,10 @@ local actualPolicy = function (pkg, pid, perm)
  if perm:sub(1, 10) == "x.neo.pub." then
   return "allow"
  end
+ -- These signals are harmless, though they identify HW (as does everything in OC...)
+ if perm == "s.h.component_added" or perm == "s.h.component_removed" then
+  return "allow"
+ end
  -- This is to ensure the prefix naming scheme is FOLLOWED!
  -- sys- : System, part of KittenOS NEO and thus tries to present a "unified fragmented interface" in 'neo'
  -- app- : Application - these can have ad-hoc relationships. It is EXPECTED these have a GUI

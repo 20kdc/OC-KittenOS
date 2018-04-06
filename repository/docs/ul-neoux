@@ -1,4 +1,49 @@
-Hello World.
+The "neoux" (aka NeoUX) library is a
+ UI framework for KittenOS NEO, meant
+ to provide a consistent set of
+ controls and a consistent way to
+ navigate the UI in any given case.
+
+Thus, it's not used by text editing
+ programs such as Neolithic.
+
+To get ahold of NeoUX in your app,
+ use code similar to:
+
+local event, neoux
+event = require("event")(neo)
+neoux = require("neoux")(event, neo)
+
+The neo table is used for retrieving
+ the required accesses for APIs.
+
+The NeoUX API is divided into three
+ parts - the part that connects it to
+ Everest & utility functions, the UI
+ framework's "tcwindow" root, and the
+ basic set of controls.
+
+The most reliable reference on the
+ API a control implements is given
+ at the top of libs/neoux.lua, and
+ for updatability reasons will not
+ be repeated here, except with the
+ note that "xI"/"yI" is within-char
+ position from 0 to 1.
+
+ TODO, TODO, TODO, TODO, TODO, TODO
+
+ neoux.fileDialog = function (forWrite, callback)
+ neoux.create = function (w, h, title, callback)
+ neoux.pad = require("fmttext").pad
+ neoux.fmtText = function (...)
+ neoux.tcwindow = function (w, h, controls, closing, bg, fg, selIndex)
+ neoux.tcrawview = function (x, y, lines)
+ neoux.tchdivider = function (x, y, w)
+ neoux.tcvdivider = function (x, y, h)
+ neoux.tcbutton = function (x, y, text, callback)
+ neoux.tcfield = function (x, y, w, textprop)
+ neoux.startDialog = function (fmt, title, wait)
 
 -- This is released into
  the public domain.

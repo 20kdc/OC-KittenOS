@@ -18,6 +18,7 @@ fmt = {
   end
   return t
  end,
+ -- Expects safeTextFormat'd input
  fmtText = function (text, w)
   local nl = text:find("\n")
   if nl then
@@ -67,4 +68,4 @@ fmt = {
   return {fmt.pad(text, w)}
  end
 }
-return neo.wrapMeta(fmt)
+return fmt

@@ -51,7 +51,11 @@ This is a critical memory management
 (This also means libraries can have
   security side-effects, but they
   always can in any system, arguably,
-  and it's worth it for the memory.)
+  and it's worth it for the memory.
+  Notably, library values get
+  wrapMeta'd automatically since R2,
+  in order to reduce NEO-specific
+  code.)
 
 The processes are applications and
  services, that communicate with the

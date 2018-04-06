@@ -50,6 +50,7 @@ function regenCore()
    fd.close()
    busy = false
    neoux.startDialog("Got the data!", nil, true)
+   window.reset(regenCore())
   end))
   table.insert(elems, neoux.tcbutton(6, l + 1, "set", function (window)
    if busy then return end
@@ -62,6 +63,7 @@ function regenCore()
    report = (wasOk and tostring(report)) or "Flash successful.\nI recommend relabelling the EEPROM."
    busy = false
    neoux.startDialog(report, nil, true)
+   window.reset(regenCore())
   end))
   local function dHandler(set, get, wd)
    local setter = v[set]
@@ -85,5 +87,11 @@ end
 local window = neoux.create(regenCore())
 
 while running do
- event.pull()
+ local s = {event.pull()}
+ if (s[1] == "h.component_added" or s[1] == "h.component_removed") and busy then
+  -- Anything important?
+  if s[3] == "gpu" or s[3] == "screen" then
+   window.reset(regenCore())
+  end
+ end
 end

@@ -1,4 +1,54 @@
-Hello World.
+The "serial" library is a library to
+ serialize and deserialize Lua values
+ in a relatively safe* manner.
+
+ * Serialization cannot handle a
+    recursive loop correctly,
+    and may error() if certain values
+    are passed to it.
+   The deserialization has unbounded
+    time and memory only limited by
+    the host. It is possible to kill
+    a process indirectly via a
+    poisonous file, but it is not
+    possible to directly break the
+    sandbox without Lua interpreter
+    bugs.
+
+It is not recommended to use serial
+ for data that is not from a known
+ source, but it is not dangerous to
+ system security (but certainly to
+ stability) to use it for other
+ data so long as no function that
+ originated from the data is ever
+ executed with objects that can be
+ used to elevate privilege.
+
+(In other words, don't call any
+  function if you can't tell where it
+  came from. This should be obvious.)
+
+The serial library has merely two
+ functions available to it.
+
+ serialize(val):
+  Returns the serialized data as a
+   string. The serialized data will
+   be in the form of "return ",
+   followed by a Lua 5.2-parsable
+   value of some sort.
+
+ deserialize(str):
+  Returns the deserialized data as a
+   Lua value.
+  A value of nil is an ambiguity:
+   it could be the actual data, or it
+   could be a deserialization error.
+  Check for this situation by reading
+   the second returned value.
+  If it is not nil, deserialization
+   failed with the given error.
 
 -- This is released into
  the public domain.

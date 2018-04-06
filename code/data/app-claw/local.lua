@@ -1,3 +1,5 @@
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
@@ -123,7 +125,7 @@ return {
  },
  ["app-flash"] = {
   desc = "KittenOS NEO EEPROM Flasher",
-  v = 0,
+  v = 2,
   deps = {
    "neo"
   },

@@ -82,7 +82,10 @@ newNeoux = function (event, neo)
   return window
  end
  -- Padding function
- neoux.pad = require("fmttext").pad
+ neoux.pad = function (...)
+  local fmt = require("fmttext")
+  return fmt.pad(...)
+ end
  -- Text dialog formatting function.
  -- Assumes you've run unicode.safeTextFormat if need be
  neoux.fmtText = function (...)

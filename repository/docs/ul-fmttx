@@ -1,0 +1,55 @@
+The "fmttext" library is used for
+ formatting text in various places in
+ KittenOS NEO.
+
+It's recommended that you only load
+ this library when you need it, and
+ release the value immediately after,
+ as it is rarely called, and has no
+ sticky objects that could cause
+ duplicated library issues.
+
+If using neoux, the pad and fmtText
+ functions are proxied there in a
+ load-on-demand form, such that you
+ can call them, and the library is
+ loaded for that call.
+
+Essentially, it's job is to take some
+ safeTextFormat'd text, and turn it
+ into a column of a given width.
+
+It has two functions for this task:
+ pad(text, len[, centre[, cut]]):
+  Pads the given safeTextFormat'd
+   string to a given width, returning
+   the resulting string.
+  If centre is true, then the text is
+   centred within the area given -
+   otherwise, it is left-justified.
+   (Values that are not nil or true
+     are reserved for future use.)
+  If cut is true, then the text may
+   be reduced in size if necessary.
+  Otherwise, text that is too long is
+   not reduced.
+
+ fmtText(text, width):
+  Formats the given text to a given
+   width in a wrapping fashion.
+  Returns a series of lines that are
+   padded to the given width.
+  If there are newlines in the text,
+   these newlines are respected.
+  If possible, the wrapping is a word
+   wrap style, but words are broken
+   if necessary.
+  If the width is less than 2, then
+   this function may fail in various
+   ways, up to and including freezes.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

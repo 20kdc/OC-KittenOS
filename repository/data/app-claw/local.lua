@@ -33,8 +33,10 @@ return {
    "docs/kn-sched",
    "docs/kn-perms",
    "docs/us-perms",
+   "docs/us-nxapp",
    "docs/ul-seria",
    "docs/ul-event",
+   "docs/ul-fmttx",
    "docs/ul-neoux",
    "docs/ul-broil",
    "docs/gp-pedan"

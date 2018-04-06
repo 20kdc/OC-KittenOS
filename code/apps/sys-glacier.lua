@@ -408,13 +408,8 @@ while true do
   -- always shutdown
   shutdownFin(shutdownMode)
  end
- if s[1] == "h.component_added" then
-  -- Before doing anything, is it worth it?
-  if s[3] == "gpu" or s[3] == "screen" then
-   rescanDevs()
-  end
- end
- if s[1] == "h.component_removed" then
+ if s[1] == "h.component_added" or s[1] == "h.component_removed" then
+  -- Anything important?
   if s[3] == "gpu" or s[3] == "screen" then
    rescanDevs()
   end

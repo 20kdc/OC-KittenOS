@@ -410,6 +410,8 @@ local function initializeSystem()
     else
      local v, err = neo.executeAsync(steps[w])
      if not v then
+      neo.emergency(steps[w] .. " STF")
+      neo.emergency(err)
       table.insert(warnings, steps[w] .. " STF")
       table.insert(warnings, err)
      end
