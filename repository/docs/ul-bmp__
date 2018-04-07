@@ -1,0 +1,248 @@
+The "bmp" library is a library for
+ the express purpose of reading and
+ writing Windows BMP files and other
+ Windows DIB headers.
+
+It is written with portability,
+ memory-efficiency, and reusability
+ as it's primary goals.
+
+With this in mind, it can be used as
+ the backend for an ICO/CUR handling
+ library, works with packed-DIB data,
+ only requires the first 0x36 bytes
+ of a .BMP to be present, and can be
+ used on KittenOS NEO, OpenOS, and
+ just about any place with a desktop
+ Lua interpreter available for use.
+
+(That said, it's not 5.1-tested.)
+
+That said, it does not handle all the
+ possible bitmap formats, restricting
+ itself to support of BI_RGB where
+ possible, and BI_BITFIELDS to a
+ limited extent.
+
+Given this covers most bitmaps that
+ you are likely to generate, do not
+ underestimate the use of this.
+
+The library has 2 fields:
+ headerMinSzBMP,
+ headerMinSzDIB: The minimum data you
+  must have available when calling
+  connect for a given format.
+
+The library has 3 functions:
+
+ connect(get, set, cMode, packed):
+  "Connects" to a bitmap. A very real
+   implication of this is that the
+   data get/set accesses is where the
+   actual bitmap is, and this merely
+   provides a way to access it in a
+   useful form (as pixels).
+  Technically, all but 'get' are
+   optional, but I feel it necessary
+   to document them as if they are
+   implicitly left nil by those users
+   who omit them because of their
+   functionality.
+  Due to this section being a rather
+   long length, the paragraph
+   separation is per-argument here.
+
+  get is best described by:
+   function (a) return dt:byte(a) end
+
+  set, which is optional unless you
+   call any of the set* functions in
+   the resulting bitmap, has a longer
+   description:
+   function (a, v)
+    dt = dt:sub(1, a - 1) ..
+         string.char(v) ..
+         dt:sub(a + 1)
+   end
+  Notably, while these are the
+   canonical implementations of these
+   functions, they are by no means
+   the only implementations, and it
+   is the purpose of these callbacks
+   to allow choice in how you write
+   them.
+
+  cMode exists for cursor and icon
+   handling. These images are split
+   via a very horrifying mechanism
+   into an AND mask, and a XOR mask.
+  The XOR mask typically contains
+   what could be called the actual
+   image - the AND mask then acts
+   as a sort of alpha mask, blacking
+   out the areas where the XOR mask
+   is then projected onto.
+  It can be one of three values.
+  It can be nil, in which case this
+   is an ordinary DIB, with no evil
+   nonsense applied to it -
+  It can be "colour", in which case
+   the XOR mask (the actual image in
+   most cases) is shown -
+  And it can be "mask", in which case
+   the AND mask is accessed instead.
+   (Notably, bpp, paletteSize, and
+    ignoresPalette changes to the
+    1bpp mask format in use here.)
+
+  packed exists for the use of those
+   bitmaps that don't have a BMP file
+   header, the usual "BM". In this
+   case, you can remove support for
+   gap1 but allow yourself to avoid
+   the BM header as a result.
+  If not nil, it is how much to
+   offset the indexes from 0-based
+   offsets into a .BMP file to the
+   final positions.
+  The following table is useful for
+   understanding this:
+  1: Standard 1-indexed BMP handling,
+      but with no gap1 support (!)
+  -13: Standard 1-indexed handling of
+        a packed DIB (no BMP header),
+        such as a BITMAP or ICON
+        resource (set cMode if ICON)
+  -9: Standard 1-indexed handling of
+       a CURSOR resource, which has
+       a 2-short hotspot header
+
+ prepareDIB(w, h, p, bpp, paletteSize
+  , topDown, cMode) -> hd, sz, dp:
+  (See prepareBMP if you want a .BMP
+   file, but this describes how to
+   use the arguments and returns.)
+  This prepares a packed DIB, and
+   returns three values:
+   1. The header. (The palette, in
+       the 4-byte-per-colour form,
+       will follow immediately.)
+   2. The buffer size, including the
+       header in 1. The bytes that
+       are not specified can be
+       initialized in any fashion,
+       as they are part of the colour
+       and later image data itself.
+   3. The pointer to the pixels for
+       BM creation.
+
+  w, h, p, and bpp are the usual -
+   width, height, planes, pixel depth
+   - but the paletteSize needs note.
+  If the BPP is <= 8, then the size
+   of the palette must not be 0.
+  This is to avoid unintentionally
+   triggering legacy features in the
+   BMP format.
+
+  topDown and cMode are essentially
+   booleans that can safely be nil,
+   where nil is interpreted as false.
+  
+  topDown indicates that the image is
+   to be top-down rather than the
+   standard upsidedown form of a BMP.
+  This may look odd if streaming a
+   BMP, so the option, while rather
+   an odd one, has been included.
+
+  cMode indicates that this image is
+   intended for use in an ICON or
+   CURSOR resource of some form, and
+   should thus contain an AND mask.
+
+ prepareBMP(...):
+  This prepares a .BMP file. It has
+  the same arguments and returns as
+  prepareDIB, and indeed wraps it.
+
+Bitmap objects, while not read-only,
+ do not particularly change if you
+ write to them.
+
+Going out of bounds with a bitmap
+ object will have hilarious results.
+
+...Don't do it.
+
+Anyway, they have these fields:
+
+ width, height, planes: The usuals.
+ (NOTE: Due to lack of examples,
+  it is assumed that planes are a
+  dimension more major than height.
+  If this isn't the case, someone
+   do tell me, preferably with an
+   example and a way to open it that
+   does not involve this library, so
+   I can test and correct all of the
+   code involving them.)
+ bpp: Bits per pixel. This specifies
+       a limit on numbers passed to
+       and from the bitmap object,
+       of 1 << bpp (2 ^ bpp).
+      A number may not be equal to
+       or exceed this limit.
+ ignoresPalette: Used to indicate
+  the palette is worthless and does
+  not affect image contents in any
+  way at all. If one exists.
+ paletteCol: The amount of colours in
+  the palette. Multiply by 4 for a
+  byte count.
+ paletteAddress: Useful for caching,
+  the palette starts at this get/set
+  address.
+ dataAddress: Useful for caching,
+  the data starts at this get/set
+  address.
+ dataFull: The size of the data of
+  the image, according to the image.
+ dsSpan: This is a hint for the cache
+  and cannot be relied upon to be
+  correct, only >= 1:
+  Scanline length in bytes.
+ dsPlane: This is a hint for the
+  cache and cannot be relied upon to
+  be correct, only >= 1:
+  Plane length in bytes.
+ getPalette(i): Gets the XRGB value
+  of colour i as an integer.
+  Do not go out of range of I.
+ setPalette(i, v): Sets the XRGB
+  value of colour i as an integer.
+  Do not go out of range of I or V.
+ getPixel(x, y, p): Returns the pixel
+  value at X, Y, P. Do not go out of
+  the range of X, Y or P.
+ setPixel(x, y, p, v): Sets the pixel
+  value at X, Y, P to V. Do not go
+  out of the range of X, Y, P, or V.
+
+...in other words, about as much
+ usability as a BufferedImage with
+ getGraphics and createGraphics taken
+ out of it for some crazy reason.
+
+The primary use of this library is
+ because people like to use formats
+ they happen to have actually heard
+ of before, and everything but BMP is
+ too complicated for low-memory OSes
+ to stream from disk.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.

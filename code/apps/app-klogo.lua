@@ -4,8 +4,14 @@
 local event = require("event")(neo)
 local neoux = require("neoux")(event, neo)
 local braille = require("braille")
+local bmp = require("bmp")
 local icecap = neo.requireAccess("x.neo.pub.base", "loadimg")
-local qt = icecap.open("/logo.data", false)
+local qt = icecap.open("/logo.bmp", false)
+
+local header = qt.read(bmp.headerMinSzBMP)
+
+local lcBase = bmp.headerMinSzBMP
+local lcWidth = 1
 
 local lc = {}
 local lcdq = {}
@@ -18,26 +24,46 @@ for i = 1, queueSize do
 end
 local function getLine(y)
  if not lc[y] then
-  local idx = (y - 1) * 120
-  qt.seek("set", idx)
+  local idx = y * lcWidth
+  qt.seek("set", lcBase + idx - 1)
   if lcdq[1] then
    lc[table.remove(lcdq, 1)] = nil
   end
   table.insert(lcdq, y)
-  lc[y] = qt.read(120) or ""
+  lc[y] = qt.read(lcWidth)
  end
  return lc[y]
 end
 
+local bitmap = bmp.connect(function (i)
+ if i >= lcBase then
+  local ld = getLine(math.floor((i - lcBase) / lcWidth))
+  i = ((i - lcBase) % lcWidth) + 1
+  return ld:byte(i) or 0
+ end
+ return header:byte(i) or 0
+end)
+
+qt.seek("set", bitmap.paletteAddress - 1)
+header = header .. qt.read(bitmap.paletteCol * 4)
+lcBase = bitmap.dataAddress
+lcWidth = bitmap.dsSpan
+
 local running = true
 
-neoux.create(20, 10, nil, neoux.tcwindow(20, 10, {
- braille.new(1, 1, 20, 10, {
+local function decodeRGB(rgb)
+ return math.floor(rgb / 65536) % 256, math.floor(rgb / 256) % 256, rgb % 256
+end
+
+local bW, bH = math.ceil(bitmap.width / 2), math.ceil(bitmap.height / 4)
+neoux.create(bW, bH, nil, neoux.tcwindow(bW, bH, {
+ braille.new(1, 1, bW, bH, {
   selectable = true,
   get = function (window, x, y, bg, fg, selected, colour)
-   local data = getLine(y)
-   local idx = ((x - 1) * 3) + 1
-   return data:byte(idx) or 255, data:byte(idx + 1) or 0, data:byte(idx + 2) or 255
+   if bitmap.ignoresPalette then
+    return decodeRGB(bitmap.getPixel(x - 1, y - 1, 0))
+   end
+   return decodeRGB(bitmap.getPalette(bitmap.getPixel(x - 1, y - 1, 0)))
   end
  }, 1)
 }, function (w)

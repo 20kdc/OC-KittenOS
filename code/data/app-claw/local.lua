@@ -120,7 +120,7 @@ return {
   },
   files = {
    "apps/app-klogo.lua",
-   "data/app-klogo/logo.data"
+   "data/app-klogo/logo.bmp"
   },
  },
  ["app-flash"] = {

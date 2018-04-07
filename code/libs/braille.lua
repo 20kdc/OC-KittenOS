@@ -184,7 +184,10 @@ heldRef = {
    drop = cbs.drop and cTransform(cbs.drop),
    scroll = cbs.scroll and cTransform(cbs.scroll),
    line = function (window, x, y, iy, bg, fg, selected)
-    local colour = ((window.getDepth() <= 1) or nil) and colour
+    local colour = colour
+    if window.getDepth() <= 1 then
+     colour = nil
+    end
     calcLine(x, y, control.w, window.span, function (xb, yb)
      return cbs.get(window, xb + 1, yb + (iy * 4) - 3, bg, fg, selected, colour)
     end, colour)

@@ -38,7 +38,8 @@ return {
    "docs/ul-event",
    "docs/ul-fmttx",
    "docs/ul-neoux",
-   "docs/ul-broil",
+   "docs/ul-brail",
+   "docs/ul-bmp__",
    "docs/gp-pedan"
   },
  }
