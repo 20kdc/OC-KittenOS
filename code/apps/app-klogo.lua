@@ -6,11 +6,13 @@ local neoux = require("neoux")(event, neo)
 local braille = require("braille")
 local bmp = require("bmp")
 local icecap = neo.requireAccess("x.neo.pub.base", "loadimg")
-local qt = icecap.open("/logo.bmp", false)
+local file = icecap.open("/logo.bmp", false)
 
-local header = qt.read(bmp.headerMinSzBMP)
+local header = file.read(bmp.headerMinSzBMP)
+local palette = ""
 
 local lcBase = bmp.headerMinSzBMP
+local palBase = bmp.headerMinSzBMP
 local lcWidth = 1
 
 local lc = {}
@@ -25,17 +27,23 @@ end
 local function getLine(y)
  if not lc[y] then
   local idx = y * lcWidth
-  qt.seek("set", lcBase + idx - 1)
+  file.seek("set", lcBase + idx - 1)
   if lcdq[1] then
    lc[table.remove(lcdq, 1)] = nil
   end
   table.insert(lcdq, y)
-  lc[y] = qt.read(lcWidth)
+  lc[y] = file.read(lcWidth)
  end
  return lc[y]
 end
 
 local bitmap = bmp.connect(function (i)
+ if i >= palBase then
+  local v = palette:byte(i + 1 - palBase)
+  if v then
+   return v
+  end
+ end
  if i >= lcBase then
   local ld = getLine(math.floor((i - lcBase) / lcWidth))
   i = ((i - lcBase) % lcWidth) + 1
@@ -44,8 +52,9 @@ local bitmap = bmp.connect(function (i)
  return header:byte(i) or 0
 end)
 
-qt.seek("set", bitmap.paletteAddress - 1)
-header = header .. qt.read(bitmap.paletteCol * 4)
+file.seek("set", bitmap.paletteAddress - 1)
+palette = file.read(bitmap.paletteCol * 4)
+palBase = bitmap.paletteAddress
 lcBase = bitmap.dataAddress
 lcWidth = bitmap.dsSpan
 
