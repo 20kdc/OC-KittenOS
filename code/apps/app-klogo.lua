@@ -60,7 +60,10 @@ lcWidth = bitmap.dsSpan
 
 local running = true
 
-local function decodeRGB(rgb)
+local function decodeRGB(rgb, igp)
+ if igp and bitmap.bpp > 24 then
+  rgb = math.floor(rgb / 256)
+ end
  return math.floor(rgb / 65536) % 256, math.floor(rgb / 256) % 256, rgb % 256
 end
 
@@ -70,9 +73,9 @@ neoux.create(bW, bH, nil, neoux.tcwindow(bW, bH, {
   selectable = true,
   get = function (window, x, y, bg, fg, selected, colour)
    if bitmap.ignoresPalette then
-    return decodeRGB(bitmap.getPixel(x - 1, y - 1, 0))
+    return decodeRGB(bitmap.getPixel(x - 1, y - 1, 0), true)
    end
-   return decodeRGB(bitmap.getPalette(bitmap.getPixel(x - 1, y - 1, 0)))
+   return decodeRGB(bitmap.getPalette(bitmap.getPixel(x - 1, y - 1, 0)), false)
   end
  }, 1)
 }, function (w)
