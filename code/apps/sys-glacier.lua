@@ -177,11 +177,11 @@ donkonitSPProvider(function (pkg, pid, sendSig)
   end,
   -- NOTE: REPLICATED IN GB
   getSetting = function (name)
-   if type(name) ~= "string" then error("Setting name must be string") end
+   neo.ensureType(name, "string")
    return settings[name]
   end,
   delSetting = function (name)
-   if type(name) ~= "string" then error("Setting name must be string") end
+   neo.ensureType(name, "string")
    local val = nil
    if name == "password" or name == "pub.clipboard" then val = "" end
    settings[name] = val
@@ -189,8 +189,8 @@ donkonitSPProvider(function (pkg, pid, sendSig)
    pcall(saveSettings)
   end,
   setSetting = function (name, val)
-   if type(name) ~= "string" then error("Setting name must be string") end
-   if type(val) ~= "string" then error("Setting value must be string") end
+   neo.ensureType(name, "string")
+   neo.ensureType(val, "string")
    settings[name] = val
    -- NOTE: Either a monitor is under application control,
    --  or it's not under any control.
@@ -203,11 +203,11 @@ donkonitSPProvider(function (pkg, pid, sendSig)
    targsSD[pid] = sendSig
   end,
   registerSavingThrow = function (st)
-   if type(st) ~= "function" then error("Saving throw function must be a function") end
+   neo.ensureType(st, "function")
    targsST[pid] = st
   end,
   shutdown = function (reboot)
-   if type(reboot) ~= "boolean" then error("Shutdown parameter must be a boolean (reboot)") end
+   neo.ensureType(reboot, "boolean")
    if shuttingDown then return end
    shuttingDown = true
    shutdownMode = reboot
@@ -263,7 +263,7 @@ donkonitRDProvider(function (pkg, pid, sendSig)
    return c
   end,
   claim = function (address)
-   if type(address) ~= "string" then error("Address must be string.") end
+   neo.ensureType(address, "string")
    for k, v in ipairs(monitorPool) do
     if v.address == address then
      local gpu = getGPU(v)
@@ -379,11 +379,11 @@ glacierDCProvider(function (pkg, pid, sendSig)
   forceRescan = rescanDevs,
   -- NOTE: "pub." prefixed version of functions in sys.manage
   getSetting = function (name)
-   if type(name) ~= "string" then error("Setting name must be string") end
+   neo.ensureType(name, "string")
    return settings["pub." .. name]
   end,
   delSetting = function (name)
-   if type(name) ~= "string" then error("Setting name must be string") end
+   neo.ensureType(name, "string")
    local val = nil
    if name == "clipboard" then val = "" end
    settings["pub." .. name] = val
@@ -391,8 +391,8 @@ glacierDCProvider(function (pkg, pid, sendSig)
    pcall(saveSettings)
   end,
   setSetting = function (name, val)
-   if type(name) ~= "string" then error("Setting name must be string") end
-   if type(val) ~= "string" then error("Setting value must be string") end
+   neo.ensureType(name, "string")
+   neo.ensureType(val, "string")
    settings["pub." .. name] = val
    sRattle("pub." .. name, val)
    pcall(saveSettings)

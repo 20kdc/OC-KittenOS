@@ -1,0 +1,94 @@
+This is a list of the settings, and
+ setting formats, in KittenOS NEO.
+
+As "*" is used as a part of some of
+ the settings, <> is used to enclose
+ a component of a varied name.
+
+-- System-wide permissions --
+
+pub.<anything>: Public settings,
+ readable and writable by anything
+ with x.neo.pub.globals access.
+
+pub.clipboard: The text in the user's
+ clipboard. Can include newlines.
+ Hardcoded to be non-nil.
+
+perm|*|<permission>: Security policy
+ override entry, global. Allows an
+ application to set the defaults for
+ its own APIs, or for the user to
+ override that or any other default.
+ If there is a setting here, it must
+ be respected unless the user makes a
+ direct choice to alter it.
+ sys-secpolicy defines this as having
+ priority only second to...
+
+perm|<app>|<permission>: Security
+ policy override entry for a specific
+ application. Solely for use by the
+ user to make specific choices about
+ the applications on the system.
+ The existence or lack of this entry
+ must be respected, unless the user
+ makes a direct choice to alter it.
+
+-- screen management settings --
+
+scr.w.<monitor>: Width, as a string,
+ for a given monitor by address.
+
+scr.h.<monitor>: Height, as a string,
+ for a given monitor by address.
+
+scr.d.<monitor>: Depth, as a string,
+ for a given monitor by address.
+
+scr.t.<monitor>: Touch invert, given
+ as "yes" for true and anything else
+ for false (including non-existence),
+ for a given monitor by address.
+
+-- sys-init specific settings --
+
+password: The user's password.
+ Hardcoded to be non-nil.
+ An empty password is considered to
+ be "not a password".
+
+sys-init.nologin: If set to "yes",
+ the login screen is skipped, even if
+ a password is present.
+
+sys-init.shell: The user's shell.
+ Not hardcoded to be non-nil, since
+ this can be broken in many ways,
+ but is hardcoded with "sys-everest"
+ as a default, which will replace nil
+ the next time sys-glacier starts up.
+
+run.sys-<program beginning with sys->
+ This is stage 1 of startup, which
+ starts things beginning with "sys-".
+ This is required so that security
+ policy changeover happens smoothly.
+ A value equal to "yes" causes the
+ service to be automatically started
+ up as the system boots.
+ As sys-glacier is needed to read the
+ list of processes to start, it is
+ always started regardless, and must
+ not have an entry here.
+
+run.<any program>: Programs which
+ do not begin with "sys-" start up
+ during stage 2. As usual, any entry
+ with the value of "yes" is started.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

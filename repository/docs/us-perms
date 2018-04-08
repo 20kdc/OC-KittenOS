@@ -1,4 +1,62 @@
-Hello World.
+This is a list of the different
+ additional permissions in KittenOS
+ NEO as distributed, and their
+ purposes.
+
+Installable service documentation is
+ provided with the respective -doc
+ packages, and goes under the rs-*
+ namespace.
+
+For programs with the prefixes "svc-"
+ or "app-", they can register their
+ services using "r.svc.mysvcname"
+ (for the program "svc-mysvcname"),
+ or "r.app.myappname" (for the
+ program "app-myappname") - this
+ MAY have any postfix matching the
+ pattern "/[a-z0-9/%.]*$", or none
+ at all.
+
+For how this registration works,
+ and how to access the resulting
+ service, please see the kn-perms
+ document.
+
+APIs registered in this manner are
+ accessible to all programs by
+ default. However, local security
+ policy may be altered by the user,
+ and part of x.neo.pub.base's API is
+ to allow locking any of your public
+ APIs. (The user can override this
+  mechanism if they so wish, and this
+  will cause a silent failure of the
+  lockPerm function.)
+ A mechanism may also be introduced
+ in later versions of KittenOS NEO to
+ easily allow changing your svc/app's
+ own API to a "ask"-style security
+ model, but this will not be the
+ default, and may still be overridden
+ by a user with access to the
+ Advanced Settings control panel.
+
+As for the system APIs...
+
+-- x.neo.pub.base @ sys-icecap --
+
+-- x.neo.pub.session @ <a shell> --
+
+This API is
+
+-- x.neo.pub.window @ <a shell> --
+
+-- x.neo.pub.session @ <a shell> --
+
+-- x.neo.sys.manage @ sys-glacier --
+-- x.neo.sys.screens @ sys-glacier --
+-- x.neo.pub.globals @ sys-glacier --
 
 -- This is released into
  the public domain.

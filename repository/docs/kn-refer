@@ -242,6 +242,10 @@ The additional things available to
  pid: A field that specifies the
   process ID of this process.
   Harmless, but not entirely useful.
+ pkg: A field that specifies the
+  package name of this process.
+  Useful if you're worried about
+   your app getting renamed.
  dead: Actually a field, that isn't
   set at first, but is set later to
   indicate deadness. Useful if your

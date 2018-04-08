@@ -26,7 +26,11 @@ A good example of this is app-flash,
  labelling window never needs to be
  regenerated after it's switched to,
  so the only regeneration is for the
- main window)
+ main window.)
+
+A full application of this technique
+ would regenerate the window whenever
+ anything occurs of interest.
 
 -- This is released into
  the public domain.

@@ -399,9 +399,10 @@ everestProvider(function (pkg, pid, sendSig)
   else
    title = base .. ":" .. title
   end
-  local m = 0
-  if renderingAllowed() then m = 1 end
   local surf = {math.min(#monitors, math.max(1, lIM)), 1, 2, w, h}
+  if h >= monitors[surf[1]][4] then
+   surf[3] = 1
+  end
   local focusState = false
   local llid = lid
   lid = lid + 1
@@ -478,11 +479,11 @@ everestProvider(function (pkg, pid, sendSig)
     return w, (h - 1)
    end,
    getDepth = function ()
-    if neo.dead then return false end
+    if neo.dead then return 1 end
     local m = monitors[surf[1]]
-    if not m then return false end
+    if not m then return 1 end
     local cb, rb = m[1]()
-    if not cb then return false end
+    if not cb then return 1 end
     if rb then
      monitorResetBF(m)
     end
@@ -637,8 +638,8 @@ while not shuttingDown do
    for k, v in ipairs(monitors) do
     if v[2] == s[2] then
      lIM = k
-     local x, y = math.floor(s[3]), math.floor(s[4])
-     local ix, iy = s[3] - x, s[4] - y
+     local x, y = math.ceil(s[3]), math.ceil(s[4])
+     local ix, iy = s[3] - math.floor(x), s[4] - math.floor(y)
      local sid, lx, ly = surfaceAt(k, x, y)
      if sid then
       local os = surfaces[1]
@@ -660,7 +661,7 @@ while not shuttingDown do
     for k, v in ipairs(monitors) do
      if v[2] == s[2] then
       if k == focus[1] then
-       local x, y = (math.floor(s[3]) - focus[2]) + 1, (math.floor(s[4]) - focus[3]) + 1
+       local x, y = (math.ceil(s[3]) - focus[2]) + 1, (math.ceil(s[4]) - focus[3]) + 1
        local ix, iy = s[3] - math.floor(s[3]), s[4] - math.floor(s[4])
        -- Ok, so let's see...
        focus[6](s[1]:sub(3), x, y, ix, iy, s[5])

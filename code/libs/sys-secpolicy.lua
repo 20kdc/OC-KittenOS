@@ -25,26 +25,15 @@ local actualPolicy = function (pkg, pid, perm)
  if perm == "s.h.component_added" or perm == "s.h.component_removed" then
   return "allow"
  end
- -- This is to ensure the prefix naming scheme is FOLLOWED!
- -- sys- : System, part of KittenOS NEO and thus tries to present a "unified fragmented interface" in 'neo'
- -- app- : Application - these can have ad-hoc relationships. It is EXPECTED these have a GUI
- -- svc- : Service - Same as Application but with no expectation of desktop usability
- -- Libraries "have no rights" as they are essentially loadable blobs of Lua code.
- -- They have access via the calling program, and have a subset of the NEO Kernel API
- local pfx = nil
- if pkg:sub(1, 4) == "app-" then pfx = "app" end
- if pkg:sub(1, 4) == "svc-" then pfx = "svc" end
- if pfx then
-  -- Apps can register with their own name
-  if perm == "r." .. pfx .. "." .. pkg:sub(5) then
-   return "allow"
-  end
+ if matchesSvc("r.", pkg, perm) then
+  return "allow"
  end
  -- Userlevel has no other registration rights
  if perm:sub(1, 2) == "r." then
   return "deny"
  end
- -- app/svc stuff is world-accessible
+ -- app/svc stuff is world-accessible,
+ -- but note perm|*| overrides this
  if perm:sub(1, 6) == "x.app." then
   return "allow"
  end
@@ -55,10 +44,14 @@ local actualPolicy = function (pkg, pid, perm)
  return "ask"
 end
 
-return function (nexus, settings, pkg, pid, perm, rsp)
- local res = actualPolicy(pkg, pid, perm)
- if res == "ask" and settings then
-  res = settings.getSetting("perm|" .. pkg .. "|" .. perm) or "ask"
+return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
+ local res = "ask"
+ if settings then
+  res = settings.getSetting("perm|" .. pkg .. "|" .. perm) or
+        settings.getSetting("perm|*|" .. perm) or "ask"
+ end
+ if res == "ask" then
+  res = actualPolicy(pkg, pid, perm, matchesSvc)
  end
  if res == "ask" and nexus then
   local totalW = 3 + 6 + 2 + 8

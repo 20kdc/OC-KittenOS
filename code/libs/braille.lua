@@ -20,28 +20,34 @@
 -- 25
 -- 67
 local function dotDist(ra, ga, ba, rb, gb, bb)
- local dR, dG, dB = math.abs(ra - rb), math.abs(ga - gb), math.abs(ba - bb)
- return (dR * 0.299) + (dG * 0.587) + (dB * 0.114)
+ local dR, dG, dB = math.abs(ra - rb)^2, math.abs(ga - gb)^2, math.abs(ba - bb)^2
+ return (dR * 0.2126) + (dG * 0.7152) + (dB * 0.0722)
 end
-local function dotGet(p, ra, ga, ba, rb, gb, bb, rc, gc, bc, pos, col)
+local function ditherResult(pos, pos2, luma)
+ local res = false
+ if luma >= 217 then
+  res = true
+ elseif luma >= 158 then
+  res = not pos2
+ elseif luma >= 96 then
+  res = pos
+ elseif luma >= 32 then
+  res = pos2
+ end
+ return res
+end
+local function dotGet(p, ra, ga, ba, rb, gb, bb, rc, gc, bc, pos, pos2, col)
  if not col then
   -- Use our own magic
-  local res = false
   local luma = (ra * 0.299) + (ga * 0.587) + (ba * 0.114)
-  if luma > 96 and luma < 160 then
-   res = pos
-  elseif luma >= 160 then
-   res = true
-  end
-  return (res and p) or 0
+  return (ditherResult(pos, pos2, luma) and p) or 0
  end
  local distA = dotDist(ra, ga, ba, rb, gb, bb)
  local distB = dotDist(ra, ga, ba, rc, gc, bc)
  local distAB = dotDist(rb, gb, bb, rc, gc, bc)
  local distC = dotDist(ra, ga, ba, (rb + rc) / 2, (gb + gc) / 2, (bb + bc) / 2)
- -- If A and B are close,
- if (distAB < 32) and (distC < (math.min(distA, distB) * 4)) then
-  return (pos and p) or 0
+ if (distC / 2) < math.min(distA, distB) then
+  return (ditherResult(pos, pos2, (distA / math.max(distA, distB, 0.1)) * 255) and p) or 0
  end
  return ((distB < distA) and p) or 0
 end
@@ -62,9 +68,7 @@ local function colourize(mark, ...)
   for i = 1, #t do
    local luma = (t[i][1] * 0.299) + (t[i][2] * 0.587) + (t[i][3] * 0.114)
    if luma > nLuma then
-    bCR = t[i][1]
-    bCG = t[i][2]
-    bCB = t[i][3]
+    bCR, bCG, bCB = table.unpack(t[i])
     nLuma = luma
    end
   end
@@ -95,12 +99,10 @@ end
 -- NOTE: xo/yo are 0-based!
 local function calcLine(x, y, w, span, get, colour)
  local str = ""
- local bgR = 0
- local bgG = 0
- local bgB = 0
- local fgR = 255
- local fgG = 255
- local fgB = 255
+ -- *g* : actual colour com.
+ -- *g  : RGB mirror of colour
+ local bgR, bgG, bgB = 0, 0, 0
+ local fgR, fgG, fgB = 255, 255, 255
  local bg = 0
  local fg = 0xFFFFFF
  local ca = 0
@@ -152,14 +154,14 @@ local function calcLine(x, y, w, span, get, colour)
     fgR, fgG, fgB = ofgR, ofgG, ofgB
    end
   end
-  i = i + dotGet(1, dot0R, dot0G, dot0B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-  i = i + dotGet(2, dot1R, dot1G, dot1B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-  i = i + dotGet(4, dot2R, dot2G, dot2B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-  i = i + dotGet(8, dot3R, dot3G, dot3B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-  i = i + dotGet(16, dot4R, dot4G, dot4B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
-  i = i + dotGet(32, dot5R, dot5G, dot5B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-  i = i + dotGet(64, dot6R, dot6G, dot6B, bgR, bgG, bgB, fgR, fgG, fgB, false, colour)
-  i = i + dotGet(128, dot7R, dot7G, dot7B, bgR, bgG, bgB, fgR, fgG, fgB, true, colour)
+  i = i + dotGet(1, dot0R, dot0G, dot0B, bgR, bgG, bgB, fgR, fgG, fgB, true, false, colour)
+  i = i + dotGet(2, dot1R, dot1G, dot1B, bgR, bgG, bgB, fgR, fgG, fgB, false, false, colour)
+  i = i + dotGet(4, dot2R, dot2G, dot2B, bgR, bgG, bgB, fgR, fgG, fgB, true, false, colour)
+  i = i + dotGet(8, dot3R, dot3G, dot3B, bgR, bgG, bgB, fgR, fgG, fgB, false, false, colour)
+  i = i + dotGet(16, dot4R, dot4G, dot4B, bgR, bgG, bgB, fgR, fgG, fgB, true, true, colour)
+  i = i + dotGet(32, dot5R, dot5G, dot5B, bgR, bgG, bgB, fgR, fgG, fgB, false, false, colour)
+  i = i + dotGet(64, dot6R, dot6G, dot6B, bgR, bgG, bgB, fgR, fgG, fgB, false, false, colour)
+  i = i + dotGet(128, dot7R, dot7G, dot7B, bgR, bgG, bgB, fgR, fgG, fgB, true, true, colour)
   str = str .. unicode.char(i)
   ca = ca + 1
  end
@@ -167,6 +169,7 @@ local function calcLine(x, y, w, span, get, colour)
   span(x, y, str, bg, fg)
  end
 end
+
 heldRef = {
  calcLine = calcLine,
  new = function (x, y, w, h, cbs, colour)
@@ -185,7 +188,8 @@ heldRef = {
    scroll = cbs.scroll and cTransform(cbs.scroll),
    line = function (window, x, y, iy, bg, fg, selected)
     local colour = colour
-    if window.getDepth() <= 1 then
+    local depth = window.getDepth()
+    if depth <= 1 then
      colour = nil
     end
     calcLine(x, y, control.w, window.span, function (xb, yb)

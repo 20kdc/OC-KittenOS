@@ -78,6 +78,29 @@ nexus = {
  end
 }
 
+local function matchesSvc(xd, pkg, perm)
+ -- This is to ensure the prefix naming scheme is FOLLOWED!
+ -- sys- : System, part of KittenOS NEO and thus tries to present a "unified fragmented interface" in 'neo'
+ -- app- : Application - these can have ad-hoc relationships. It is EXPECTED these have a GUI
+ -- svc- : Service - Same as Application but with no expectation of desktop usability
+ -- Libraries "have no rights" as they are essentially loadable blobs of Lua code.
+ -- They have access via the calling program, and have a subset of the NEO Kernel API
+ local pfx = nil
+ if pkg:sub(1, 4) == "app-" then pfx = "app" end
+ if pkg:sub(1, 4) == "svc-" then pfx = "svc" end
+ if pfx then
+  -- Apps can register with their own name, w/ details
+  local permAct = perm
+  local paP = permAct:match("/[a-z0-9/%.]*$")
+  if paP then
+   permAct = permAct:sub(1, #permAct - #paP)
+  end
+  if permAct == xd .. pfx .. "." .. pkg:sub(5) then
+   return "allow"
+  end
+ end
+end
+
 donkonitDFProvider(function (pkg, pid, sendSig)
  local prefixNS = "data/" .. pkg
  local prefixWS = "data/" .. pkg .. "/"
@@ -100,6 +123,21 @@ donkonitDFProvider(function (pkg, pid, sendSig)
     openHandles[tag] = closer
    end)
    return tag
+  end,
+  lockPerm = function (perm)
+   -- Are we allowed to?
+   if not matchesSvc("x.", pkg, perm) then
+    return false, "You don't own this permission."
+   end
+   local set = "perm|*|" .. perm
+   if settings.getSetting(set) then
+    -- Silently ignored, to stop apps trying to sense this & be annoying.
+    -- The user is allowed to choose.
+    -- You are only allowed to suggest.
+    return true
+   end
+   settings.setSetting(set, "ask")
+   return true
   end,
   -- Paths must begin with / implicitly
   list = function (path)
@@ -187,7 +225,7 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  -- Push to ICECAP thread to avoid deadlock b/c wrong event-pull context
  neo.scheduleTimer(0)
  table.insert(todo, function ()
-  local ok, err = pcall(secpol, nexus, settings, proc.pkg, pid, perm, req)
+  local ok, err = pcall(secpol, nexus, settings, proc.pkg, pid, perm, req, matchesSvc)
   if not ok then
    neo.emergency("Used fallback policy because of run-err: " .. err)
    req(def)

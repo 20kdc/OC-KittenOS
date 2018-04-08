@@ -19,6 +19,7 @@ return {
    "libs/fmttext.lua",
    "libs/neoux.lua",
    "libs/braille.lua",
+   "libs/bmp.lua",
    "libs/sys-filewrap.lua"
   },
  },
@@ -108,18 +109,29 @@ return {
   }
  },
  ["app-klogo"] = {
-  desc = "KittenOS NEO Logo",
-  v = 0,
+  desc = "KittenOS NEO Logo shower",
+  v = 2,
   deps = {
-   "neo"
+   "neo",
+   "app-klogo-logo"
   },
   dirs = {
-   "apps",
+   "apps"
+  },
+  files = {
+   "apps/app-klogo.lua",
+  },
+ },
+ ["app-klogo-logo"] = {
+  desc = "KittenOS NEO Logo (data)",
+  v = 2,
+  deps = {
+  },
+  dirs = {
    "data",
    "data/app-klogo"
   },
   files = {
-   "apps/app-klogo.lua",
    "data/app-klogo/logo.bmp"
   },
  },

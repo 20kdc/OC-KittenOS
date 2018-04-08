@@ -543,6 +543,7 @@ function start(pkg, ...)
  end
  local env = baseProcEnv()
  env.neo.pid = pid
+ env.neo.pkg = pkg
  env.neo.executeAsync = startFromUser
  env.neo.execute = function (...)
   return osExecuteCore(function () end, ...)

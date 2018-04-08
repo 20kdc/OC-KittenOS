@@ -34,6 +34,7 @@ return {
    "docs/kn-perms",
    "docs/us-perms",
    "docs/us-nxapp",
+   "docs/us-setti",
    "docs/ul-seria",
    "docs/ul-event",
    "docs/ul-fmttx",
