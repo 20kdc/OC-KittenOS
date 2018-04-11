@@ -172,19 +172,135 @@ This API is the reference definition
  of how the windowing system works in
  KittenOS NEO.
 
+As this is kind of a book by itself,
+ further details are in us-evrst.
+
 -- x.neo.sys.manage @ sys-glacier --
 
-This API is how settings and ST are
- managed
+This API manages settings, shutdown,
+ and the "Saving Throw" mechanism.
+
+Obviously, it's kind of dangerous.
+
+Regarding settings, see us-setti for
+ details.
+
+ listSettings(): Returns an ipairs
+  form list of the setting names on
+  the system.
+ getSetting(name): Returns the string
+  contents of a setting.
+ delSetting(name): Deletes a setting.
+  Some settings are undeletable, and
+   will become "" if 'deleted'.
+  Any default settings will replace
+   deleted settings on reboot.
+ setSetting(name, val): Sets a
+  setting to a given string value.
+ registerForShutdownEvent():
+  Accepts the responsibility of
+   handling shutdown events, and
+   causes them to be sent to the
+   calling process.
+ registerSavingThrow(st):
+  Sets up a callback to be called
+   post-mortem if the calling process
+   died in an unusual manner.
+ shutdown(reboot):
+  Shuts down the system carefully.
+
+ Events:
+  api, "set_setting", name, val
+  A setting has been set.
+  The value may be nil, in case of
+   a deleted setting.
+
+  api, "shutdown", reboot, accept()
+  A shutdown is in progress. Call the
+   accept function once you are OK to
+   shutdown.
 
 -- x.neo.sys.screens @ sys-glacier --
 
-This API is how screens are managed
+This API manages screens, and sends
+ events when screens are available,
+ or screens you have are lost.
+
+You should pcall around all GPU use
+ in case of sudden GPU loss.
+
+ getMonitorByKeyboard(kb): Gets a
+  monitor address by the keyboard.
+  This may include monitors you have
+   no claim to.
+  To speed things up, the last result
+   is cached (because getKeyboards is
+   extremely slow for some reason)
+  getClaimable(): Returns an ipairs-
+   form list of monitor addresses.
+  claim(address): Attempts to claim
+   a monitor. If successful, returns
+   a GPU-binding callback (which must
+   be called whenever you want to use
+   the GPU), and the monitor proxy.
+   The GPU binding callback returns
+    two things: The GPU (which may be
+    rebound upon the call) and an
+    indicator that the GPU may have
+    been altered.
+  disclaim(address): Disclaims the
+   monitor given by the address.
+
+ Events:
+
+ api, "available", address: Indicates
+  that a monitor can be claimed.
+
+ api, "lost", address: Indicates that
+  a monitor has been lost.
 
 -- x.neo.pub.globals @ sys-glacier --
 
-This API is some public global stuff
- and spooky screen control???
+This API is a "lite" version of some
+ other APIs that is not a security
+ issue to give to any program that
+ asks for it.
+
+ getKnownMonitors(): Returns ipairs
+  form table of the format:
+  {address, claimed, settings...}
+  where settings is w,h,d,t
+  The settings returned are always
+   compatible with the settings you
+   can give to changeMonitorSetup.
+ changeMonitorSetup(ma, w, h, d, t):
+  Changes the configured setup of a
+   monitor. Try not to abuse this, or
+   I'll make it silently fail and
+   change it to a more restricted API
+   that you can't abuse as much.
+ forceRescan(): Forces a rescan.
+  Again, don't abuse this.
+ getSetting(name): Returns a setting
+  prefixed with "pub." implicitly.
+ delSetting(name): Deletes a setting
+  prefixed with "pub." implicitly.
+  Attempting to delete an undeletable
+   setting will only set the value
+   to "".
+ setSetting(name, val): Sets a
+  setting prefixed with "pub."
+  implicitly.
+
+ Events:
+
+  api, "set_setting", name, val
+
+  NOTE: name is prefixed, as it
+   includes the screen settings.
+  This gets sent even if you have
+   the main settings permission, just
+   in case of unexpected oddities.
 
 -- This is released into
  the public domain.

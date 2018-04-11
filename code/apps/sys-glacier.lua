@@ -122,9 +122,7 @@ local function sRattle(name, val)
  end
  if name:sub(1, 4) == "scr." or name:sub(1, 4) == "pub." then
   for k, v in pairs(targsDC) do
-   if not targs[k] then
-    v("set_setting", name, val)
-   end
+   v("set_setting", name, val)
   end
  end
 end
@@ -240,13 +238,13 @@ donkonitRDProvider(function (pkg, pid, sendSig)
  end}
  return {
   getMonitorByKeyboard = function (kb)
-   if keyboardMonCacheK == kb.address then
+   if keyboardMonCacheK == kb then
     return keyboardMonCacheV
    end
    for v in screens.list() do
     for _, v2 in ipairs(v.getKeyboards()) do
      if v2 == kb then
-      keyboardMonCacheK, keyboardMonCacheV = kb.address, v.address
+      keyboardMonCacheK, keyboardMonCacheV = kb, v.address
       return v.address
      end
     end

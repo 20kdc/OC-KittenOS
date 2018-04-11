@@ -35,6 +35,7 @@ return {
    "docs/us-perms",
    "docs/us-nxapp",
    "docs/us-setti",
+   "docs/us-evrst",
    "docs/ul-seria",
    "docs/ul-fwrap",
    "docs/ul-event",

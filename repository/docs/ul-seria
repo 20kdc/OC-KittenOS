@@ -38,8 +38,21 @@ The serial library has merely two
    be in the form of "return ",
    followed by a Lua 5.2-parsable
    value of some sort.
+  If dealing with the 3DM format or
+   other formats that don't just
+   accept we're clearly loading Lua
+   code here, the recommendation is
+   to perform :sub(8).
 
  deserialize(str):
+  Deserializes "str" by executing it
+   in a limited environment and
+   grabbing the return value.
+  If dealing with the 3DM format or
+   other formats that don't just
+   accept we're clearly loading Lua
+   code here, please prefix str with
+   "return ".
   Returns the deserialized data as a
    Lua value.
   A value of nil is an ambiguity:

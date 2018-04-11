@@ -1,0 +1,20 @@
+-- x.neo.pub.window @ sys-everest --
+
+This API is the reference definition
+ of how the windowing system works in
+ KittenOS NEO.
+
+Implementing this API, by definition,
+ makes your process the controller of
+ windowing on the system, which means
+ you control Icecap security dialogs.
+
+...and that's why r.neo.* access is
+ heavily restricted unless the user
+ uses the Advanced Settings panel.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+
