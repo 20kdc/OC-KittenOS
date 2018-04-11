@@ -78,24 +78,31 @@ nexus = {
  end
 }
 
-local function matchesSvc(xd, pkg, perm)
+local function getPfx(xd, pkg)
  -- This is to ensure the prefix naming scheme is FOLLOWED!
  -- sys- : System, part of KittenOS NEO and thus tries to present a "unified fragmented interface" in 'neo'
  -- app- : Application - these can have ad-hoc relationships. It is EXPECTED these have a GUI
  -- svc- : Service - Same as Application but with no expectation of desktop usability
  -- Libraries "have no rights" as they are essentially loadable blobs of Lua code.
  -- They have access via the calling program, and have a subset of the NEO Kernel API
+  -- Apps can register with their own name, w/ details
  local pfx = nil
  if pkg:sub(1, 4) == "app-" then pfx = "app" end
  if pkg:sub(1, 4) == "svc-" then pfx = "svc" end
  if pfx then
-  -- Apps can register with their own name, w/ details
+  return xd .. pfx .. "." .. pkg:sub(5)
+ end
+end
+
+local function matchesSvc(xd, pkg, perm)
+ local pfx = getPfx(xd, pkg)
+ if pfx then
   local permAct = perm
   local paP = permAct:match("/[a-z0-9/%.]*$")
   if paP then
    permAct = permAct:sub(1, #permAct - #paP)
   end
-  if permAct == xd .. pfx .. "." .. pkg:sub(5) then
+  if permAct == pfx then
    return "allow"
   end
  end
@@ -113,6 +120,9 @@ donkonitDFProvider(function (pkg, pid, sendSig)
  end
  return {
   showFileDialogAsync = function (forWrite)
+   if not rawequal(forWrite, nil) then
+    require("sys-filewrap").ensureMode(forWrite)
+   end
    -- Not hooked into the event API, so can't safely interfere
    -- Thus, this is async and uses a return event.
    local tag = {}
@@ -124,6 +134,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    end)
    return tag
   end,
+  myApi = getPfx("", pkg),
   lockPerm = function (perm)
    -- Are we allowed to?
    if not matchesSvc("x.", pkg, perm) then
@@ -141,22 +152,22 @@ donkonitDFProvider(function (pkg, pid, sendSig)
   end,
   -- Paths must begin with / implicitly
   list = function (path)
-   if type(path) ~= "string" then error("Expected path to be string") end
+   neo.ensureType(path, "string")
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) ~= "/" then error("Expected / at end") end
    return fs.primary.list(path:sub(1, #path - 1))
   end,
   makeDirectory = function (path)
-   if type(path) ~= "string" then error("Expected path to be string") end
+   neo.ensureType(path, "string")
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
    return fs.primary.makeDirectory(path)
   end,
   rename = function (path1, path2)
-   if type(path1) ~= "string" then error("Expected path to be string") end
-   if type(path2) ~= "string" then error("Expected path to be string") end
+   neo.ensureType(path1, "string")
+   neo.ensureType(path2, "string")
    path1 = prefixNS .. path1
    path2 = prefixNS .. path2
    neo.ensurePath(path1, prefixWS)
@@ -166,12 +177,12 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    return fs.primary.rename(path1, path2)
   end,
   open = function (path, mode)
-   if type(path) ~= "string" then error("Expected path to be string") end
-   if type(mode) ~= "boolean" then error("Expected mode to be boolean (writing)") end
+   neo.ensureType(path, "string")
+   -- mode verified by filewrap
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
-   local fw, closer = require("sys-filewrap")(fs.primary, path, mode)
+   local fw, closer = require("sys-filewrap").create(fs.primary, path, mode)
    local oc = fw.close
    fw.close = function ()
     oc()
@@ -181,14 +192,14 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    return fw
   end,
   remove = function (path)
-   if type(path) ~= "string" then error("Expected path to be string") end
+   neo.ensureType(path, "string")
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
    return fs.primary.remove(path)
   end,
   stat = function (path)
-   if type(path) ~= "string" then error("Expected path to be string") end
+   neo.ensureType(path, "string")
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end

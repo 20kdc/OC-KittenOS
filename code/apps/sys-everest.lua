@@ -120,11 +120,11 @@ local function monitorGPUColours(m, cb, bg, fg)
  local nbg = m[5]
  local nfg = m[6]
  if nbg ~= bg then
-  cb.setBackground(bg)
+  pcall(cb.setBackground, bg)
   m[5] = bg
  end
  if nfg ~= fg then
-  cb.setForeground(fg)
+  pcall(cb.setForeground, fg)
   m[6] = fg
  end
 end
@@ -138,11 +138,11 @@ local function doBackgroundLine(m, mg, bdx, bdy, bdl)
   monitorGPUColours(m, mg, 0x000000, 0xFFFFFF)
   local str = unicode.sub(statusLine, bdx, bdx + bdl - 1)
   local strl = unicode.len(str)
-  mg.set(bdx, bdy, unicode.undoSafeTextFormat(str))
-  mg.fill(bdx + strl, bdy, bdl - strl, 1, " ")
+  pcall(mg.set, bdx, bdy, unicode.undoSafeTextFormat(str))
+  pcall(mg.fill, bdx + strl, bdy, bdl - strl, 1, " ")
  else
   monitorGPUColours(m, mg, 0x000020, 0)
-  mg.fill(bdx, bdy, bdl, 1, " ")
+  pcall(mg.fill, bdx, bdy, bdl, 1, " ")
  end
 end
 
@@ -265,7 +265,7 @@ local function moveSurface(surface, m, x, y, w, h, force)
   if renderingAllowed() and not force then
    local cb, b = monitors[m][1]()
    if b then
-    monitorResetBF(b)
+    monitorResetBF(monitors[m])
    end
    if cb then
     cb.copy(ox, oy, w, h, x - ox, y - oy)
@@ -326,7 +326,7 @@ local function handleSpan(target, x, y, text, bg, fg)
    base = unicode.sub(text, buildingSegment, buildingSegmentE)
    -- rely on undoSafeTextFormat for this transform now
    monitorGPUColours(m, cb, bg, fg)
-   cb.set(buildingSegmentWX, buildingSegmentWY, unicode.undoSafeTextFormat(base))
+   pcall(cb.set, buildingSegmentWX, buildingSegmentWY, unicode.undoSafeTextFormat(base))
    buildingSegment = nil
   end
  end
@@ -520,15 +520,37 @@ everestProvider(function (pkg, pid, sendSig)
  end
 end)
 -- THE EVEREST USER API ENDS (now for the session API, which just does boring stuff)
+-- used later on for lost monitor, too
+local function disclaimMonitor(mon)
+ neo.ensureType(mon, "string")
+ screens.disclaim(mon)
+ for k, v in ipairs(monitors) do
+  if v[2] == mon then
+   table.remove(monitors, k)
+   reconcileAll()
+   return true
+  end
+ end
+ return false
+end
 everestSessionProvider(function (pkg, pid, sendSig)
  return {
   endSession = function (gotoBristol)
+   neo.ensureType(gotoBristol, "boolean")
    shuttingDown = true
    if gotoBristol then
     suggestAppsStop()
     dying()
    end
-  end
+  end,
+  getMonitors = function ()
+   local details = {}
+   for k, v in ipairs(monitors) do
+    details[k] = v[2]
+   end
+   return details
+  end,
+  disclaimMonitor = disclaimMonitor
  }
 end)
 -- THE EVEREST SESSION API ENDS
@@ -539,7 +561,14 @@ end)
 -- Alt-Up/Down/Left/Right: Move surface
 local isAltDown = false
 local isCtrDown = false
-local function key(ka, kc, down)
+local function key(ku, ka, kc, down)
+ local ku = screens.getMonitorByKeyboard(ku)
+ if not ku then return end
+ for k, v in ipairs(monitors) do
+  if v[2] == mu then
+   lIM = k
+  end
+ end
  local focus = surfaces[1]
  if kc == 29 then isCtrDown = down end
  if kc == 56 then isAltDown = down end
@@ -617,16 +646,10 @@ while not shuttingDown do
  local s = {coroutine.yield()}
  if renderingAllowed() then
   if s[1] == "h.key_down" then
-   local m = screens.getMonitorByKeyboard(s[2])
-   for k, v in ipairs(monitors) do
-    if v[2] == m then
-     lIM = k
-    end
-   end   
-   key(s[3], s[4], true)
+   key(s[2], s[3], s[4], true)
   end
   if s[1] == "h.key_up" then
-   key(s[3], s[4], false)
+   key(s[2], s[3], s[4], false)
   end
   if s[1] == "h.clipboard" then
    if surfaces[1] then
@@ -697,13 +720,7 @@ while not shuttingDown do
    performClaim(s[3])
   end
   if s[2] == "lost" then
-   for k, v in ipairs(monitors) do
-    if v[2] == s[3] then
-     table.remove(monitors, k)
-     reconcileAll()
-     break
-    end
-   end
+   handleLostMonitor(s[3])
   end
  end
  if s[1] == "x.neo.sys.manage" then

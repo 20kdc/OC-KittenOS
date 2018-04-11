@@ -57,7 +57,7 @@ The following are just wrapMeta'd
  host libraries (*: altered):
 
 math, table, string, unicode*,
- coroutine, os*, debug
+ coroutine, os*, debug, utf8, bit32
 
 unicode is extended with:
  safeTextFormat(s, p):
@@ -92,14 +92,11 @@ Programs that thus try to work around
  as-needed if and when the issue is
  resolved.
 
-os is replaced with (wrapMeta'd):
+os is extended with:
  totalMemory = computer.totalMemory,
  freeMemory = computer.freeMemory,
  energy = computer.energy,
  maxEnergy = computer.maxEnergy,
- clock = os.clock, date = os.date,
- difftime = os.difftime,
- time = os.time,
  uptime = computer.uptime,
  address = computer.address
 
@@ -316,6 +313,38 @@ The additional things available to
    the consequence of memory use,
    and timers stick around after the
    process that owns them is dead.
+
+The list of events, tacked on at the
+ end here:
+
+k.procnew(pkg, pid, ppkg, ppid):
+ New process creation, with parent
+  information (for seat tracking)
+ This is not given to the process
+  being created, as all of this gets
+  given to it anyway on main function
+  start.
+
+k.procdie(pkg, pid, reason, cpuTime):
+ Process death.
+
+k.registration(uid):
+ Registration of an access.
+
+k.deregistration(uid):
+ Deregistration of an access.
+
+k.securityresponse(perm, obj):
+ Response to a security request made
+  with neo.requestAccess or such.
+
+k.timer(tag, time):
+ A timer. Includes the planned uptime
+  for comparison.
+
+h.*(...): 
+ Hardware signals, by type, such
+  as "h.key_up"
 
 With that, I hope I have documented
  the kernel's interface to programs.

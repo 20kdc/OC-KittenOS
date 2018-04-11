@@ -36,6 +36,7 @@ return {
    "docs/us-nxapp",
    "docs/us-setti",
    "docs/ul-seria",
+   "docs/ul-fwrap",
    "docs/ul-event",
    "docs/ul-fmttx",
    "docs/ul-neoux",

@@ -31,22 +31,24 @@ local function shutdown(reboot)
 end
 
 local function rstfbDraw(gpu)
- gpu.setBackground(0xFFFFFF)
- gpu.setForeground(0x000000)
+ pcall(gpu.setBackground, 0xFFFFFF)
+ pcall(gpu.setForeground, 0x000000)
 end
 
 local function basicDraw(gpu)
- scrW, scrH = gpu.getResolution()
- gpu.fill(1, 1, scrW, scrH, " ")
- gpu.set(2, 2, "KittenOS NEO")
+ local ok, sw, sh = pcall(gpu.getResolution)
+ if not ok then return end
+ scrW, scrH = sw, sh
+ pcall(gpu.fill, 1, 1, scrW, scrH, " ")
+ pcall(gpu.set, 2, 2, "KittenOS NEO")
 end
 
 local function advDraw(gpu)
  basicDraw(gpu)
  local usage = math.floor((os.totalMemory() - os.freeMemory()) / 1024)
- gpu.set(2, 3, "RAM Usage: " .. usage .. "K / " .. math.floor(os.totalMemory() / 1024) .. "K")
+ pcall(gpu.set, 2, 3, "RAM Usage: " .. usage .. "K / " .. math.floor(os.totalMemory() / 1024) .. "K")
  for i = 1, #warnings do
-  gpu.set(2, 6 + i, warnings[i])
+  pcall(gpu.set, 2, 6 + i, warnings[i])
  end
 end
 
@@ -91,10 +93,12 @@ local function retrieveNssMonitor(nss)
    if gpu then
     local gcb = gpu()
     if gcb then
-     table.insert(subpool, {gpu, v})
-     gcb.setBackground(0x000020)
-     local w, h = gcb.getResolution()
-     gcb.fill(1, 1, w, h, " ")
+     pcall(function ()
+      gcb.setBackground(0x000020)
+      local w, h = gcb.getResolution()
+      gcb.fill(1, 1, w, h, " ")
+      table.insert(subpool, {gpu, v})
+     end)
     end
    end
   end
@@ -107,9 +111,7 @@ local function retrieveNssMonitor(nss)
  end
  -- done with search
  local gpu = gpuG()
- scrW, scrH = gpu.getResolution()
  rstfbDraw(gpu)
- gpu.fill(1, 1, scrW, scrH, " ")
  performDisclaim = function (full)
   nss.disclaim(subpool[1][2])
   if full then
@@ -212,7 +214,7 @@ local function finalPrompt()
       local gpu = gpuG()
       rstfbDraw(gpu)
       basicDraw(gpu)
-      gpu.set(2, 4, "Shutting down...")
+      pcall(gpu.set, 2, 4, "Shutting down...")
       shutdown(false)
      end
     end, 2, scrH - 1, unicode.len(shButton)},
@@ -223,7 +225,7 @@ local function finalPrompt()
       local gpu = gpuG()
       rstfbDraw(gpu)
       basicDraw(gpu)
-      gpu.set(2, 4, "Rebooting...")
+      pcall(gpu.set, 2, 4, "Rebooting...")
       shutdown(true)
      end
     end, 3 + unicode.len(shButton), scrH - 1, unicode.len(rbButton)},
@@ -234,7 +236,7 @@ local function finalPrompt()
       local gpu = gpuG()
       rstfbDraw(gpu)
       basicDraw(gpu)
-      gpu.set(2, 4, "Login to activate Safe Mode.")
+      pcall(gpu.set, 2, 4, "Login to activate Safe Mode.")
       sleep(1)
       gpu = gpuG()
       safeModeActive = true
@@ -249,14 +251,14 @@ local function finalPrompt()
    local gpu = gpuG()
    for k, v in ipairs(controls) do
     if k == control then
-     gpu.setBackground(0x000000)
-     gpu.setForeground(0xFFFFFF)
+     pcall(gpu.setBackground, 0x000000)
+     pcall(gpu.setForeground, 0xFFFFFF)
     else
-     gpu.setBackground(0xFFFFFF)
-     gpu.setForeground(0x000000)
+     pcall(gpu.setBackground, 0xFFFFFF)
+     pcall(gpu.setForeground, 0x000000)
     end
-    gpu.fill(v[3], v[4], v[5], 1, " ")
-    gpu.set(v[3], v[4], v[1]())
+    pcall(gpu.fill, v[3], v[4], v[5], 1, " ")
+    pcall(gpu.set, v[3], v[4], v[1]())
    end
    -- event handling...
    local sig = {coroutine.yield()}
@@ -336,9 +338,9 @@ local function initializeSystem()
   gpu.bind(screen, true)
   local gW, gH = gpu.maxResolution()
   gW, gH = math.min(80, gW), math.min(25, gH)
-  gpu.setResolution(gW, gH)
+  pcall(gpu.setResolution, gW, gH)
   pcall(gpu.setDepth, gpu.maxDepth()) -- can crash on OCEmu if done at the "wrong time"
-  gpu.setForeground(0x000000)
+  pcall(gpu.setForeground, 0x000000)
  end
  local w = 1
  local steps = {
@@ -373,12 +375,12 @@ local function initializeSystem()
   end
   if ev[1] == "k.timer" then
    if gpu then
-    gpu.setForeground(0x000000)
+    pcall(gpu.setForeground, 0x000000)
     if w < stepCount then
      local n = math.floor((w / stepCount) * 255)
-     gpu.setBackground((n * 0x10000) + (n * 0x100) + n)
+     pcall(gpu.setBackground, (n * 0x10000) + (n * 0x100) + n)
     else
-     gpu.setBackground(0xFFFFFF)
+     pcall(gpu.setBackground, 0xFFFFFF)
     end
     basicDraw(gpu)
    end
@@ -440,7 +442,7 @@ if finalPrompt() then
  basicDraw(gpu)
  local nsm = neo.requestAccess("x.neo.sys.manage")
  if nsm then
-  gpu.set(2, 4, "Rebooting for Safe Mode...")
+  pcall(gpu.set, 2, 4, "Rebooting for Safe Mode...")
   for _, v in ipairs(nsm.listSettings()) do
    if v ~= "password" then
     nsm.delSetting(v)
@@ -448,10 +450,10 @@ if finalPrompt() then
   end
  else
   -- assume sysconf.lua did something very bad
-  gpu.set(2, 4, "No NSM. Wiping configuration completely.")
+  pcall(gpu.set, 2, 4, "No NSM. Wiping configuration completely.")
   local fs = neo.requestAccess("c.filesystem")
   if not fs then
-   gpu.set(2, 4, "Failed to get permission, you're doomed.")
+   pcall(gpu.set, 2, 4, "Failed to get permission, you're doomed.")
   end
   fs.primary.remove("/data/sys-glacier/sysconf.lua")
  end

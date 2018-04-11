@@ -270,13 +270,17 @@ wrapTable = wrapMeta(table)
 wrapString = wrapMeta(string)
 wrapUnicode = wrapMeta(unicode)
 wrapCoroutine = wrapMeta(coroutine)
-wrapOs = wrapMeta({
-  totalMemory = computer.totalMemory, freeMemory = computer.freeMemory,
-  energy = computer.energy, maxEnergy = computer.maxEnergy,
-  clock = os.clock, date = os.date, difftime = os.difftime,
-  time = os.time, uptime = computer.uptime, address = computer.address
- })
+-- inject stuff into os
+os.totalMemory = computer.totalMemory
+os.freeMemory = computer.freeMemory
+os.energy = computer.energy
+os.maxEnergy = computer.maxEnergy
+os.uptime = computer.uptime
+os.address = computer.address
+wrapOs = wrapMeta(os)
 wrapDebug = wrapMeta(debug)
+wrapBit32 = wrapMeta(bit32)
+wrapUtf8 = wrapMeta(utf8)
 
 baseProcEnvCore = {
  _VERSION = _VERSION,
@@ -287,6 +291,8 @@ baseProcEnvCore = {
  coroutine = wrapCoroutine,
  os = wrapOs,
  debug = wrapDebug,
+ bit32 = wrapBit32,
+ utf8 = wrapUtf8,
  require = loadLibraryInner,
  assert = assert,     ipairs = ipairs,
  load = load,
@@ -382,7 +388,7 @@ function retrieveAccess(perm, pkg, pid)
  -- "c.<hw>":    Component
  -- "s.<event>": Signal receiver (with responsibilities for Security Request watchers)
  -- "s.k.<...>": Kernel stuff
- -- "s.k.procnew" : New process (pkg, pid)
+ -- "s.k.procnew" : New process (pkg, pid, ppkg, ppid)
  -- "s.k.procdie" : Process dead (pkg, pid, reason, usage)
  -- "s.k.registration" : Registration of service alert ("x." .. etc)
  -- "s.k.deregistration" : Registration of service alert ("x." .. etc)
@@ -480,7 +486,7 @@ function retrieveAccess(perm, pkg, pid)
  end
 end
 
-function start(pkg, ...)
+function start(pkg, ppkg, ppid, ...)
  local proc = {}
  local pid = lastPID
  lastPID = lastPID + 1
@@ -571,7 +577,7 @@ function start(pkg, ...)
  env.neo.scheduleTimer = function (time)
   ensureType(time, "number")
   local tag = {}
-  table.insert(timers, {time, execEvent, pid, "k.timer", tag, time, ofs})
+  table.insert(timers, {time, execEvent, pid, "k.timer", tag, time})
   return tag
  end
 
@@ -587,9 +593,9 @@ function start(pkg, ...)
  proc.deathCBs = {function () pcall(function () env.neo.dead = true end) end}
  proc.cpuUsage = 0
  -- Note the target process doesn't get the procnew (the dist occurs before it's creation)
- pcall(distEvent, nil, "k.procnew", pkg, pid)
+ pcall(distEvent, nil, "k.procnew", pkg, pid, ppkg, ppid)
  processes[pid] = proc
- table.insert(timers, {0, execEvent, pid, ...})
+ table.insert(timers, {0, execEvent, pid, ppkg, ppid, ...})
  return pid
 end
 

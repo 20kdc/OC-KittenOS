@@ -18,6 +18,16 @@ For programs with the prefixes "svc-"
  pattern "/[a-z0-9/%.]*$", or none
  at all.
 
+Examples:
+
+r.app.nucleus:
+ Registers x.app.nucleus from
+  app-nucleus
+
+r.svc.nucleus/ABCD:
+ Registers x.svc.nucleus/ABCD from
+  svc-nucleus
+
 For how this registration works,
  and how to access the resulting
  service, please see the kn-perms
@@ -33,30 +43,148 @@ APIs registered in this manner are
   mechanism if they so wish, and this
   will cause a silent failure of the
   lockPerm function.)
- A mechanism may also be introduced
- in later versions of KittenOS NEO to
- easily allow changing your svc/app's
- own API to a "ask"-style security
- model, but this will not be the
- default, and may still be overridden
- by a user with access to the
- Advanced Settings control panel.
 
 As for the system APIs...
 
 -- x.neo.pub.base @ sys-icecap --
 
+Gaining access to this API creates
+ this application's data directory,
+ wherever that is.
+
+Paths for the IO parts of this API
+ must start with "/", and must follow
+ the standard KittenOS NEO path
+ safety rules in the kernel.
+
+ showFileDialogAsync(mode): Shows a
+  filedialog with a given filemode,
+  or nil for "none". Returns a new,
+  empty table as a "tag", and emits a
+  "filedialog" event on completion.
+
+ myApi: A string such as "svc.abc"
+  for the program svc-abc, used for
+  automatically finding the correct
+  API name to register for your app.
+
+ lockPerm(perm): Changes the default
+  permission setting for anything the
+  process should have permission to
+  define according to the matchesSvc
+  function, so that the user must be
+  asked before a program can access
+  the permission.
+
+ NOTE: LIST REQUIRES "/" AT THE END
+  AND START, WHILE THE REST CANNOT
+  HAVE IT AT THE END BUT MUST AT THE
+  START, BECAUSE THE ROOT IS "/".
+ There's logic here, specifically to
+  stop you trying to do nonsense like
+  deleting your own data directory...
+
+ list(path): After ensuring that the
+  path has a "/" at the end, lists
+  the contents of a directory
+  accessible to the application.
+  Returns a table containing
+  file/directory names, with "/"
+  postfixes for directories. If this
+  contains the invalid names "." or
+  "..", please report as a bug at
+  once, this shouldn't happen.
+
+ Everything after here ensures that
+  there is a "/" at the start and no
+  "/" at the end
+
+ makeDirectory(path): Creates the
+  directory with the given path.
+  Returns whatever the component call
+  did.
+
+ rename(pathA, pathB): Renames or
+  moves a file or directory around.
+  Returns whatever the component call
+  did.
+
+ open(path, mode): Opens a file with
+  a given mode (see ul-fwrap for the
+  list of modes).
+  Returns the file object,
+
+ remove(path): Removes a file.
+
+ stat(path): "I got lazy, so I took 3
+  API functions and combined them as
+  one API function!" - 20kdc
+ Returns {
+  isDirectory
+  size
+  lastModified
+ }
+
+ spaceUsed, spaceTotal, isReadOnly:
+  The filesystem proxy functions.
+
+Events:
+ api, "filedialog", tag, res
+
 -- x.neo.pub.session @ <a shell> --
 
-This API is
+This API must be implemented by any
+ program that the user wants to use
+ as a shell.
 
--- x.neo.pub.window @ <a shell> --
+A shell should set up a Saving Throw
+ with sys-glacier in case of errors.
 
--- x.neo.pub.session @ <a shell> --
+ endSession(backToInit): Stops the
+  current session, and optionally
+  starts up sys-init.
+  endSession(false) is for switching
+   to a new shell.
+  endSession(true) is for logging out
+   of the session.
+
+ getMonitors(): Returns an ipairs-
+  form list of screen addresses for
+  use in disclaimMonitor and the
+  subsequent screens.claim call.
+
+ disclaimMonitor(address):
+  Disclaims a monitor. Returns true
+  on success. The monitor may be
+  reclaimed if something causes the
+  shell to be notified of the
+  monitor's existence (such as a
+  monitor rescan in Glacier).
+
+No events are given. Deregistration
+ is equivalent to stating that you
+ are no longer in control of the
+ session, and that something else is.
+
+-- x.neo.pub.window @ sys-everest --
+
+This API is the reference definition
+ of how the windowing system works in
+ KittenOS NEO.
 
 -- x.neo.sys.manage @ sys-glacier --
+
+This API is how settings and ST are
+ managed
+
 -- x.neo.sys.screens @ sys-glacier --
+
+This API is how screens are managed
+
 -- x.neo.pub.globals @ sys-glacier --
+
+This API is some public global stuff
+ and spooky screen control???
 
 -- This is released into
  the public domain.

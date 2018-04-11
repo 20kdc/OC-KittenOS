@@ -47,14 +47,14 @@ local settings = {
 
 local function loadSettings()
  pcall(function ()
-  local fw = require("sys-filewrap")
-  local se = require("serial")
+  local fw = require("sys-filewrap").create
+  local se = require("serial").deserialize
   local st = fw(fs.primary, "data/sys-glacier/sysconf.lua", false)
   local cfg = st.read("*a")
   st.close()
   st = nil
   fw = nil
-  cfg = se.deserialize(cfg)
+  cfg = se(cfg)
   for k, v in pairs(cfg) do
    if type(k) == "string" then
     if type(v) == "string" then
@@ -65,11 +65,11 @@ local function loadSettings()
  end)
 end
 local function saveSettings()
- local fw = require("sys-filewrap")
- local se = require("serial")
+ local fw = require("sys-filewrap").create
+ local se = require("serial").serialize
  fs.primary.makeDirectory("data/sys-glacier")
  local st = fw(fs.primary, "data/sys-glacier/sysconf.lua", true)
- st.write(se.serialize(settings))
+ st.write(se(settings))
  st.close()
 end
 
@@ -252,7 +252,6 @@ donkonitRDProvider(function (pkg, pid, sendSig)
     end
    end
   end,
-
   getClaimable = function ()
    local c = {}
    -- do we have gpu?
