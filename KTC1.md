@@ -14,7 +14,7 @@ A 256-colour palette is assumed, and it is assumed that the palette is provided
 
 A KTC1 block is one OpenComputers character (2x4 pixels), and is 4 bytes long.
 
-The format amounts to a foreground palette index, a background palette index,
+The format amounts to a background palette index, a foreground palette index,
  and a Unicode character index in the Basic Multilingual Plane.
 
 The unicode character is displayed with the given colours at the position of the

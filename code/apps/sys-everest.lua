@@ -500,6 +500,22 @@ everestProvider(function (pkg, pid, sendSig)
     if y == 0 then return end
     handleSpan(surf, x, y + 1, text, bg, fg)
    end,
+   recommendPalette = function (pal)
+    neo.ensureType(pal, "table")
+    if neo.dead then return 0 end
+    if not focusState then return 0 end
+    local m = monitors[surf[1]]
+    if not m then return 0 end
+    local cb, rb = m[1]()
+    if not cb then return 0 end
+    if rb then
+     monitorResetBF(m)
+    end
+    for k, v in ipairs(pal) do
+     local ok = pcall(cb.setPaletteColor, k - 1, v)
+     if not ok then return k - 1 end
+    end
+   end,
    close = function ()
     if neo.dead then return end
     local os1 = surfaces[1]

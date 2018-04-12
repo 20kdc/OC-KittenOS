@@ -13,6 +13,46 @@ Implementing this API, by definition,
  heavily restricted unless the user
  uses the Advanced Settings panel.
 
+The API gives you a function:
+ (w, h, title) -> window
+
+This function creates a window.
+
+Window fields:
+
+ id: Window ID.
+ setSize(w, h): Changes the size of
+  the window, and sends the line
+  events (even if the size doesn't
+  change)
+ getDepth(): Returns the depth of the
+  screen the window is on.
+ span(x, y, text, bg, fg): Draws a
+  span onto the screen.
+  This function will error if the
+   Everest instance is dead.
+  (Others won't.)
+ recommendPalette(pal): If the window
+  is focused, sets the first #pal
+  palette entries to the given RGB
+  values.
+  This is meant only as a hint to
+  Everest, and may be ignored.
+  Returns 0.
+ close(): Close the window.
+
+Events:
+
+ api, id, "key", ka, kc, down
+ api, id, "touch"/"drag"/"drop",
+  lx, ly, ix, iy, button
+ api, id, "scroll",
+  lx, ly, ix, iy, amount
+ api, id, "clipboard", text
+ api, id, "close"
+ api, id, "focus", hasFocus
+ api, id, "line", lineIndex
+
 -- This is released into
  the public domain.
 -- No warranty is provided,
