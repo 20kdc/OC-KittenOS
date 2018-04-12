@@ -353,15 +353,13 @@ local function handleSpan(target, x, y, text, bg, fg)
 end
 
 local basePalT2 = {
- -- on T2 we provide 'system colours'
- -- by default
+ -- on T2 we provide 'system colours' by default
  0x000000, 0x0080FF, 0x000040, 0xFFFFFF,
- -- stuff above cannot be altered by
- -- user applications to prevent
- -- graphical glitches
- 0xFF0000, 0xC04000, 0x808000, 0x40C000,
- 0x00FF00, 0x00C040, 0x008080, 0x0040C0,
- 0x0000FF, 0x4000C0, 0x800080, 0xC00040
+ -- stuff above cannot be altered by user applications, to prevent graphical glitches.
+ -- Provide some shades of grey to try and prevent accidental chroma.
+ 0x182828, 0x404040, 0x686868, 0x909090,
+ 0xB8B8B8, 0xE0E0E0, 0x800080, 0xFF0000,
+ 0x808000, 0x00FF00, 0x008080, 0x0000FF
 }
 local basePalT3 = {
  -- on T3 we provide the Tier 3 pal.
@@ -382,25 +380,28 @@ local function setSurfacePalette(surf, pal)
  if rb then
   monitorResetBF(m)
  end
+ local ko = -1
+ local unlocked = false
  if not rawequal(pal, nil) then
   neo.ensureType(pal, "table")
+  if depth < 8 then
+   ko = 3 -- start overriding at indexes 4+
+  end
  elseif depth < 8 then
-  pal = basePalT1
- else
   pal = basePalT2
- end
- local ko = -1
- if depth == 4 then
-  ko = 3 -- start overriding at 4+
+  unlocked = true
+ else
+  pal = basePalT3
+  unlocked = true
  end
  for k, v in ipairs(pal) do
   -- prevent graphical glitches for
   -- critical system colours on T3
   local av = v % 0x1000000
-  if av ~= 0xFFFFFF and
+  if unlocked or (av ~= 0xFFFFFF and
      av ~= 0x000000 and
      av ~= 0x0080FF and
-     av ~= 0x000040 then
+     av ~= 0x000040) then
    local ok = pcall(cb.setPaletteColor, k + ko, v)
    if not ok then return k - 1 end
   end
@@ -413,11 +414,11 @@ local function changeFocus(oldSurface, optcache)
  optcache = optcache or {}
  if ns1 ~= oldSurface then
   if oldSurface then
-   setSurfacePalette(oldSurface, basePal)
+   setSurfacePalette(oldSurface, nil)
    oldSurface[6]("focus", false)
   end
   if ns1 then
-   setSurfacePalette(ns1, basePal)
+   setSurfacePalette(ns1, nil)
    ns1[6]("focus", true)
   end
   updateStatus()
@@ -694,6 +695,7 @@ local function performClaim(s3)
  if gpucb then
   local w, h = gpucb.getResolution()
   table.insert(monitors, {gpu, s3, w, h, -1, -1})
+  setSurfacePalette({#monitors}, nil)
   -- This is required to ensure windows are moved off of the null monitor.
   -- Luckily, there's an obvious sign if they aren't - everest will promptly crash.
   reconcileAll()

@@ -8,11 +8,18 @@ That's what the "SYSTEM HEROES" thing is about.
 
 ## Known Issues (That Aren't KittenOS NEO's Fault)
 
-Touch calibration is off because OC's setPrecise seems to offset coordinates down and right by a character. OCEmu's does not. I consider this an OC bug. This is known to occur on at least `OpenComputers-MC1.12.2-1.7.2.67.jar`. If you want to check my routines, see sys-everest, search for the lowest instance of `"touch"`. Or just use OCEmu, which doesn't change anything when precise is set, and thus can't be doing anything different than the setPrecise(false) behavior.
+Touch calibration could be off if the setPrecise support mess didn't work properly.
 
 Wide character support *may* encounter issues due to performance-saving tricks in some old OC versions. The 1.12.2 version being used at LimboCon doesn't have the issue, so it's been dealt with. Point is, not a KittenOS NEO bug if it happens.
 
 ## Known Issues (That Are KittenOS NEO's Fault But Aren't Really Fixable)
+
+Having a window around that uses the palette-setting interface can cause funky graphical issues on
+ a window that does not receive or lose focus when the palette changes.
+The alternative is rerendering all windows on palette change, or attempting to detect this particular case.
+This isn't very fast, so the graphics corruption is considered worth it.
+Critical UI gets protected from this by having a set of 4 reserved colours,
+ but this can't be expanded without hurting Tier 2 systems.
 
 If you move a window over another window, that window has to rerender. The alternative is buffering the window. Since memory is a concern, that is not going to happen. Some windows are more expensive to render than others (`klogo` tries to use less RAM if the system is 192K, at the expense of disk access) - move the most expensive window out of the way, since once a window is top-most, moving it around is usually "free".
 

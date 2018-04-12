@@ -38,7 +38,21 @@ Window fields:
   values.
   This is meant only as a hint to
   Everest, and may be ignored.
-  Returns 0.
+  Returns the amount of entries set.
+  NOTE: Up to 4 colours may be used
+   by the implementation as "base"
+   colours, and thus cannot be set as
+   past of a palette to prevent any
+   use of the application-controlled
+   indexes in the major UI.
+  This is because the palette-setting
+   interface leads to graphics issues
+   with multi-tasking, even in those
+   programs not using the interface,
+   so a set of reliable colours is
+   required to keep a multitasking
+   system usable in these edge cases.
+
  close(): Close the window.
 
 Events:
@@ -52,6 +66,16 @@ Events:
  api, id, "close"
  api, id, "focus", hasFocus
  api, id, "line", lineIndex
+
+Palette advice for artists:
+ *Use 16-colour images*, and ensure
+ the viewer software uses the palette
+ functions. Always use a 2x4 grid to
+ check cell colour limits. If your
+ palette contains any reserved
+ colour, make it last in the palette,
+ so that they are not wasted if not
+ used.
 
 -- This is released into
  the public domain.
