@@ -141,7 +141,7 @@ local function doBackgroundLine(m, mg, bdx, bdy, bdl)
   pcall(mg.set, bdx, bdy, unicode.undoSafeTextFormat(str))
   pcall(mg.fill, bdx + strl, bdy, bdl - strl, 1, " ")
  else
-  monitorGPUColours(m, mg, 0x000020, 0)
+  monitorGPUColours(m, mg, 0x000040, 0)
   pcall(mg.fill, bdx, bdy, bdl, 1, " ")
  end
 end
@@ -352,14 +352,72 @@ local function handleSpan(target, x, y, text, bg, fg)
  submitSegment()
 end
 
+local basePalT2 = {
+ -- on T2 we provide 'system colours'
+ -- by default
+ 0x000000, 0x0080FF, 0x000040, 0xFFFFFF,
+ -- stuff above cannot be altered by
+ -- user applications to prevent
+ -- graphical glitches
+ 0xFF0000, 0xC04000, 0x808000, 0x40C000,
+ 0x00FF00, 0x00C040, 0x008080, 0x0040C0,
+ 0x0000FF, 0x4000C0, 0x800080, 0xC00040
+}
+local basePalT3 = {
+ -- on T3 we provide the Tier 3 pal.
+ 0x0F0F0F, 0x1E1E1E, 0x2D2D2D, 0x3C3C3C,
+ 0x4B4B4B, 0x5A5A5A, 0x696969, 0x787878,
+ 0x878787, 0x969696, 0xA5A5A5, 0xB4B4B4,
+ 0xC3C3C3, 0xD2D2D2, 0xE1E1E1, 0xF0F0F0
+}
+
+local function setSurfacePalette(surf, pal)
+ if neo.dead then return 0 end
+ local m = monitors[surf[1]]
+ if not m then return 0 end
+ local cb, rb = m[1]()
+ if not cb then return 0 end
+ local dok, depth = pcall(cb.getDepth)
+ if not dok then depth = 4 end
+ if rb then
+  monitorResetBF(m)
+ end
+ if not rawequal(pal, nil) then
+  neo.ensureType(pal, "table")
+ elseif depth < 8 then
+  pal = basePalT1
+ else
+  pal = basePalT2
+ end
+ local ko = -1
+ if depth == 4 then
+  ko = 3 -- start overriding at 4+
+ end
+ for k, v in ipairs(pal) do
+  -- prevent graphical glitches for
+  -- critical system colours on T3
+  local av = v % 0x1000000
+  if av ~= 0xFFFFFF and
+     av ~= 0x000000 and
+     av ~= 0x0080FF and
+     av ~= 0x000040 then
+   local ok = pcall(cb.setPaletteColor, k + ko, v)
+   if not ok then return k - 1 end
+  end
+ end
+ return #pal
+end
+
 local function changeFocus(oldSurface, optcache)
  local ns1 = surfaces[1]
  optcache = optcache or {}
  if ns1 ~= oldSurface then
   if oldSurface then
+   setSurfacePalette(oldSurface, basePal)
    oldSurface[6]("focus", false)
   end
   if ns1 then
+   setSurfacePalette(ns1, basePal)
    ns1[6]("focus", true)
   end
   updateStatus()
@@ -501,20 +559,8 @@ everestProvider(function (pkg, pid, sendSig)
     handleSpan(surf, x, y + 1, text, bg, fg)
    end,
    recommendPalette = function (pal)
-    neo.ensureType(pal, "table")
-    if neo.dead then return 0 end
     if not focusState then return 0 end
-    local m = monitors[surf[1]]
-    if not m then return 0 end
-    local cb, rb = m[1]()
-    if not cb then return 0 end
-    if rb then
-     monitorResetBF(m)
-    end
-    for k, v in ipairs(pal) do
-     local ok = pcall(cb.setPaletteColor, k - 1, v)
-     if not ok then return k - 1 end
-    end
+    return setSurfacePalette(surf, pal)
    end,
    close = function ()
     if neo.dead then return end

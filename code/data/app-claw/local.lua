@@ -83,7 +83,7 @@ return {
  },
  ["neo-secpolicy"] = {
   desc = "KittenOS NEO / Secpolicy",
-  v = 1,
+  v = 2,
   deps = {
   },
   dirs = {

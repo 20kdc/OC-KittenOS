@@ -67,13 +67,14 @@ newNeoux = function (event, neo)
   window.getSize = function ()
    return w, h
   end
-  window.getDepth = windowCore.getDepth
   window.setSize = function (nw, nh)
    w = nw
    h = nh
    windowCore.setSize(w, h)
   end
+  window.getDepth = windowCore.getDepth
   window.span = windowCore.span
+  window.recommendPalette = windowCore.recommendPalette
   window.close = function ()
    windowCore.close()
    lclEvToW[windowCore.id] = nil

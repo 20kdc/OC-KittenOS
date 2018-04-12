@@ -11,7 +11,7 @@
 -- IRC is usually pretty safe, but no guarantees.
 
 -- Returns "allow", "deny", or "ask".
-local actualPolicy = function (pkg, pid, perm)
+local function actualPolicy(pkg, pid, perm, matchesSvc)
  -- System stuff is allowed.
  if pkg:sub(1, 4) == "sys-" then
   return "allow"

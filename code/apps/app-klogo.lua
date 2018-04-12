@@ -68,7 +68,8 @@ local function decodeRGB(rgb, igp)
 end
 
 local bW, bH = math.ceil(bitmap.width / 2), math.ceil(bitmap.height / 4)
-neoux.create(bW, bH, nil, neoux.tcwindow(bW, bH, {
+
+local fp = neoux.tcwindow(bW, bH, {
  braille.new(1, 1, bW, bH, {
   selectable = true,
   get = function (window, x, y, bg, fg, selected, colour)
@@ -81,7 +82,20 @@ neoux.create(bW, bH, nil, neoux.tcwindow(bW, bH, {
 }, function (w)
  w.close()
  running = false
-end, 0xFFFFFF, 0))
+end, 0xFFFFFF, 0)
+
+neoux.create(bW, bH, nil, function (w, t, r, ...)
+ if t == "focus" then
+  if r then
+   local pal = {}
+   for i = 0, 15 do
+    pal[i + 1] = bitmap.getPalette(i)
+   end
+   w.recommendPalette(pal)
+  end
+ end
+ return fp(w, t, r, ...)
+end)
 
 while running do
  event.pull()
