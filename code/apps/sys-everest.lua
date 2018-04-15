@@ -784,7 +784,7 @@ while not shuttingDown do
    performClaim(s[3])
   end
   if s[2] == "lost" then
-   handleLostMonitor(s[3])
+   disclaimMonitor(s[3])
   end
  end
  if s[1] == "x.neo.sys.manage" then
