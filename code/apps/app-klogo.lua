@@ -60,11 +60,20 @@ lcWidth = bitmap.dsSpan
 
 local running = true
 
-local function decodeRGB(rgb, igp)
+local function decodeRGB(rgb, igp, col)
  if igp and bitmap.bpp > 24 then
   rgb = math.floor(rgb / 256)
  end
- return math.floor(rgb / 65536) % 256, math.floor(rgb / 256) % 256, rgb % 256
+ local r, g, b = math.floor(rgb / 65536) % 256, math.floor(rgb / 256) % 256, rgb % 256
+ -- the new KittenOS NEO logo is 'sensitive' to dithering, so disable it
+ if not col then
+  -- ...and the palette is a bit odd, oh well
+  if math.max(r, g, b) < 0xC0 then
+   return 0, 0, 0
+  end
+  return 255, 255, 255
+ end
+ return r, g, b
 end
 
 local bW, bH = math.ceil(bitmap.width / 2), math.ceil(bitmap.height / 4)
@@ -74,9 +83,9 @@ local fp = neoux.tcwindow(bW, bH, {
   selectable = true,
   get = function (window, x, y, bg, fg, selected, colour)
    if bitmap.ignoresPalette then
-    return decodeRGB(bitmap.getPixel(x - 1, y - 1, 0), true)
+    return decodeRGB(bitmap.getPixel(x - 1, y - 1, 0), true, colour)
    end
-   return decodeRGB(bitmap.getPalette(bitmap.getPixel(x - 1, y - 1, 0)), false)
+   return decodeRGB(bitmap.getPalette(bitmap.getPixel(x - 1, y - 1, 0)), false, colour)
   end
  }, 1)
 }, function (w)
