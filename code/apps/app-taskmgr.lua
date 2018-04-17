@@ -78,7 +78,7 @@ while true do
   end
   if n[3] == "key" then
    if n[6] then
-    if n[4] == 8 then
+    if n[4] == 8 or n[4] == 127 then
      if consistentProcList[camY] then
       kill(consistentProcList[camY][1])
      end
