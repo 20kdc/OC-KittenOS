@@ -47,7 +47,7 @@ return {
   },
  },
  ["app-nbox2018"] = {
-  desc = "NBOX-2018, a 3D printing toolbox",
+  desc = "NBOX2018 and NPRT2018, a 3D-printing toolbox",
   v = 0,
   deps = {
    "neo"
@@ -56,7 +56,8 @@ return {
    "apps"
   },
   files = {
-   "apps/app-nbox2018.lua"
+   "apps/app-nbox2018.lua",
+   "apps/app-nprt2018.lua"
   },
  },
 }

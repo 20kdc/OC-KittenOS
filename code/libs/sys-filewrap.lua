@@ -69,6 +69,6 @@ local function create(dev, file, mode)
  end
 end
 return {
- createMode = createMode,
+ ensureMode = ensureMode,
  create = create
 }
