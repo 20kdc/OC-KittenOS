@@ -44,9 +44,49 @@ Main functions:
   mode is the mode used for the file,
    so see ul-fwrap for values.
 
- neoux.create = TODO
-  function (w, h, title, callback)
- callback(window, evt, ...)
+ neoux.create(w, h, title, callback):
+  Creates a window,
+  including a NeoUX window wrapper.
+  The parameter list is compatible
+   with the window "reset" function,
+   and it is intended that you use
+   this to simplify your code where
+   possible.
+  The callback is of the kind:
+   function(window, evt, ...)
+  Where window is the window wrapper,
+   and everything else is the Everest
+   event with API and Window ID gone.
+  It is recommended that you use this
+   in the form shown:
+
+  local stopping = false
+  local function genWindow()
+   return 8, 8, "mainwin",
+    neoux.tcwindow(8, 8, {
+     -- you can have as many
+     -- controls as you want,
+     -- but don't be deliberately
+     -- wasteful
+     neoux.tcrawview(1, 1, {
+      "Each day",
+      "shall en",
+      "d as it ",
+      "begins, ",
+      "and thou",
+      "gh you'r",
+      "e far aw",
+      "ay from "
+     })
+    }, function (w)
+     w.close()
+     stopping = true
+    end, 0xFFFFFF, 0)
+  end
+  local w = neoux.create(genWindow())
+  while not stopping do
+   event.pull()
+  end
 
  pad: See ul-fmttx, but loaded on
   demand and unloaded after use.
@@ -54,9 +94,26 @@ Main functions:
  fmtText: See ul-fmttx, but loaded on
   demand and unloaded after use.
 
- neoux.tcwindow = TODO
- function (w, h, controls, closing,
-  bg, fg, selIndex)
+ neoux.tcwindow(w, h, controls,
+  closing, bg, fg[, selIndex]):
+  Creates a neoux.create-compatible
+  callback for a NeoUX GUI framework
+  window.
+  W/H is the width/height of the
+   window, for background drawing.
+  controls is an ipairsable table
+   containing UI framework controls.
+  (The definition of a UI framework
+   control is noted at the top of the
+   neoux.lua library file, so that it
+   does not become out of date.)
+  closing is a function (window) used
+   when a close request occurs.
+  bg/fg sets the application's colour
+   scheme for controls that care.
+  selIndex, if provided, is the index
+   of the control that should start
+   out selected.
 
  startDialog(fmt, title, wait):
   Shows a text dialog.
@@ -67,22 +124,87 @@ Main functions:
   wait can be nil/false to not wait,
    and otherwise.
 
+UI framework window API (TODO):
+ reset(...): For parameters, see the
+  neoux.create function. Resets the
+  window without closing/reopening,
+  essentially reusing the window yet
+  changing its contents. Choose over
+  destroying and then creating a
+  window - it acts better with
+  shutdown, for example.
+  Implicitly performs a setSize,
+   so a refresh will occur.
+
+ getSize(): Returns width, height.
+
+ setSize(w, h): Changes the width and
+  height. Like in the API this wraps,
+  this is guaranteed to refresh all
+  the lines of your window.
+
+ getDepth(...): Read the note
+  in us-evrst for details.
+ span(...): Read the relevant note in
+  us-evrst for details.
+ recommendPalette(...): Read the note
+  in us-evrst for details.
+
+ close(): Closes the window, freeing
+  both Everest and NeoUX resources
+  associated with it.
+
 UI framework controls (TODO):
 
- neoux.tcrawview = 
-  function (x, y, lines)
- table of lines not STF'd
- neoux.tchdivider =
-  function (x, y, w)
- neoux.tcvdivider =
-  function (x, y, h)
- neoux.tcbutton =
-  function (x, y, text, callback)
- callback(window)
- neoux.tcfield =
-  function (x, y, w, textprop)
- textprop(newval) -> nil
- textprop() -> val
+ (X/Y positions are 1-based, as usual
+  in OpenComputers)
+
+ neoux.tcrawview(x, y, lines)
+  Creates a UI element that displays
+   some raw lines, in the format from
+   the fmtText function.
+  This format is essentially raw span
+   text, pre-STF'd, immediately
+   ready to submit to Everest.
+
+ neoux.tchdivider(x, y, w)
+  Creates a UI element that displays
+   a 1-high horizontal divider.
+  The used characters are a detail of
+   the implementation.
+
+ neoux.tcvdivider(x, y, h)
+  Creates a UI element that displays
+   a 1-wide vertical divider.
+  The used characters are a detail of
+   the implementation.
+
+ neoux.tcbutton(x, y, text, callback)
+  Creates a UI element for a button.
+  The text is not run through
+   safeTextFormat automatically, so
+   you must do it yourself if wide
+   characters are expected.
+  The width is thus always equal to:
+   unicode.len(text) + 2
+  The height is always 1.
+  The callback is a function (window)
+   where window is the NeoUX wrapped
+   window.
+
+ neoux.tcfield(x, y, w, textprop)
+  Creates a UI element for a text
+   field.
+  textprop is a function, which
+   can be called in two ways:
+  textprop(newval) -> nil
+   Writes a string.
+  textprop() -> val
+   Reads a string. The string must
+   NOT be safeTextFormatted, as this
+   is done internally (in contrast to
+   tcbutton) only for display, as the
+   textfield has to edit the string.
 
 -- This is released into
  the public domain.

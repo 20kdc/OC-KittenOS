@@ -6,7 +6,7 @@
 
 return {
  ["app-eeprog"] = {
-  desc = "EEPROM programmer / copier",
+  desc = "Example program: EEPROM programmer / copier",
   v = 0,
   deps = {
    "neo"
@@ -45,5 +45,18 @@ return {
    "docs/ul-bmp__",
    "docs/gp-pedan"
   },
- }
+ },
+ ["app-nbox2018"] = {
+  desc = "NBOX-2018, a 3D printing toolbox",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/app-nbox2018.lua"
+  },
+ },
 }
