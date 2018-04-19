@@ -9,16 +9,7 @@
 local holos = neo.requestAccess("c.hologram")
 local icecap = neo.requireAccess("x.neo.pub.base", "filedialogs")
 local window = neo.requireAccess("x.neo.pub.window", "window")(40, 13)
-
-local xyz = false
-local state = false
-local redstone = false
-local button = false
-local fileLabel = "NB2018"
-local fileTooltip = nil
-
-local cx, cy, cz = 1, 1, 1
-local cursorBlink = false
+local fmttext = require("fmttext")
 
 -- [true] = {["A"] = {
 --  tex = "",
@@ -31,15 +22,209 @@ local boxes = {
  [true] = {},
  [false] = {}
 }
+local redstone = false
+local button = false
+local fileLabel = "NB2018"
+local fileTooltip = nil
+
+-- program
+
+local xyz = false
+local state = false
+
+local cx, cy, cz = 1, 1, 1
+local cursorBlink = false
 
 local selectedBox
 
+local tintDigi = 0
+
+-- minX/minY/minZ are +1 from the usual values
+-- tex/rgb are defaults until edited
+-- maxX/maxY/maxZ only present after 2nd point placed
+-- final corrections performed on submission to boxes table
 local workingOnBox = nil
 
 local programState = "none"
--- ["state"] = {lines, key, clipboard}
+-- ["state"] = {lines, keydown, clipboard}
 local programStates = {
- ["none"] = {
+ none = {
+  function (miText, mxText)
+   -- This state handles both box selected & box not selected,
+   --  because the box can get deselected out of program control
+   if selectedBox then
+    local targetBox = boxes[state][selectedBox]
+    return {
+     "'" .. selectedBox .. "' " .. targetBox.tex,
+     "Tint #" .. string.format("%06x", targetBox.rgb),
+     "Enter deselects, Delete deletes.",
+     "F9 and F10 change texture/tint."
+    }
+   end
+   local str = string.format("%02i, %02i, %02i", cx, cy, cz)
+   return {
+    "Nothing selected. " .. str,
+    "Enter starts a new box, while   ",
+    " a box can be selected by its   ",
+    " key. To print, press F8.       "
+   }
+  end,
+  function (ka, kc)
+   if ka == 13 then
+    if selectedBox then
+     selectedBox = nil
+    else
+     -- Beginning box!
+     workingOnBox = {
+      minX = cx,
+      minY = cy,
+      minZ = cz,
+      tex = "",
+      rgb = 0xFFFFFF
+     }
+     programState = "point2"
+    end
+   elseif kc == 67 then
+    -- Texture
+    if selectedBox then programState = "texture" end
+   elseif kc == 68 then
+    -- Tint
+    if selectedBox then tintDigi = 1 programState = "tint" end
+   else
+    local cc = unicode.char(ka):upper()
+    if boxes[state][cc] then
+     selectedBox = cc
+    end
+   end
+  end,
+  function (text)
+  end
+ },
+ point2 = {
+  function (miText, mxText)
+   return {
+    "Placing Point 2:" .. miText .. "/" .. mxText,
+    "Enter confirms.",
+    "Arrows move 2nd point.",
+    "Delete/Backspace cancels."
+   }
+  end,
+  function (ka, kc)
+   if ka == 127 or ka == 8 then
+    workingOnBox = nil
+    programState = "none"
+   elseif ka == 13 then
+    workingOnBox.maxX = cx
+    workingOnBox.maxY = cy
+    workingOnBox.maxZ = cz
+    local ch = 65
+    while boxes[state][string.char(ch)] do
+     ch = ch + 1
+    end
+    local ax, ay, az = workingOnBox.minX, workingOnBox.minY, workingOnBox.minZ
+    local bx, by, bz = workingOnBox.maxX, workingOnBox.maxY, workingOnBox.maxZ
+    workingOnBox.minX = math.min(ax, bx) - 1
+    workingOnBox.minY = math.min(ay, by) - 1
+    workingOnBox.minZ = math.min(az, bz) - 1
+    workingOnBox.maxX = math.max(ax, bx)
+    workingOnBox.maxY = math.max(ay, by)
+    workingOnBox.maxZ = math.max(az, bz)
+    selectedBox = string.char(ch)
+    boxes[state][selectedBox] = workingOnBox
+    workingOnBox = nil
+    programState = "none"
+   end
+  end,
+  function (text)
+  end
+ },
+ texture = {
+  function (miText, mxText)
+   local targetBox = boxes[state][selectedBox]
+   local fieldContent = unicode.safeTextFormat(targetBox.tex)
+   fieldContent = fmttext.pad(fieldContent, 30, false, false)
+   fieldContent = unicode.sub(fieldContent, math.max(1, unicode.len(fieldContent) - 29))
+   return {
+    "Texturing Box:" .. miText .. "/" .. mxText,
+    "Type texture ID or use clipboard",
+    "[" .. fieldContent .. "]",
+    "Enter to confirm."
+   }
+  end,
+  function (ka, kc)
+   local targetBox = boxes[state][selectedBox]
+   if ka == 127 or ka == 8 then
+    targetBox.tex = unicode.sub(targetBox.tex, 1, unicode.len(targetBox.tex) - 1)
+   elseif ka == 13 then
+    programState = "none"
+   elseif ka >= 32 then
+    targetBox.tex = targetBox.tex .. unicode.char(ka)
+   end
+  end,
+  function (text)
+   boxes[state][selectedBox].tex = text
+   programState = "none"
+  end
+ },
+ tint = {
+  function (miText, mxText)
+   local targetBox = boxes[state][selectedBox]
+   local a = "#"
+   local b = " "
+   local rgb = targetBox.rgb
+   local div = 0x100000
+   for i = 1, 6 do
+    a = a .. string.format("%01x", math.floor(rgb / div) % 16)
+    if tintDigi == i then
+     b = b .. "^"
+    else
+     b = b .. " "
+    end
+    div = math.floor(div / 16)
+   end
+   return {
+    "Tinting Box:" .. miText .. "/" .. mxText,
+    a,
+    b,
+    "Enter hexadecimal digits."
+   }
+  end,
+  function (ka, kc)
+   local targetBox = boxes[state][selectedBox]
+   local shifts = {
+    20,
+    16,
+    12,
+    8,
+    4,
+    0
+   }
+   local hexChars = {
+    [48] = 0, [65] = 10, [97] = 10,
+    [49] = 1, [66] = 11, [98] = 11,
+    [50] = 2, [67] = 12, [99] = 12,
+    [51] = 3, [68] = 13, [100] = 13,
+    [52] = 4, [69] = 14, [101] = 14,
+    [53] = 5, [70] = 15, [102] = 15,
+    [54] = 6,
+    [55] = 7,
+    [56] = 8,
+    [57] = 9,
+   }
+   if hexChars[ka] then
+    local shift = math.floor(2^shifts[tintDigi])
+    local low = targetBox.rgb % shift
+    local high = math.floor(targetBox.rgb / (shift * 16)) * (shift * 16)
+    targetBox.rgb = low + high + (hexChars[ka] * shift)
+    tintDigi = 1 + (tintDigi or 1)
+    if tintDigi == 7 then
+     tintDigi = nil
+     programState = "none"
+    end
+   end
+  end,
+  function (text)
+  end
  }
 }
 
@@ -197,38 +382,16 @@ local function render(line)
   end
   local miText = mix .. "," .. miy .. "," .. miz
   local mxText = mxx .. "," .. mxy .. "," .. mxz
-  local text = {
-   "Nothing selected. " .. miText,
-   "Enter starts a new box, while   |F3 Load",
-   " a box can be selected by its   |F4 Save",
-   " key. To print, press F8.       |F5 XYXZ"
+  local text = programStates[programState][1](miText, mxText)
+  local menu = {
+   "|F1 New ",
+   "|F3 Load",
+   "|F4 Save",
+   "|F5 XYXZ"
   }
-  if selectedBox then
-   text = {
-    "'" .. selectedBox .. "' " .. boxes[state][selectedBox].tex,
-    require("fmttext").pad("Tint #" .. string.format("%08x", workingOnBox.rgb), 32, false, true) .. "|F3 Load",
-    "Enter deselects, Delete deletes,|F4 Save",
-    " and the A-Z keys still select. |F5 XYXZ"
-   }
-  elseif workingOnBox then
-   if not workingOnBox.maxX then
-    text = {
-     "Creating: " .. miText .. "/" .. mxText,
-     "Arrows to move around. Use F5 to|F3 Load",
-     " swap from XY to XZ or back.    |F4 Save",
-     "Enter confirms, Delete cancels. |F5 XYXZ"
-    }
-   else
-    local tex = require("fmttext").pad(unicode.safeTextFormat(workingOnBox.tex), 30, false, true)
-    text = {
-     "Box Texture Entry: " .. miText .. "/" .. mxText,
-     " Press Enter to confirm texture,|F3 Load",
-     " or paste out-of-game clipboard.|F4 Save",
-     "[" .. tex .. "]|F5 XYXZ"
-    }
-   end
+  for i = 1, 4 do
+   text[i] = fmttext.pad(text[i], 32, true, true) .. menu[i]
   end
-  text[1] = require("fmttext").pad(text[1], 32, true, true) .. "|F1 New "
   window.span(1, line, text[line - 9] or "", 0, 0xFFFFFF)
  end
 end
@@ -245,6 +408,7 @@ local function reset()
  xyz = false
  cx, cy, cz = 1, 1, 1
  workingOnBox = nil
+ programState = "none"
 end
 
 local function loadObj(obj)
@@ -418,68 +582,9 @@ while true do
       cz = math.min(16, cz + 1)
      end
      refresh()
-    elseif c == 13 then
-     if not selectedBox then
-      if not workingOnBox then
-       workingOnBox = {
-        minX = cx,
-        minY = cy,
-        minZ = cz,
-        tex = "diamond_block",
-        rgb = 0xFFFFFF
-       }
-      elseif not workingOnBox.maxX then
-       workingOnBox.maxX = cx
-       workingOnBox.maxY = cy
-       workingOnBox.maxZ = cz
-      else
-       local ch = 65
-       while boxes[state][string.char(ch)] do
-        ch = ch + 1
-       end
-       local ax, ay, az = workingOnBox.minX, workingOnBox.minY, workingOnBox.minZ
-       local bx, by, bz = workingOnBox.maxX, workingOnBox.maxY, workingOnBox.maxZ
-       workingOnBox.minX = math.min(ax, bx) - 1
-       workingOnBox.minY = math.min(ay, by) - 1
-       workingOnBox.minZ = math.min(az, bz) - 1
-       workingOnBox.maxX = math.max(ax, bx)
-       workingOnBox.maxY = math.max(ay, by)
-       workingOnBox.maxZ = math.max(az, bz)
-       selectedBox = string.char(ch)
-       boxes[state][selectedBox] = workingOnBox
-       workingOnBox = nil
-      end
-     else
-      selectedBox = nil
-     end
-     refresh()
     else
-     if workingOnBox then
-      if not workingOnBox.maxX then
-       if c == 8 or c == 127 then
-        workingOnBox = nil
-       end
-      else
-       if c >= 32 then
-        workingOnBox.tex = workingOnBox.tex .. unicode.char(c)
-       elseif c == 8 or c == 127 then
-        workingOnBox.tex = unicode.sub(workingOnBox.tex, 1, unicode.len(workingOnBox.tex) - 1)
-       end
-      end
-      refresh()
-     elseif c == 8 or c == 127 then
-      if selectedBox then
-       boxes[state][selectedBox] = nil
-       selectedBox = nil
-       refresh()
-      end
-     else
-      local cc = unicode.char(c):upper()
-      if boxes[state][cc] then
-       selectedBox = cc
-      end
-      refresh()
-     end
+     programStates[programState][2](c, d)
+     refresh()
     end
    end
   end

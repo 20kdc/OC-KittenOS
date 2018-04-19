@@ -7,7 +7,7 @@
 -- Control reference
 -- x/y/w/h: ints, position/size, 1,1 TL
 -- selectable: boolean
--- key(window, update, char, code, down)
+-- key(window, update, char, code, down) (If this returns something truthy, defaults are inhibited)
 -- touch(window, update, x, y, xI, yI, button)
 -- drag(window, update, x, y, xI, yI, button)
 -- drop(window, update, x, y, xI, yI, button)
@@ -94,7 +94,7 @@ newNeoux = function (event, neo)
   return fmt.fmtText(...)
  end
  -- UI FRAMEWORK --
- neoux.tcwindow = function (w, h, controls, closing, bg, fg, selIndex)
+ neoux.tcwindow = function (w, h, controls, closing, bg, fg, selIndex, keyFlags)
   local function rotateSelIndex()
    local original = selIndex
    while true do
@@ -119,6 +119,7 @@ newNeoux = function (event, neo)
    end
    rotateSelIndex()
   end
+  keyFlags = keyFlags or {}
   local function moveIndex(vertical, negative)
    if not controls[selIndex] then return end
    local currentMA, currentOA = controls[selIndex].y, controls[selIndex].x
@@ -230,34 +231,45 @@ newNeoux = function (event, neo)
      end
     end
    elseif ev == "key" then
-    if b == 203 then
-     if c then
-      moveIndexAU(window, false, true)
+    if controls[selIndex] and controls[selIndex].key then
+     if controls[selIndex].key(window, function () doZone(window, controls[selIndex]) end, a, b, c) then
+      return
      end
-    elseif b == 205 then
-     if c then
-      moveIndexAU(window, false, false)
-     end
-    elseif b == 200 then
-     if c then
-      moveIndexAU(window, true, true)
-     end
-    elseif b == 208 then
-     if c then
-      moveIndexAU(window, true, false)
-     end
-    elseif a == 9 then
-     if c then
-      local c1 = controls[selIndex]
-      rotateSelIndex()
-      local c2 = controls[selIndex]
-      local cache = {}
-      if c1 then doZone(window, c1, cache) end
-      if c2 then doZone(window, c2, cache) end
-     end
-    elseif controls[selIndex] then
-     if controls[selIndex].key then
-      controls[selIndex].key(window, function () doZone(window, controls[selIndex]) end, a, b, c)
+    end
+    if b == 29 then
+     keyFlags.ctrl = c
+    elseif b == 157 then
+     keyFlags.rctrl = c
+    elseif b == 42 then
+     keyFlags.shift = c
+    elseif b == 54 then
+     keyFlags.rshift = c
+    elseif not (keyFlags.ctrl or keyFlags.rctrl or keyFlags.shift or keyFlags.rshift) then
+     if b == 203 then
+      if c then
+       moveIndexAU(window, false, true)
+      end
+     elseif b == 205 then
+      if c then
+       moveIndexAU(window, false, false)
+      end
+     elseif b == 200 then
+      if c then
+       moveIndexAU(window, true, true)
+      end
+     elseif b == 208 then
+      if c then
+       moveIndexAU(window, true, false)
+      end
+     elseif a == 9 then
+      if c then
+       local c1 = controls[selIndex]
+       rotateSelIndex()
+       local c2 = controls[selIndex]
+       local cache = {}
+       if c1 then doZone(window, c1, cache) end
+       if c2 then doZone(window, c2, cache) end
+      end
      end
     end
    elseif ev == "clipboard" then
@@ -271,7 +283,7 @@ newNeoux = function (event, neo)
    elseif ev == "close" then
     closing(window)
    end
-  end, doZone
+  end
  end
  neoux.tcrawview = function (x, y, lines)
   return {
@@ -308,6 +320,7 @@ newNeoux = function (event, neo)
     if d then
      if a == 13 or a == 32 then
       callback(window)
+      return true
      end
     end
    end,
@@ -335,13 +348,16 @@ newNeoux = function (event, neo)
    key = function (window, update, a, c, d)
     if d then
      if a == 13 then
+      return true
      elseif a == 8 then
       local str = textprop()
       textprop(unicode.sub(str, 1, unicode.len(str) - 1))
       update()
+      return true
      elseif a ~= 0 then
       textprop(textprop() .. unicode.char(a))
       update()
+      return true
      end
     end
    end,

@@ -95,7 +95,7 @@ Main functions:
   demand and unloaded after use.
 
  neoux.tcwindow(w, h, controls,
-  closing, bg, fg[, selIndex]):
+  closing, bg, fg[, selIndex], [kf]):
   Creates a neoux.create-compatible
   callback for a NeoUX GUI framework
   window.
@@ -114,6 +114,20 @@ Main functions:
   selIndex, if provided, is the index
    of the control that should start
    out selected.
+  kf, if provided, is a table that
+   is used for extended information:
+   ctrl: True when left Ctrl key
+    is down, nil or false when it's
+    up.
+   rctrl: True when right Ctrl key
+    is down, nil or false when it's
+    up.
+   shift: True when left Shift key
+    is down, nil or false when it's
+    up.
+   rshift: True when right Shift key
+    is down, nil or false when it's
+    up.
 
  startDialog(fmt, title, wait):
   Shows a text dialog.

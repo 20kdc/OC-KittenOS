@@ -77,6 +77,33 @@ Palette advice for artists:
  so that they are not wasted if not
  used.
 
+Notes on UI design:
+
+The UI design is heavily monochrome.
+
+ core (neoux supported):
+"[textheretext]": This means a text
+ field. It should preferably right-
+  align text if too much is inside,
+  ensuring that what is being written
+  can be read.
+ The enter button should do nothing,
+  and the backspace/delete buttons
+  should both remove the last Unicode
+  character.
+"<texthere>": This means a button.
+ Space or enter should activate it.
+
+ additional:
+"◢": Resize widget. Drag-dropping
+      should cause a resize. This
+      need not occur until the drop
+      is completed.
+     Standardized by Izaya.
+     The non-GUI way to do this is
+      for ctrl-arrows to resize
+      the window.
+
 -- This is released into
  the public domain.
 -- No warranty is provided,
