@@ -22,6 +22,19 @@ return {
    "docs/repoauthors/app-eeprog"
   },
  },
+ ["app-launchbar"] = {
+  desc = "Application launcher bar",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/app-launchbar.lua"
+  },
+ },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
   v = 2,
