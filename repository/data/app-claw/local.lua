@@ -35,6 +35,19 @@ return {
    "apps/app-launchbar.lua"
   },
  },
+ ["app-slaunch"] = {
+  desc = "Searching launcher",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/app-slaunch.lua"
+  },
+ },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
   v = 2,
