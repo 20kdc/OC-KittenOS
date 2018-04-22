@@ -94,24 +94,35 @@ local function announceFreeMonitor(address, except)
 end
 
 local function getGPU(monitor)
- local bestG
- local bestD = 0
+ local bestG, bestStats = nil, {-math.huge, -math.huge, -math.huge}
+ currentGPUBinding = {}
  for v in gpus.list() do
   v.bind(monitor.address, false)
-  currentGPUBinding[v.address] = nil
   local w, h = v.maxResolution()
-  local d = v.maxDepth() * w * h
-  if d > bestD then
-   bestG = v
-   bestD = d
-   bestU = currentGPUUsers[v.address] or 0
-  elseif d == bestD then
-   if (currentGPUUsers[v.address] or 0) < bestU then
+  local quality = w * h * v.maxDepth()
+  local users = (currentGPUUsers[v.address] or 0)
+  local gquality = 0
+  for scr in screens.list() do
+   v.bind(scr.address, false)
+   w, h = v.maxResolution()
+   local squality = w * h * v.maxDepth()
+   gquality = math.max(gquality, squality)
+  end
+  local stats = {quality, -users, -gquality}
+  for i = 1, #stats do
+   if stats[i] > bestStats[i] then
     bestG = v
-    bestD = d
-    bestU = currentGPUUsers[v.address] or 0
+    bestStats = stats
+    break
+   elseif stats[i] < bestStats[i] then
+    break
    end
   end
+ end
+ if bestG then
+  neo.emergency("glacier bound " .. monitor.address .. " to " .. bestG.address)
+ else
+  neo.emergency("glacier failed to bind " .. monitor.address)
  end
  return bestG
 end

@@ -21,6 +21,28 @@ As it runs in a coroutine, events are
  and potentially accesses headed in
  its direction...)
 
+NOTE regarding security of this!
+
+For efficiency, APIs are generally
+ used "directly". This allows read
+ access to all events, including any
+ security responses.
+
+The assumption made here is that if
+ you're communicating with an app you
+ don't trust, you will wrap access to
+ it in a coroutine shell, and perform
+ ensureType usage on everything that
+ it spews out.
+
+In particular, this is a good way to
+ isolate yourself from any effects,
+ including timeout, of a function you
+ know to be environment-sandboxed:
+
+coroutine.resume(coroutine.create(
+ functionIDontTrust))
+
 An example KittenOS NEO program,
  solely using kernel APIs,
  that you will likely have to kill:

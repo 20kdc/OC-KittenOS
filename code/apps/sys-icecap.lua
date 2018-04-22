@@ -5,10 +5,9 @@
 --            In general, this is what userspace will be interacting with in some way or another to get stuff done
 
 local settings = neo.requireAccess("x.neo.sys.manage", "security sysconf access")
-
 local fs = neo.requireAccess("c.filesystem", "file managers")
-
 local donkonitDFProvider = neo.requireAccess("r.neo.pub.base", "creating basic NEO APIs")
+local rootAccess = neo.requireAccess("k.root", "installing GUI integration")
 
 local targsDH = {} -- data disposal
 
@@ -280,7 +279,6 @@ local function wrapWASS(perm, req)
 end
 
 -- Connect in security policy now
-local rootAccess = neo.requireAccess("k.root", "installing GUI integration")
 local backup = rootAccess.securityPolicyINIT or rootAccess.securityPolicy
 rootAccess.securityPolicyINIT = backup
 rootAccess.securityPolicy = function (pid, proc, perm, req)
