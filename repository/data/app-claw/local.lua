@@ -60,4 +60,18 @@ return {
    "apps/app-nprt2018.lua"
   },
  },
+ ["svc-ghostie"] = {
+  desc = "Application that schedules a scare after a random time to test svc autostart",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/svc-ghostie.lua",
+   "apps/app-ghostcall.lua"
+  },
+ },
 }

@@ -17,6 +17,10 @@ The API gives you a function:
  (w, h, title) -> window
 
 This function creates a window.
+NOTE: The width can never be smaller
+ than 8, under any circumstances.
+Trying to will cause the width to be
+ forced to 8.
 
 Window fields:
 
@@ -25,6 +29,10 @@ Window fields:
   the window, and sends the line
   events (even if the size doesn't
   change)
+ NOTE: The width can never be smaller
+  than 8, under any circumstances.
+ Trying to will cause the width to be
+  forced to 8.
  getDepth(): Returns the depth of the
   screen the window is on.
  span(x, y, text, bg, fg): Draws a

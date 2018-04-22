@@ -47,6 +47,10 @@ Main functions:
  neoux.create(w, h, title, callback):
   Creates a window,
   including a NeoUX window wrapper.
+ NOTE: The width can never be smaller
+  than 8, under any circumstances.
+ Trying to will cause the width to be
+  forced to 8.
   The parameter list is compatible
    with the window "reset" function,
    and it is intended that you use
@@ -156,6 +160,10 @@ UI framework window API (TODO):
   height. Like in the API this wraps,
   this is guaranteed to refresh all
   the lines of your window.
+ NOTE: The width can never be smaller
+  than 8, under any circumstances.
+ Trying to will cause the width to be
+  forced to 8.
 
  getDepth(...): Read the note
   in us-evrst for details.

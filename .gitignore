@@ -23,4 +23,5 @@ repobuild/*/*/*
 inst.lua
 com2/code.tar.bd
 upldr.sh
+upldr-dev.sh
 repository/inst.lua

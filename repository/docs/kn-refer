@@ -305,7 +305,7 @@ The additional things available to
   is never touched by the kernel
   directly, called the "tag".
   The resulting event:
-  "k.timer", tag, time, ofs
+  "k.timer", tag, time
   These events are ONLY EVER sent as
    a consequence of this function,
    and this can be relied on safely.

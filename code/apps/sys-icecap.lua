@@ -14,10 +14,18 @@ local targsDH = {} -- data disposal
 
 local todo = {}
 
-local onEverest = {}
+-- Specific registration callbacks
+local onReg = {}
 local everestWindows = {}
 
 local nexus
+
+local theEventHandler
+
+local function addOnReg(p, f)
+ onReg[p] = onReg[p] or {}
+ table.insert(onReg[p], f)
+end
 
 local function resumeWF(...)
  local ok, e = coroutine.resume(...)
@@ -26,22 +34,29 @@ local function resumeWF(...)
   neo.emergency(e)
   nexus.startDialog(e, "ice")
  end
- return ok
+ return ok, e
 end
 
 nexus = {
  createNexusThread = function (f, ...)
   local t = coroutine.create(f)
-  if not resumeWF(t, ...) then return end
-  local early = neo.requestAccess("x.neo.pub.window")
+  local ok, cbi = resumeWF(t, ...)
+  if not ok then return end
+  local early = neo.requestAccess("x.neo.pub.window", theEventHandler)
   if early then
-   onEverest[#onEverest] = nil
-   resumeWF(t, early)
+   local r = onReg["x.neo.pub.window"]
+   -- r should not be nil here
+   onReg["x.neo.pub.window"] = nil
+   for k, v in ipairs(r) do
+    v()
+   end
   end
   return function ()
-   for k, v in ipairs(onEverest) do
-    if v == t then
-     table.remove(onEverest, k)
+   local r = onReg["x.neo.pub.window"]
+   if not r then return end
+   for k, v in ipairs(r) do
+    if v == cbi then
+     table.remove(r, k)
      return
     end
    end
@@ -49,8 +64,11 @@ nexus = {
  end,
  create = function (w, h, t)
   local thr = coroutine.running()
-  table.insert(onEverest, thr)
-  local everest = coroutine.yield()
+  local function cb()
+   coroutine.resume(thr, neo.requestAccess("x.neo.pub.window"))
+  end
+  addOnReg("x.neo.pub.window", cb)
+  local everest = coroutine.yield(cb)
   local dw = everest(w, h, title)
   everestWindows[dw.id] = thr
   return dw
@@ -232,11 +250,27 @@ local function wrapWASS(perm, req)
      if paP then
       permAct = appAct:sub(1, #appAct - #paP)
      end
-     pcall(neo.executeAsync, appAct)
-     neo.scheduleTimer(0)
-     table.insert(todo, function ()
+     -- Prepare for success
+     onReg[perm] = onReg[perm] or {}
+     table.insert(onReg[perm], function ()
       req(res)
+      req = nil
      end)
+     pcall(neo.executeAsync, "svc-" .. appAct)
+     -- Fallback "quit now"
+     local time = os.uptime() + 30
+     neo.scheduleTimer(time)
+     local f
+     function f()
+      if req then
+       if os.uptime() >= time then
+        req(res)
+       else
+        table.insert(todo, f)
+       end
+      end
+     end
+     table.insert(todo, f)
      return
     end
    end
@@ -253,7 +287,7 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  if neo.dead then
   return backup(pid, proc, perm, req)
  end
- req = wrapWASS(req)
+ req = wrapWASS(perm, req)
  local def = proc.pkg:sub(1, 4) == "sys-"
  local secpol, err = require("sys-secpolicy")
  if not secpol then
@@ -273,8 +307,8 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  end)
 end
 
-while true do
- local ev = {coroutine.yield()}
+function theEventHandler(...)
+ local ev = {...}
  if ev[1] == "k.procdie" then
   local _, pkg, pid, reason = table.unpack(ev)
   if targsDH[pid] then
@@ -294,11 +328,11 @@ while true do
    end
   end
  elseif ev[1] == "k.registration" then
-  if ev[2] == "x.neo.pub.window" then
-   local nt = onEverest
-   onEverest = {}
-   for _, v in ipairs(nt) do
-    coroutine.resume(v, neo.requestAccess("x.neo.pub.window"))
+  if onReg[ev[2]] then
+   local tmp = onReg[ev[2]]
+   onReg[ev[2]] = nil
+   for _, v in ipairs(tmp) do
+    v()
    end
   end
  elseif ev[1] == "x.neo.pub.window" then
@@ -310,4 +344,8 @@ while true do
    end
   end
  end
+end
+
+while true do
+ theEventHandler(coroutine.yield())
 end
