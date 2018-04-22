@@ -6,21 +6,64 @@ The first commit is after I got the installer working again after the new compre
 
 That's what the "SYSTEM HEROES" thing is about.
 
-## Authors
+## Authors & Licensing
 
-Most code and data here by 20kdc.
+Disclaimer: I Am Not A Lawyer. I probably screwed something up in this.
 
-Exceptions must be noted in this section, on a per-file basis, including submitted patches.
+It would be really nice if, if I have screwed up, that you tell me how.
 
-## About code/README.asc
+Preferably with a solution that fits the technological constraints.
+
+Licensing in this project is rather fluid,
+ but everything in code/ is unconditionally under the following license:
+
+    This is released into the public domain.
+    No warranty is provided, implied or otherwise.
+
+This will be referred to as "Public Domain".
+
+It should be considered equivalent to CC0, and this is the intent,
+ but it is smaller, which is somewhat important when optimizing for size.
+
+At this time, the majority of the code/ folder is by 20kdc, but exceptions may occur.
+
+These exceptions must be documented below.
+
+```
+No exceptions exist at this time.
+```
+
+The repository folder is much more complex, as the structure represents places in a running system,
+ so licensing information cannot be directly bundled with the files that require it.
+
+The contents of the repository/docs/licensing files represent a "full text" for a given license,
+ used in order to ensure legal compliance with a given license's "distribute with the program" clauses.
+
+It is assumed that this is sufficient.
+
+A user with access to a package requiring newer licensing information that does not update their licensing package is assumed to have made a willing choice.
+
+If you find this assumption to be incorrect, please request the removal of the affected packages.
+
+The limitations of OpenComputers affect the available choices here, and having separate license copies for each package is not an available choice.
+
+Nor is having a separate license package for each individual license, unless you would prefer an unbrowsable repository.
+
+The contents of the repository/docs/repo-authors file contains a full list of authorship and licensing information, per-file.
+
+## About NOTE-TO-MS.asc
 
 It exists because it needs to exist.
+It does not represent the opinions of those who have contributed to the repository,
+ only those of the person who digitally signed it (20kdc).
 
 ## Known Issues (That Aren't KittenOS NEO's Fault)
 
 Touch calibration could be off if the setPrecise support mess didn't work properly.
 
-Wide character support *may* encounter issues due to performance-saving tricks in some old OC versions. The 1.12.2 version being used at LimboCon doesn't have the issue, so it's been dealt with. Point is, not a KittenOS NEO bug if it happens.
+Wide character support *may* encounter issues due to performance-saving tricks (?) in some old OC versions.
+
+The 1.12.2 version being used at LimboCon doesn't have the issue, so it's been dealt with. Point is, not a KittenOS NEO bug if it happens.
 
 ## Known Issues (That Are KittenOS NEO's Fault But Aren't Really Fixable)
 
@@ -33,7 +76,8 @@ Critical UI gets protected from this by having a set of 4 reserved colours,
 
 If you move a window over another window, that window has to rerender. The alternative is buffering the window. Since memory is a concern, that is not going to happen. Some windows are more expensive to render than others (`klogo` tries to use less RAM if the system is 192K, at the expense of disk access) - move the most expensive window out of the way, since once a window is top-most, moving it around is usually "free".
 
-If the system runs out of memory, the kernel could crash, or alternatively the system goes into a limbo state. You're more or less doomed. Given that almost everything in Lua causes a memory allocation, I'm not exactly sure how I'd be supposed to fix this properly.
+If the system runs out of memory, the kernel could crash, or alternatively the system goes into a limbo state. You're more or less doomed.
+Given that almost everything in Lua causes a memory allocation, I'm not exactly sure how I'd be supposed to fix this properly.
 
 Any situation where the system fails to boot *may* be fixable with Safe Mode.
 This includes if you copied a sufficiently large bit of text into the persistent clipboard, and now Icecap or Everest won't start.
@@ -43,7 +87,8 @@ The catch is, it wipes your settings. As the settings are always in RAM, and con
 And finally, just because a system can multitask somewhat on 192K doesn't mean it can do the impossible regarding memory usage.
 Lesson learned: Cleaner design -> Higher memory usage.
 So anyone who wants the design to be made even cleaner should probably reread this paragraph.
-(In R0, editing the kernel causes 192K systems to fail to open filedialogs. I've fixed this in R1.)
+(In R0, editing the kernel causes 192K systems to fail to open filedialogs. I've fixed this in R1.
+ I don't know if I've screwed this up in R2, because all this focus on usability improvements has probably gone back a step regarding memory use.)
 
 ## Description
 
@@ -75,21 +120,7 @@ As the installer must be loaded in full into RAM, this is not negotiable.
 
 If it can't be kept this way with the current compressor, then a better compressor will have to be made.
 
-Everything following is completely a draft. This is more like a guideline rather than actual policy.
-
-All kernel or security-critical `sys-` process bugs will cause an installer update.
-
-Other bugs will merely result in an updated copy in the repository.
-
-This copy will be copied to installer code if and only if another condition requires the installer code be updated.
-
-The code in the `code/` folder is the code meant for the installer.
-
-Non-installer code is in the `repository/`, and thus accessible via CLAW.
-
-As HTTPS is not used for this due to various weirdness that occurs when I try, I'm hosting the repository and `inst.lua` at `http://20kdc.duckdns.org/neo`.
-
-Requests for additional features in system APIs will NOT cause an installer update.
+Frankly I don't even know what policy after that ought to be.
 
 ## Building
 
@@ -101,15 +132,11 @@ Firstly, for an uncompressed installer (just to test installer basecode), you us
 
 This kind of has some overlap with `package.sh` so that needs to be dealt with at some point.
 
-Secondly, for a compressed installer, you use `package.sh` to rebuild `code.tar`, then use something along the lines of:
-
-    lua heroes.lua `wc -c code.tar` > inst.lua
-
-This will build the compressed installer.
+Secondly, for a compressed installer, you use `package.sh` to rebuild `code.tar` and `inst.lua`, which also prepares the final structure of the repository to upload.
 
 ## Kernel Architecture
 
-KittenOS NEO is an idea of what a Lua-based efficient microkernel might look like.
+KittenOS NEO is an idea of what a Lua-based 'efficient' microkernel might look like.
 
 Scheduling is based entirely around uptime and timers,
  which cause something to be executed at a given uptime.
@@ -123,9 +150,4 @@ If anyone has any ideas, put them in an issue? If they're not too damaging, I'll
 The installer is split into a generic TAR extractor frontend `insthead.lua` and a replacable compression backend (written in by relevant tools - in current versions, `heroes.lua` is where it starts).
 
 There was more details on this but the details changed.
-
-## License
-
-    This is released into the public domain.
-    No warranty is provided, implied or otherwise.
 

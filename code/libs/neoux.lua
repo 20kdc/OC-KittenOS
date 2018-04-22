@@ -7,7 +7,7 @@
 -- Control reference
 -- x/y/w/h: ints, position/size, 1,1 TL
 -- selectable: boolean
--- key(window, update, char, code, down) (If this returns something truthy, defaults are inhibited)
+-- key(window, update, char, code, down, keyFlags) (If this returns something truthy, defaults are inhibited)
 -- touch(window, update, x, y, xI, yI, button)
 -- drag(window, update, x, y, xI, yI, button)
 -- drop(window, update, x, y, xI, yI, button)
@@ -232,7 +232,7 @@ newNeoux = function (event, neo)
     end
    elseif ev == "key" then
     if controls[selIndex] and controls[selIndex].key then
-     if controls[selIndex].key(window, function () doZone(window, controls[selIndex]) end, a, b, c) then
+     if controls[selIndex].key(window, function () doZone(window, controls[selIndex]) end, a, b, c, keyFlags) then
       return
      end
     end
@@ -316,7 +316,7 @@ newNeoux = function (event, neo)
    w = unicode.len(text),
    h = 1,
    selectable = true,
-   key = function (window, update, a, c, d)
+   key = function (window, update, a, c, d, f)
     if d then
      if a == 13 or a == 32 then
       callback(window)
@@ -345,7 +345,7 @@ newNeoux = function (event, neo)
    w = w,
    h = 1,
    selectable = true,
-   key = function (window, update, a, c, d)
+   key = function (window, update, a, c, d, f)
     if d then
      if a == 8 then
       local str = textprop()

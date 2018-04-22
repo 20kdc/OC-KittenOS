@@ -7,7 +7,7 @@
 
 -- Braille Neoux Component Callbacks :
 --  selectable (boolean)
---  key(window, update, a, c, d)
+--  key(window, update, a, c, d, keyFlags)
 --  touch(window, update, x, y, button)
 --  drag(window, update, x, y, button)
 --  drop(window, update, x, y, button)

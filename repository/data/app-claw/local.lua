@@ -5,11 +5,26 @@
 -- Authors: 20kdc
 
 return {
+ ["licensing"] = {
+  desc = "Legal compliance package, dependency of everything in the repository",
+  v = 0,
+  deps = {
+  },
+  dirs = {
+   "docs",
+   "docs/licensing"
+  },
+  files = {
+   "docs/repo-authors",
+   "docs/licensing/Public Domain"
+  },
+ },
  ["app-eeprog"] = {
   desc = "Example program: EEPROM programmer / copier",
   v = 0,
   deps = {
-   "neo"
+   "neo",
+   "licensing"
   },
   dirs = {
    "apps"
@@ -22,6 +37,7 @@ return {
   desc = "KittenOS NEO system documentation",
   v = 2,
   deps = {
+   "licensing"
   },
   dirs = {
    "docs"
@@ -50,7 +66,8 @@ return {
   desc = "NBOX2018 and NPRT2018, a 3D-printing toolbox",
   v = 0,
   deps = {
-   "neo"
+   "neo",
+   "licensing"
   },
   dirs = {
    "apps"
@@ -64,7 +81,8 @@ return {
   desc = "Application that schedules a scare after a random time to test svc autostart",
   v = 0,
   deps = {
-   "neo"
+   "neo",
+   "licensing"
   },
   dirs = {
    "apps"
@@ -73,5 +91,5 @@ return {
    "apps/svc-ghostie.lua",
    "apps/app-ghostcall.lua"
   },
- },
+ }
 }
