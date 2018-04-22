@@ -167,7 +167,7 @@ For libraries, it contains:
    not a requirement and is not
    enforced - it's not a security
    matter, just optimization/memory.
- wrapMeta: A function that takes a
+ wrapMeta(v): A function that takes a
   value, and wraps it in such a way
   as to be immutable, returning the
    wrapped value.
@@ -175,26 +175,30 @@ For libraries, it contains:
    against memory use - by using this
    to protect a table, the result can
    be shared between untrusted code.
- listProcs: A function that returns a
-  table of processes. Index is ipairs
-  -friendly, values are:
+ listProcs(): A function that returns
+  an ipairs-friendly process list.
+  Values are:
   {pid, pkg, cpuUsageInSeconds}
- listApps: Returns an ipairs-friendly
-  list of applications on the system,
-  such as:
-  {"app-out-of-sight-is-out-of-mind",
-   "svc-i-see-the-ones-that-play"}
- listLibs: Returns an ipairs-friendly
-  list of libraries on the system,
-  such as:
+ listApps(): Returns an
+  ipairs-friendly list of
+  applications on the system, like:
+  {"app-test", "svc-liliput"}
+ listLibs(): Returns an
+  ipairs-friendly list of libraries
+  on the system, such as:
   {"fmttext",
    "braille"}
- totalIdleTime: Returns the current
+ usAccessExists(s):
+  Returns true if the specified
+   access has been registered from
+   userspace using the related "r."
+   access.
+ totalIdleTime(): Returns the current
   kernel idle time total, useful for
   measuring current CPU usage, and in
   turn comparing to application CPU
   time to get various statistics.
- ensurePath: (s, root)
+ ensurePath(s, root):
   Attempts to verify the
   safety of a path, and errors if any
   aspect seems incorrect.
@@ -207,7 +211,7 @@ For libraries, it contains:
   Essentially, "//" must not occur,
    and all "[^/]+" matches must be
    valid path components.
- ensurePathComponent: (s)
+ ensurePathComponent(s):
   Ensures that a string is a safe
    filename via a character list and
    some special filename checks.
@@ -226,7 +230,7 @@ For libraries, it contains:
    Windows total nonsense (aux, com1)
    because if OC doesn't cover up
    that then you're kinda doomed.
- ensureType: (v, ts)
+ ensureType(v, ts):
   Checks that a value is of a given
    type, and errors otherwise. If the
    type is "table", it also errors if
@@ -284,12 +288,14 @@ The additional things available to
   is responded to with a
   k.securityresponse such as:
   "k.securityresponse", perm, obj
- requestAccess: A function with
-  (perm, handler) as the arguments -
-  runs requestAccessAsync, then sends
+ requestAccess(perm[, handler]):
+  Runs requestAccessAsync, then sends
   events to handler (if any) while
   waiting for the response.
- requireAccess: requestAccess, but
+  sys-icecap is responsible for any
+   automatic starting of services
+   that may occur.
+ requireAccess(perm, reason): requestAccess, but
   (perm, reason) - the reason is used
    in an error if the access cannot
    be gained.

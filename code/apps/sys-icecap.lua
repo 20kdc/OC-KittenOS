@@ -94,11 +94,13 @@ local function getPfx(xd, pkg)
  end
 end
 
+local endAcPattern = "/[a-z0-9/%.]*$"
+
 local function matchesSvc(xd, pkg, perm)
  local pfx = getPfx(xd, pkg)
  if pfx then
   local permAct = perm
-  local paP = permAct:match("/[a-z0-9/%.]*$")
+  local paP = permAct:match(endAcPattern)
   if paP then
    permAct = permAct:sub(1, #permAct - #paP)
   end
@@ -218,6 +220,31 @@ donkonitDFProvider(function (pkg, pid, sendSig)
  }
 end)
 
+-- Automatic service start
+local function wrapWASS(perm, req)
+ return function (res)
+  if res then
+   -- Do we need to start it?
+   if perm:sub(1, 6) == "x.svc." then
+    if not neo.usAccessExists(perm) then
+     local appAct = perm:sub(7)
+     local paP = appAct:match(endAcPattern)
+     if paP then
+      permAct = appAct:sub(1, #appAct - #paP)
+     end
+     pcall(neo.executeAsync, appAct)
+     neo.scheduleTimer(0)
+     table.insert(todo, function ()
+      req(res)
+     end)
+     return
+    end
+   end
+  end
+  req(res)
+ end
+end
+
 -- Connect in security policy now
 local rootAccess = neo.requireAccess("k.root", "installing GUI integration")
 local backup = rootAccess.securityPolicyINIT or rootAccess.securityPolicy
@@ -226,6 +253,7 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  if neo.dead then
   return backup(pid, proc, perm, req)
  end
+ req = wrapWASS(req)
  local def = proc.pkg:sub(1, 4) == "sys-"
  local secpol, err = require("sys-secpolicy")
  if not secpol then

@@ -329,6 +329,12 @@ baseProcNeo = {
  end,
  listApps = lister("apps/"),
  listLibs = lister("libs/"),
+ usAccessExists = function (accessName)
+  ensureType(accessName, "string")
+  if accesses[accessName] then
+   return true
+  end
+ end,
  totalIdleTime = function () return idleTime end,
  ensurePath = ensurePath,
  ensurePathComponent = ensurePathComponent,
