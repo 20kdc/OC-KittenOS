@@ -347,14 +347,12 @@ newNeoux = function (event, neo)
    selectable = true,
    key = function (window, update, a, c, d)
     if d then
-     if a == 13 then
-      return true
-     elseif a == 8 then
+     if a == 8 then
       local str = textprop()
       textprop(unicode.sub(str, 1, unicode.len(str) - 1))
       update()
       return true
-     elseif a ~= 0 then
+     elseif a >= 32 then
       textprop(textprop() .. unicode.char(a))
       update()
       return true

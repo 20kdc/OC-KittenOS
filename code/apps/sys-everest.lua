@@ -58,6 +58,7 @@ local lIM = 1
 -- Stops the main loop
 local shuttingDown = false
 
+-- Also used for settings.
 local savingThrow = neo.requestAccess("x.neo.sys.manage")
 
 local function suggestAppsStop()
@@ -677,7 +678,14 @@ local function key(ku, ka, kc, down)
    return
   end
   if ka == 13 then
-   if down and (not waitingShutdownCallback) then neo.executeAsync("app-launcher") end return
+   if down and (not waitingShutdownCallback) then
+    local lApp = "app-launcher"
+    if savingThrow then
+     lApp = savingThrow.getSetting("sys-everest.launcher") or lApp
+    end
+    neo.executeAsync(lApp)
+   end
+   return
   end
  end
  if focus then
@@ -774,10 +782,17 @@ while not shuttingDown do
   end
   for k, v in ipairs(tags) do
    local surf = table.remove(surfaces, v - (k - 1))
+   if os1 == surf then
+    os1 = nil
+   end
    updateRegion(surf[1], surf[2], surf[3], surf[4], surf[5], {})
   end
   checkWSC()
-  changeFocus(os1)
+  if os1 then
+   changeFocus(os1)
+  else
+   changeFocus(surfaces[1])
+  end
  end
  if s[1] == "x.neo.sys.screens" then
   if s[2] == "available" then

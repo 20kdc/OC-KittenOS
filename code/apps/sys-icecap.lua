@@ -183,6 +183,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
    local fw, closer = require("sys-filewrap").create(fs.primary, path, mode)
+   if not fw then return nil, closer end
    local oc = fw.close
    fw.close = function ()
     oc()

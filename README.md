@@ -6,6 +6,16 @@ The first commit is after I got the installer working again after the new compre
 
 That's what the "SYSTEM HEROES" thing is about.
 
+## Authors
+
+Most code and data here by 20kdc.
+
+Exceptions must be noted in this section, on a per-file basis, including submitted patches.
+
+## About code/README.asc
+
+It exists because it needs to exist.
+
 ## Known Issues (That Aren't KittenOS NEO's Fault)
 
 Touch calibration could be off if the setPrecise support mess didn't work properly.

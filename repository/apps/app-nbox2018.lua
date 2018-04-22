@@ -6,7 +6,6 @@
 
 -- program start
 
-local holos = neo.requestAccess("c.hologram")
 local icecap = neo.requireAccess("x.neo.pub.base", "filedialogs")
 local window = neo.requireAccess("x.neo.pub.window", "window")(40, 13)
 local fmttext = require("fmttext")
@@ -90,6 +89,12 @@ local programStates = {
    elseif kc == 68 then
     -- Tint
     if selectedBox then tintDigi = 1 programState = "tint" end
+   elseif ka == 127 or ka == 8 then
+    -- Delete
+    if selectedBox then
+     boxes[state][selectedBox] = nil
+     selectedBox = nil
+    end
    else
     local cc = unicode.char(ka):upper()
     if boxes[state][cc] then
@@ -243,9 +248,10 @@ local function onRect(x, y, minX, minY, maxX, maxY)
 end
 
 local function getPixel(x, y, p)
+ -- the reason is obvious for plane1, but less so for plane2
+ -- just consider that without this, the top of the screen would be facing you, but X would remain your left/right
+ y = 17 - y
  if p == 1 then
-  -- plane 1 uses inverted Y
-  y = 17 - y
   if x == cx and y == cy then
    return cursorBlink
   end
@@ -451,7 +457,7 @@ local function exportBoxes(shapes, st)
    v.minX,
    v.minY,
    v.minZ,
-   v.minX,
+   v.maxX,
    v.maxY,
    v.maxZ,
    texture = v.tex,
@@ -569,7 +575,7 @@ while true do
      if not xyz then
       cy = math.min(16, cy + 1)
      else
-      cz = math.max(1, cz - 1)
+      cz = math.min(16, cz + 1)
      end
      refresh()
     elseif d == 205 then
@@ -579,7 +585,7 @@ while true do
      if not xyz then
       cy = math.max(1, cy - 1)
      else
-      cz = math.min(16, cz + 1)
+      cz = math.max(1, cz - 1)
      end
      refresh()
     else

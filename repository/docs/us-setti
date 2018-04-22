@@ -7,6 +7,10 @@ As "*" is used as a part of some of
 
 -- System-wide permissions --
 
+sys-everest.launcher: The launcher
+ application. If not present, then
+ app-launcher is used by default.
+
 pub.<anything>: Public settings,
  readable and writable by anything
  with x.neo.pub.globals access.
