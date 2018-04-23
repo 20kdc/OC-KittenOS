@@ -10,7 +10,7 @@ readBufSize = 2048
 -- A function used for logging, usable by programs.
 emergencyFunction = function (...)
  computer.pushSignal("_kosneo_syslog", "kernel", ...)
- if ocemu.log then
+ if ocemu and ocemu.log then
   pcall(ocemu.log, ...)
  end
 end

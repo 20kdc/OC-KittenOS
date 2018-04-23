@@ -623,7 +623,7 @@ local function startLauncher()
  if not waitingShutdownCallback then
   local lApp = "app-launcher"
   if savingThrow then
-   lApp = lApp or savingThrow.getSetting("sys-everest.launcher")
+   lApp = savingThrow.getSetting("sys-everest.launcher") or lApp
   end
   if lApp then
    neo.executeAsync(lApp)
