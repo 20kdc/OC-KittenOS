@@ -619,6 +619,18 @@ everestSessionProvider(function (pkg, pid, sendSig)
 end)
 -- THE EVEREST SESSION API ENDS
 
+local function startLauncher()
+ if not waitingShutdownCallback then
+  local lApp = "app-launcher"
+  if savingThrow then
+   lApp = lApp or savingThrow.getSetting("sys-everest.launcher")
+  end
+  if lApp then
+   neo.executeAsync(lApp)
+  end
+ end
+end
+
 -- WM shortcuts are:
 -- Alt-Z: Switch surface
 -- Alt-Enter: Launcher
@@ -678,12 +690,8 @@ local function key(ku, ka, kc, down)
    return
   end
   if ka == 13 then
-   if down and (not waitingShutdownCallback) then
-    local lApp = "app-launcher"
-    if savingThrow then
-     lApp = savingThrow.getSetting("sys-everest.launcher") or lApp
-    end
-    neo.executeAsync(lApp)
+   if down then
+    startLauncher()
    end
    return
   end
@@ -743,7 +751,7 @@ while not shuttingDown do
       changeFocus(os)
       ns[6]("touch", lx, ly, ix, iy, s[5])
      else
-      if s[5] == 1 and not waitingShutdownCallback then neo.executeAsync("app-launcher") end
+      if s[5] == 1 then startLauncher() end
      end
      break
     end

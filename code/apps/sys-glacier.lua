@@ -41,6 +41,7 @@ local settings = {
  password = "",
  ["pub.clipboard"] = "",
  ["sys-init.shell"] = "sys-everest",
+ ["sys-everest.launcher"] = "app-launcher",
  ["run.sys-icecap"] = "yes",
  -- scr.w/h/d/t.<uuid>
 }
@@ -343,7 +344,7 @@ end
 rescanDevs()
 
 -- Save any settings made during the above (or just the language)
-saveSettings()
+pcall(saveSettings)
 -- --
 
 glacierDCProvider(function (pkg, pid, sendSig)

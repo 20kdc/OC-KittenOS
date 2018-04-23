@@ -1,17 +1,9 @@
-repository/apps/app-eeprog.lua: 20kdc, Public Domain
-repository/apps/app-ghostcall.lua: 20kdc, Public Domain
-repository/apps/app-nbox2018.lua: 20kdc, Public Domain
-repository/apps/app-nprt2018.lua: 20kdc, Public Domain
-repository/apps/svc-ghostie.lua: 20kdc, Public Domain
-repository/data/app-claw/local.lua: 20kdc, Public Domain
-repository/docs/licensing/Public Domain: 20kdc, Public Domain
 repository/docs/an-intro: 20kdc, Public Domain
 repository/docs/gp-pedan: 20kdc, Public Domain
 repository/docs/kn-intro: 20kdc, Public Domain
 repository/docs/kn-perms: 20kdc, Public Domain
 repository/docs/kn-refer: 20kdc, Public Domain
 repository/docs/kn-sched: 20kdc, Public Domain
-repository/docs/repo-authors: 20kdc, Public Domain
 repository/docs/ul-bmp__: 20kdc, Public Domain
 repository/docs/ul-brail: 20kdc, Public Domain
 repository/docs/ul-event: 20kdc, Public Domain

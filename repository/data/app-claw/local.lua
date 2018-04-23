@@ -5,42 +5,32 @@
 -- Authors: 20kdc
 
 return {
- ["licensing"] = {
-  desc = "Legal compliance package, dependency of everything in the repository",
-  v = 0,
-  deps = {
-  },
-  dirs = {
-   "docs",
-   "docs/licensing"
-  },
-  files = {
-   "docs/repo-authors",
-   "docs/licensing/Public Domain"
-  },
- },
  ["app-eeprog"] = {
   desc = "Example program: EEPROM programmer / copier",
   v = 0,
   deps = {
    "neo",
-   "licensing"
+   "zzz-license-pd"
   },
   dirs = {
-   "apps"
+   "apps",
+   "docs",
+   "docs/repoauthors"
   },
   files = {
-   "apps/app-eeprog.lua"
+   "apps/app-eeprog.lua",
+   "docs/repoauthors/app-eeprog"
   },
  },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
   v = 2,
   deps = {
-   "licensing"
+   "zzz-license-pd"
   },
   dirs = {
-   "docs"
+   "docs",
+   "docs/repoauthors"
   },
   files = {
    "docs/an-intro",
@@ -59,7 +49,8 @@ return {
    "docs/ul-neoux",
    "docs/ul-brail",
    "docs/ul-bmp__",
-   "docs/gp-pedan"
+   "docs/gp-pedan",
+   "docs/repoauthors/neo-docs"
   },
  },
  ["app-nbox2018"] = {
@@ -67,14 +58,17 @@ return {
   v = 0,
   deps = {
    "neo",
-   "licensing"
+   "zzz-license-pd"
   },
   dirs = {
-   "apps"
+   "apps",
+   "docs",
+   "docs/repoauthors"
   },
   files = {
    "apps/app-nbox2018.lua",
-   "apps/app-nprt2018.lua"
+   "apps/app-nprt2018.lua",
+   "docs/repoauthors/app-nbox2018"
   },
  },
  ["svc-ghostie"] = {
@@ -82,14 +76,32 @@ return {
   v = 0,
   deps = {
    "neo",
-   "licensing"
+   "zzz-license-pd"
   },
   dirs = {
-   "apps"
+   "apps",
+   "docs",
+   "docs/repoauthors"
   },
   files = {
    "apps/svc-ghostie.lua",
-   "apps/app-ghostcall.lua"
+   "apps/app-ghostcall.lua",
+   "docs/repoauthors/svc-ghostie"
+  },
+ },
+ -- licenses (MUST BE IMMUTABLE)
+ ["zzz-license-pd"] = {
+  desc = "license file 'Public Domain'",
+  v = 0,
+  deps = {
+   "zzz-license",
+  },
+  dirs = {
+   "docs",
+   "docs/licensing"
+  },
+  files = {
+   "docs/licensing/Public Domain"
   },
  }
 }

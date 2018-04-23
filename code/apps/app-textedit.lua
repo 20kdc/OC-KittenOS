@@ -339,24 +339,24 @@ local function ev_key(ka, kc, down)
   end
  end
  -- Letters
- if ka ~= 0 then
-  if ka == 8 then
-   if cursorX == 1 then
-    if cursorY == 1 then
-     return false
-    end
-    local l = table.remove(lines, cursorY)
-    cursorY = cursorY - 1
-    cursorX = unicode.len(lines[cursorY]) + 1
-    lines[cursorY] = lines[cursorY] .. l
-   else
-    local a, b = splitCur()
-    a = unicode.sub(a, 1, unicode.len(a) - 1)
-    lines[cursorY] = a.. b
-    cursorX = cursorX - 1
+ if ka == 8 or kc == 211 then
+  if cursorX == 1 then
+   if cursorY == 1 then
+    return false
    end
-   return true
+   local l = table.remove(lines, cursorY)
+   cursorY = cursorY - 1
+   cursorX = unicode.len(lines[cursorY]) + 1
+   lines[cursorY] = lines[cursorY] .. l
+  else
+   local a, b = splitCur()
+   a = unicode.sub(a, 1, unicode.len(a) - 1)
+   lines[cursorY] = a.. b
+   cursorX = cursorX - 1
   end
+  return true
+ end
+ if ka ~= 0 then
   putLetter(unicode.char(ka))
   return true
  end

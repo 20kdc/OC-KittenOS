@@ -114,10 +114,11 @@ local advPlusH = false
 
 local function advAsker(info, def, r, parent)
  info = unicode.safeTextFormat(info)
+ local ww = math.max(25, unicode.len(info))
  return function ()
-  return 25, 2, nil, neoux.tcwindow(25, 2, {
+  return ww, 2, nil, neoux.tcwindow(ww, 2, {
    neoux.tcrawview(1, 1, {info}),
-   neoux.tcfield(1, 2, 25, function (tx)
+   neoux.tcfield(1, 2, ww, function (tx)
     def = tx or def
     return def
    end)

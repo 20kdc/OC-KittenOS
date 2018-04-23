@@ -35,7 +35,7 @@ newNeoux = function (event, neo)
     rtt = rt
    end
   end
-  local tag = neo.requestAccess("x.neo.pub.base").showFileDialogAsync(forWrite)
+  local tag = neo.requireAccess("x.neo.pub.base", "filedialog").showFileDialogAsync(forWrite)
   local f
   f = function (_, fd, tg, re)
    if fd == "filedialog" then
@@ -347,7 +347,14 @@ newNeoux = function (event, neo)
    selectable = true,
    key = function (window, update, a, c, d, f)
     if d then
-     if a == 8 then
+     if c == 63 then
+      neo.requireAccess("x.neo.pub.globals", "clipboard").setSetting("clipboard", textprop())
+     elseif c == 64 then
+      local contents = neo.requireAccess("x.neo.pub.globals", "clipboard").getSetting("clipboard")
+      contents = contents:match("^[^\r\n]*")
+      textprop(contents)
+      update()
+     elseif a == 8 then
       local str = textprop()
       textprop(unicode.sub(str, 1, unicode.len(str) - 1))
       update()
@@ -358,6 +365,11 @@ newNeoux = function (event, neo)
       return true
      end
     end
+   end,
+   clipboard = function (window, update, contents)
+    contents = contents:match("^[^\r\n]*")
+    textprop(contents)
+    update()
    end,
    line = function (window, x, y, lind, bg, fg, selected)
     local fg1 = fg

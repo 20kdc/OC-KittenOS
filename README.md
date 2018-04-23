@@ -41,15 +41,18 @@ The contents of the repository/docs/licensing files represent a "full text" for 
 
 It is assumed that this is sufficient.
 
-A user with access to a package requiring newer licensing information that does not update their licensing package is assumed to have made a willing choice.
-
-If you find this assumption to be incorrect, please request the removal of the affected packages.
+A separate package is used for each license such that the user must go out of their way to not download the license.
 
 The limitations of OpenComputers affect the available choices here, and having separate license copies for each package is not an available choice.
 
 Nor is having a separate license package for each individual license, unless you would prefer an unbrowsable repository.
 
-The contents of the repository/docs/repo-authors file contains a full list of authorship and licensing information, per-file.
+The contents of the repository/docs/repoauthors folder
+ is a human-readable per-package manifest of all files and their 
+ licenses.
+
+If you find this uncompliant with the license of a package,
+ please request the removal of the affected packages.
 
 ## About NOTE-TO-MS.asc
 

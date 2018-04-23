@@ -8,23 +8,27 @@
 readBufSize = 2048
 
 -- A function used for logging, usable by programs.
-emergencyFunction = function () end
+emergencyFunction = function (...)
+ computer.pushSignal("_kosneo_syslog", "kernel", ...)
+ if ocemu.log then
+  pcall(ocemu.log, ...)
+ end
+end
 -- Comment this out if you don't want programs to have
 --  access to ocemu's logger.
-ocemu = component.list("ocemu", true)()
+ocemu = (component.list("ocemu", true)()) or (component.list("sandbox", true)())
 if ocemu then
  ocemu = component.proxy(ocemu)
- emergencyFunction = ocemu.log
 end
 
+-- It is a really bad idea to remove this.
+-- If the code inside this block even executes, then removing it is a security risk.
 if load(string.dump(function()end)) then
- -- This is your first and only warning.
- -- allowBytecode has effects *outside the game.*
- -- If it is enabled, any program with load can take over your host system.
- -- I refuse to allow KittenOS NEO to operate in this environment for your safety.
- -- If you are truly unable to change it, tell someone who can.
- emergencyFunction("Please set allowBytecode = false in OCEmu config.")
- error("Please set allowBytecode = false in OC config.")
+ emergencyFunction("detected bytecode access, preventing (only remove this block if you trust every app ever on your KittenOS NEO system)")
+ local oldLoad = load
+ load = function (c, n, m, ...)
+  return oldLoad(c, n, "t", ...)
+ end
 end
 
 primaryDisk = component.proxy(computer.getBootAddress())
@@ -376,15 +380,6 @@ function runProgramPolicy(ipkg, pkg, pid, ...)
   end
  end
  return true
-end
-
--- This is hidden here to protect you.
--- I beg of you, don't remove it.
-if load(string.dump(function()end)) then
- local oldLoad = load
- load = function (c, n, m, ...)
-  return oldLoad(c, n, "t", ...)
- end
 end
 
 function retrieveAccess(perm, pkg, pid)
