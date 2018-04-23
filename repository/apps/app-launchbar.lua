@@ -1,3 +1,8 @@
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
+
+-- app-launchbar: launchbar with application pinning
+
 local event = require("event")(neo)
 local neoux, err = require("neoux")
 if not neoux then error(err) end
