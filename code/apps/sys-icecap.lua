@@ -237,55 +237,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
  }
 end)
 
--- Automatic service start
-local function wrapWASS(perm, req)
- return function (res)
-  if res then
-   -- Do we need to start it?
-   if perm:sub(1, 6) == "x.svc." then
-    if not neo.usAccessExists(perm) then
-     local appAct = perm:sub(7)
-     local paP = appAct:match(endAcPattern)
-     if paP then
-      permAct = appAct:sub(1, #appAct - #paP)
-     end
-     -- Prepare for success
-     onReg[perm] = onReg[perm] or {}
-     table.insert(onReg[perm], function ()
-      req(res)
-      req = nil
-     end)
-     pcall(neo.executeAsync, "svc-" .. appAct)
-     -- Fallback "quit now"
-     local time = os.uptime() + 30
-     neo.scheduleTimer(time)
-     local f
-     function f()
-      if req then
-       if os.uptime() >= time then
-        req(res)
-       else
-        table.insert(todo, f)
-       end
-      end
-     end
-     table.insert(todo, f)
-     return
-    end
-   end
-  end
-  req(res)
- end
-end
-
--- Connect in security policy now
-local backup = rootAccess.securityPolicyINIT or rootAccess.securityPolicy
-rootAccess.securityPolicyINIT = backup
-rootAccess.securityPolicy = function (pid, proc, perm, req)
- if neo.dead then
-  return backup(pid, proc, perm, req)
- end
- req = wrapWASS(perm, req)
+local function secPolicyStage2(pid, proc, perm, req)
  local def = proc.pkg:sub(1, 4) == "sys-"
  local secpol, err = require("sys-secpolicy")
  if not secpol then
@@ -303,6 +255,51 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
    req(def)
   end
  end)
+end
+
+-- Connect in security policy now
+local backup = rootAccess.securityPolicyINIT or rootAccess.securityPolicy
+rootAccess.securityPolicyINIT = backup
+rootAccess.securityPolicy = function (pid, proc, perm, req)
+ if neo.dead then
+  return backup(pid, proc, perm, req)
+ end
+ local function finish()
+  secPolicyStage2(pid, proc, perm, req)
+ end
+ -- Do we need to start it?
+ if perm:sub(1, 6) == "x.svc." then
+  if not neo.usAccessExists(perm) then
+   local appAct = perm:sub(7)
+   local paP = appAct:match(endAcPattern)
+   if paP then
+    permAct = appAct:sub(1, #appAct - #paP)
+   end
+   -- Prepare for success
+   onReg[perm] = onReg[perm] or {}
+   table.insert(onReg[perm], function ()
+    finish()
+   end)
+   pcall(neo.executeAsync, "svc-" .. appAct)
+   -- Fallback "quit now"
+   local time = os.uptime() + 30
+   neo.scheduleTimer(time)
+   local f
+   function f()
+    if finish then
+     if os.uptime() >= time then
+      finish()
+     else
+      table.insert(todo, f)
+     end
+    end
+   end
+   table.insert(todo, f)
+   return
+  end
+ else
+  finish()
+ end
 end
 
 function theEventHandler(...)

@@ -9,6 +9,9 @@
 -- Specifically, register as soon as possible.
 -- While not required, security dialogs can cause a timeout.
 
+local ic = neo.requireAccess("x.neo.pub.base", "to lock x.svc.ghostie")
+ic.lockPerm("x.svc.ghostie")
+
 local r = neo.requireAccess("r.svc.ghostie", "ghost registration")
 
 local waiting = 0

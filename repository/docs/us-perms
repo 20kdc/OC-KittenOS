@@ -75,6 +75,10 @@ Paths for the IO parts of this API
   function, so that the user must be
   asked before a program can access
   the permission.
+ This function should be called
+  *before* you register your API, not
+  after, in case your service was
+  automatically started.
 
  NOTE: LIST REQUIRES "/" AT THE END
   AND START, WHILE THE REST CANNOT

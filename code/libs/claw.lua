@@ -73,7 +73,11 @@ return function ()
    end
   end
   for _, v in ipairs(sources[srcName][3][pkg].files) do
-   local ok, r = sources[srcName][1](v, sources[dstName][2][1](v .. ".claw-tmp"))
+   local tmpOut, r, ok = sources[dstName][2][1](v .. ".claw-tmp")
+   ok = tmpOut
+   if ok then
+    ok, r = sources[srcName][1](v, tmpOut)
+   end
    if ok then
     yielder()
    else

@@ -45,13 +45,10 @@ local function actualPolicy(pkg, pid, perm, matchesSvc)
 end
 
 return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
- local res = "ask"
+ local res = actualPolicy(pkg, pid, perm, matchesSvc)
  if settings then
   res = settings.getSetting("perm|" .. pkg .. "|" .. perm) or
-        settings.getSetting("perm|*|" .. perm) or "ask"
- end
- if res == "ask" then
-  res = actualPolicy(pkg, pid, perm, matchesSvc)
+        settings.getSetting("perm|*|" .. perm) or res
  end
  if res == "ask" and nexus then
   local totalW = 3 + 6 + 2 + 8

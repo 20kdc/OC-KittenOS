@@ -94,14 +94,15 @@ return {
   desc = "license file 'Public Domain'",
   v = 0,
   deps = {
-   "zzz-license",
   },
   dirs = {
    "docs",
-   "docs/licensing"
+   "docs/licensing",
+   "docs/repoauthors"
   },
   files = {
-   "docs/licensing/Public Domain"
+   "docs/licensing/Public Domain",
+   "docs/repoauthors/zzz-license-pd"
   },
  }
 }
