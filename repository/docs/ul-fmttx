@@ -35,15 +35,13 @@ It has two functions for this task:
    not reduced.
 
  fmtText(text, width):
-  Formats the given text to a given
-   width in a wrapping fashion.
-  Returns a series of lines that are
-   padded to the given width.
+  Formats the given safeTextFormat'd
+   string to a list of lines with a
+   given max. width and word wrap, if
+   possible (words will be broken by
+   letter if necessary)
   If there are newlines in the text,
    these newlines are respected.
-  If possible, the wrapping is a word
-   wrap style, but words are broken
-   if necessary.
   If the width is less than 2, then
    this function may fail in various
    ways, up to and including freezes.
