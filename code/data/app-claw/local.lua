@@ -189,7 +189,8 @@ return {
    "neo-coreapps",
    "app-klogo",
    "app-flash",
-   "app-claw"
+   "app-claw",
+   "app-wget"
   },
   dirs = {
   },

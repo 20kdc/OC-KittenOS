@@ -4,11 +4,28 @@
 -- app-nbox2018.lua : NODEBOX 2018
 -- Authors: 20kdc
 
+-- Current layout
+--  12345678901234567890123456789012345678901234567890
+-- 1                |                |                
+-- 2                |                | 3d 32x32 panel 
+-- 3                |                |                
+-- 4                |                |                
+-- 5                |                |                
+-- 6                |                |                
+-- 7                |                |                
+-- 8                |                |                
+-- 9-XY Ortho-ACTIV-+-XZ Ortho-ACTIV-+-ST:OFF-+-FILE:-
+--10This was the story of someone cal|ABCDEFGH|F1 New 
+--11led Stanley. Stanley got very cro|IJKLMNOP|F3 Load
+--12ss because someone else used his |QRSTUVWX|F4 Save
+--13name for a game. Stanley's silly.|YZ[\]^_`|F5 XYXZ
+
 -- program start
 
 local icecap = neo.requireAccess("x.neo.pub.base", "filedialogs")
-local window = neo.requireAccess("x.neo.pub.window", "window")(40, 13)
+local window = neo.requireAccess("x.neo.pub.window", "window")(50, 13)
 local fmttext = require("fmttext")
+local braille = require("braille")
 
 -- [true] = {["A"] = {
 --  tex = "",
@@ -64,8 +81,8 @@ local programStates = {
    return {
     "Nothing selected. " .. str,
     "Enter starts a new box, while   ",
-    " a box can be selected by its   ",
-    " key. To print, press F8.       "
+    " boxes are selected by letter.  ",
+    "F8 prints, TAB toggles state.   "
    }
   end,
   function (ka, kc)
@@ -295,7 +312,80 @@ local function getPixel(x, y, p)
  return false
 end
 
-local function render(line)
+local function get3DPixel(xo, yo)
+ local function inLine(xa, ya, xb, yb)
+  xa, ya, xb, yb = math.floor(xa), math.floor(ya), math.floor(xb), math.floor(yb)
+  local xd = math.abs(xa - xb)
+  local yd = math.abs(ya - yb)
+  if xd > yd then
+   local point = math.abs(xo - xa) / xd
+   local cast = math.floor((point * (0.99 + yb - ya)) + ya)
+   if cast ~= yo then
+    return false
+   end
+  elseif yd ~= 0 then
+   local point = math.abs(yo - ya) / yd
+   local cast = math.floor((point * (0.99 + xb - xa)) + xa)
+   if cast ~= xo then
+    return false
+   end
+  end
+  -- clipping
+  return
+   xo >= math.min(xa, xb) and
+   xo <= math.max(xa, xb) and
+   yo >= math.min(ya, yb) and
+   yo <= math.max(ya, yb)
+ end
+ local cacheX = {}
+ local cacheY = {}
+ local function point3(ax, ay, az)
+  local k = ax .. "_" .. ay .. "_" .. az
+  if cacheX[k] then return cacheX[k], cacheY[k] end
+  local ox = 16
+  local oy = 15.5
+  oy = oy - (ay / 2)
+  ox = ox + (ax / 2)
+  ox = ox - (az / 2)
+  oy = oy + (ax / 4)
+  oy = oy + (az / 4)
+  cacheX[k] = ox
+  cacheY[k] = oy
+  return ox, oy
+ end
+ local function in3Line(ax, ay, az, bx, by, bz)
+  local sc = 1.9
+  ax, ay = point3(ax * sc, ay * sc, az * sc)
+  bx, by = point3(bx * sc, by * sc, bz * sc)
+  return inLine(ax, ay, bx, by)
+ end
+ local function inShape(ax, ay, az, bx, by, bz)
+  return
+   in3Line(ax, ay, az, bx, ay, az) or
+   in3Line(ax, ay, az, ax, ay, bz) or
+   in3Line(bx, ay, az, bx, ay, bz) or
+   in3Line(ax, ay, bz, bx, ay, bz) or
+
+   in3Line(ax, ay, az, ax, by, az) or
+   in3Line(ax, ay, bz, ax, by, bz) or
+   in3Line(bx, ay, az, bx, by, az) or
+   in3Line(bx, ay, bz, bx, by, bz) or
+
+   in3Line(ax, by, az, bx, by, az) or
+   in3Line(ax, by, az, ax, by, bz) or
+   in3Line(bx, by, az, bx, by, bz) or
+   in3Line(ax, by, bz, bx, by, bz)
+ end
+ for k, v in pairs(boxes[state]) do
+  if (not selectedBox) or (k == selectedBox) then
+   if inShape(16 - v.minZ, v.minY, 16 - v.minX, 16 - v.maxZ, v.maxY, 16 - v.maxX) then
+    return true
+   end
+  end
+ end
+ return false
+end
+local function render(line, doBraille)
  if line < 9 then
   local textA, textB = "", ""
   local bo = (line - 1) * 2
@@ -323,46 +413,29 @@ local function render(line)
     end
    end
   end
-  if line < 7 then
-   window.span(1, line, "|" .. textA .. "|" .. textB .. "|     ", 0, 0xFFFFFF)
-  else
-   if line == 7 then
-    window.span(1, line, "|" .. textA .. "|" .. textB .. "|F6/F7", 0, 0xFFFFFF)
-   elseif line == 8 then
-    local rs = "R0"
-    local bm = "B0"
-    if redstone then
-     rs = "R1"
-    end
-    if button then
-     bm = "B1"
-    end
-    window.span(1, line, "|" .. textA .. "|" .. textB .. "|" .. rs .. " " .. bm, 0, 0xFFFFFF)
-   end
-  end
-  for i = 1, 5 do
-   local boxId = string.char(i + ((line - 1) * 5) + 64)
-   if boxes[state][boxId] then
-    if selectedBox == boxId then
-     window.span(35 + i, line, boxId, 0xFFFFFF, 0)
+  window.span(1, line, textA .. "|" .. textB .. "|", 0, 0xFFFFFF)
+  if doBraille then
+   braille.calcLine(35, line, 16, window.span, function (xo, yo)
+    if get3DPixel(xo, yo + ((line - 1) * 4)) then
+     return 255, 255, 255
     else
-     window.span(35 + i, line, boxId, 0, 0xFFFFFF)
-    end
-   end
+     return 0, 0, 0
+    end 
+   end, nil)
   end
  elseif line == 9 then
   local sts = "ON "
   if not state then
    sts = "OFF"
   end
-  local actA = "---"
-  local actB = "---"
+  local actA = "--*F5"
+  local actB = "--*F5"
   if not xyz then
-   actA = "ACT"
+   actA = "ACT.-"
   else
-   actB = "ACT"
+   actB = "ACT.-"
   end
-  window.span(1, line, "+XY Ortho-" .. actA .. "----+XZ Ortho-" .. actB .. "--+-+S:" .. sts, 0, 0xFFFFFF)
+  window.span(1, line, "-XY Ortho-" .. actA .. "-+-XZ Ortho-" .. actB .. "-+-ST:" .. sts .. "-+-FILE:-", 0, 0xFFFFFF)
  elseif line > 9 then
   local mix, miy, miz = cx, cy, cz
   local mxx, mxy, mxz = cx, cy, cz
@@ -390,20 +463,30 @@ local function render(line)
   local mxText = mxx .. "," .. mxy .. "," .. mxz
   local text = programStates[programState][1](miText, mxText)
   local menu = {
-   "|F1 New ",
-   "|F3 Load",
-   "|F4 Save",
-   "|F5 XYXZ"
+   "|        |F1 New ",
+   "|        |F3 Load",
+   "|        |F4 Save",
+   "|        |F5 XYXZ"
   }
   for i = 1, 4 do
-   text[i] = fmttext.pad(text[i], 32, true, true) .. menu[i]
+   text[i] = fmttext.pad(text[i], 33, true, true) .. menu[i]
   end
   window.span(1, line, text[line - 9] or "", 0, 0xFFFFFF)
+  for i = 1, 8 do
+   local boxId = string.char(i + ((line - 10) * 8) + 64)
+   if boxes[state][boxId] then
+    if selectedBox == boxId then
+     window.span(34 + i, line, boxId, 0xFFFFFF, 0)
+    else
+     window.span(34 + i, line, boxId, 0, 0xFFFFFF)
+    end
+   end
+  end
  end
 end
-local function refresh()
+local function refresh(n3d)
  for i = 1, 14 do
-  render(i)
+  render(i, not n3d)
  end
 end
 
@@ -510,11 +593,11 @@ while true do
  if event == "k.timer" then
   neo.scheduleTimer(os.uptime() + 0.5)
   cursorBlink = not cursorBlink
-  refresh()
+  refresh(true)
  end
  if event == "x.neo.pub.window" then
   if b == "line" then
-   render(c)
+   render(c, true)
   end
   if b == "clipboard" then
    if workingOnBox and workingOnBox.maxX then
@@ -570,24 +653,24 @@ while true do
      refresh()
     elseif d == 203 then
      cx = math.max(1, cx - 1)
-     refresh()
+     refresh(true)
     elseif d == 200 then
      if not xyz then
       cy = math.min(16, cy + 1)
      else
       cz = math.min(16, cz + 1)
      end
-     refresh()
+     refresh(true)
     elseif d == 205 then
      cx = math.min(16, cx + 1)
-     refresh()
+     refresh(true)
     elseif d == 208 then
      if not xyz then
       cy = math.max(1, cy - 1)
      else
       cz = math.max(1, cz - 1)
      end
-     refresh()
+     refresh(true)
     else
      programStates[programState][2](c, d)
      refresh()
