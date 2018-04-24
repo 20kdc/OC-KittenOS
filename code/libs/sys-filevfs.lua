@@ -16,12 +16,12 @@ end
 
 local getFsNode, getRoot
 local setupCopyNode
-function setupCopyNode(parent, myRoot, op, complete)
+function setupCopyNode(parent, myRoot, op, complete, impliedName)
  local function handleResult(aRes, res)
   if aRes then
-   return complete(res)
+   return complete(res, true)
   else
-   return nil, setupCopyNode(parent, res, op, complete)
+   return nil, setupCopyNode(parent, res, op, complete, impliedName)
   end
  end
  return {
@@ -29,8 +29,14 @@ function setupCopyNode(parent, myRoot, op, complete)
   list = function ()
    local l = {}
    table.insert(l, {"Cancel Operation: " .. op, function ()
+    complete(nil, false)
     return false, parent
    end})
+   if impliedName and myRoot.unknownAvailable then
+    table.insert(l, {"Implied: " .. impliedName, function ()
+     return handleResult(myRoot.selectUnknown(impliedName))
+    end})
+   end
    for _, v in ipairs(myRoot.list()) do
     table.insert(l, {v[1], function ()
      return handleResult(v[2]())
@@ -44,15 +50,19 @@ function setupCopyNode(parent, myRoot, op, complete)
   end
  }
 end
-local function setupCopyVirtualEnvironment(fs, parent, fwrap)
+local function setupCopyVirtualEnvironment(fs, parent, fwrap, impliedName)
  if not fwrap then
   return false, dialog("Could not open source", parent)
  end
  local myRoot = getRoot(fs, true)
  -- Setup wrapping node
- return setupCopyNode(parent, myRoot, "Copy", function (fwrap2)
+ return setupCopyNode(parent, myRoot, "Copy", function (fwrap2, intent)
   if not fwrap2 then
-   return false, dialog("Could not open dest.", parent)
+   fwrap.close()
+   if intent then
+    return false, dialog("Could not open dest.", parent)
+   end
+   return false, parent
   end
   local data = fwrap.read(neo.readBufSize)
   while data do
@@ -62,10 +72,11 @@ local function setupCopyVirtualEnvironment(fs, parent, fwrap)
   fwrap.close()
   fwrap2.close()
   return false, dialog("Completed copy.", parent)
- end)
+ end, impliedName)
 end
-getFsNode = function (fs, parent, fsc, path, mode)
+function getFsNode(fs, parent, fsc, path, mode)
  local va = fsc.address:sub(1, 4)
+ local fscrw = not fsc.isReadOnly()
  if path:sub(#path, #path) == "/" then
   local t
   local confirmedDel = false
@@ -84,34 +95,53 @@ getFsNode = function (fs, parent, fsc, path, mode)
      end
      n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode) end}
     end
-    local delText = "Delete"
-    if confirmedDel then
-     delText = "Delete <ARMED>"
-    end
-    if path ~= "/" then
-     table.insert(n, {delText, function ()
-      if not confirmedDel then
-       confirmedDel = true
-       return nil, t
+    if fscrw then
+     if path ~= "/" then
+      local delText = "Delete"
+      if confirmedDel then
+       delText = "Delete <ARMED>"
       end
-      fsc.remove(path)
-      return nil, dialog("Done.", parent)
+      table.insert(n, {delText, function ()
+       if not confirmedDel then
+        confirmedDel = true
+        return nil, t
+       end
+       fsc.remove(path)
+       return nil, dialog("Done.", parent)
+      end})
+     else
+      table.insert(n, {"Relabel Disk", function ()
+       return nil, {
+        name = "Disk Relabel...",
+        list = function () return {{
+         fsc.getLabel() or "Cancel",
+         function ()
+          return false, t
+         end
+        }} end,
+        unknownAvailable = true,
+        selectUnknown = function (tx)
+         fsc.setLabel(tx)
+         return false, t
+        end
+       }
+      end})
+     end
+     table.insert(n, {"Mk. Directory", function ()
+      return nil, {
+       name = "MKDIR...",
+       list = function () return {} end,
+       unknownAvailable = true,
+       selectUnknown = function (text)
+        fsc.makeDirectory(path .. text)
+        return nil, dialog("Done!", t)
+       end
+      }
      end})
     end
-    table.insert(n, {"Mk. Directory", function ()
-     return nil, {
-      name = "MKDIR...",
-      list = function () return {} end,
-      unknownAvailable = true,
-      selectUnknown = function (text)
-       fsc.makeDirectory(path .. text)
-       return nil, dialog("Done!", t)
-      end
-     }
-    end})
     return n
    end,
-   unknownAvailable = mode ~= nil,
+   unknownAvailable = (mode ~= nil) and ((mode == false) or fscrw),
    selectUnknown = function (text)
     local rt, re = require("sys-filewrap").create(fsc, path .. text, mode)
     if not rt then
@@ -136,25 +166,29 @@ getFsNode = function (fs, parent, fsc, path, mode)
     elseif mode == "append" then
      tx = "Append"
     end
-    table.insert(n, {tx, function ()
-     local rt, re = require("sys-filewrap").create(fsc, path, mode)
-     if not rt then
-      return false, dialog("Open Error: " .. tostring(re), parent)
-     end
-     return true, rt
-    end})
+    if fscrw or mode == false then
+     table.insert(n, {tx, function ()
+      local rt, re = require("sys-filewrap").create(fsc, path, mode)
+      if not rt then
+       return false, dialog("Open Error: " .. tostring(re), parent)
+      end
+      return true, rt
+     end})
+    end
    end
    table.insert(n, {"Copy", function ()
     local rt, re = require("sys-filewrap").create(fsc, path, false)
     if not rt then
      return false, dialog("Open Error: " .. tostring(re), parent)
     end
-    return nil, setupCopyVirtualEnvironment(fs, parent, rt)
+    return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
    end})
-   table.insert(n, {"Delete", function ()
-    fsc.remove(path)
-    return nil, dialog("Done.", parent)
-   end})
+   if fscrw then
+    table.insert(n, {"Delete", function ()
+     fsc.remove(path)
+     return nil, dialog("Done.", parent)
+    end})
+   end
    return n
   end,
   unknownAvailable = false,
@@ -169,32 +203,31 @@ function getRoot(fs, mode)
    local l = {}
    for fsi in fs.list() do
     local id = fsi.getLabel()
-    if not id then
-     id = " Disk"
-    else
-     id = ":" .. id
-    end
     if fsi == fs.primary then
-     id = "NEO" .. id
+     id = "NEO" .. ((id and (":" .. id)) or " Disk")
     elseif fsi == fs.temporary then
-     id = "RAM" .. id
+     id = "RAM" .. ((id and (" " .. id)) or "Disk")
+    else
+     id = id or "Disk"
     end
     local used, total = fsi.spaceUsed(), fsi.spaceTotal()
     local amount = string.format("%02i", math.ceil((used / total) * 100))
     local mb = math.floor(total / (1024 * 1024))
     if fsi.isReadOnly() then
-     id = amount .. "% RO " .. mb .. "M " .. id
+     id = "RO " .. amount .. "% " .. mb .. "M " .. id
     else
-     id = amount .. "% RW " .. mb .. "M " .. id
+     id = "RW " .. amount .. "% " .. mb .. "M " .. id
     end
-    table.insert(l, {fsi.address:sub(1, 4) .. ": " .. id, function ()
+    table.insert(l, {fsi.address:sub(1, 4) .. " " .. id, function ()
      return nil, getFsNode(fs, t, fsi, "/", mode)
     end})
    end
    return l
   end,
   unknownAvailable = false,
-  selectUnknown = function (text) end
+  selectUnknown = function (text)
+   return false, dialog("Ow, that hurt...", t)
+  end
  }
  return t
 end

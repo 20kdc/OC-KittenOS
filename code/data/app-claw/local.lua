@@ -25,7 +25,7 @@ return {
  },
  ["neo-init"] = {
   desc = "KittenOS NEO / sys-init (startup)",
-  v = 0,
+  v = 2,
   deps = {
    "neo",
    "neo-icecap",
@@ -40,7 +40,7 @@ return {
  },
  ["neo-launcher"] = {
   desc = "KittenOS NEO / Default app-launcher",
-  v = 0,
+  v = 2,
   deps = {
    "neo"
   },
@@ -66,7 +66,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 1,
+  v = 2,
   deps = {
    "neo"
   },
@@ -148,9 +148,22 @@ return {
    "apps/app-flash.lua"
   },
  },
+ ["app-wget"] = {
+  desc = "KittenOS Web Retriever",
+  v = 2,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/app-wget.lua"
+  },
+ },
  ["app-claw"] = {
   desc = "KittenOS NEO Package Manager",
-  v = 1,
+  v = 2,
   deps = {
    "neo"
   },
@@ -165,7 +178,7 @@ return {
  },
  ["neo-meta"] = {
   desc = "KittenOS NEO: Use 'All' to install to other disks",
-  v = 0,
+  v = 2,
   deps = {
    "neo",
    "neo-init",
