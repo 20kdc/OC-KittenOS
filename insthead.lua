@@ -3,6 +3,11 @@
 -- No warranty is provided, implied or otherwise.
 
 local C, O, G, D = component, computer
+
+if not C then
+ error("Copy to init.lua on a blank disk. Thank you!")
+end
+
 local sa = C.list("screen", true)()
 if sa then
  G = C.list("gpu", true)()

@@ -273,7 +273,7 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
    local appAct = perm:sub(7)
    local paP = appAct:match(endAcPattern)
    if paP then
-    permAct = appAct:sub(1, #appAct - #paP)
+    appAct = appAct:sub(1, #appAct - #paP)
    end
    -- Prepare for success
    onReg[perm] = onReg[perm] or {}

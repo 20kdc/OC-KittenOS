@@ -18,7 +18,20 @@
 --10This was the story of someone cal|ABCDEFGH|F1 New 
 --11led Stanley. Stanley got very cro|IJKLMNOP|F3 Load
 --12ss because someone else used his |QRSTUVWX|F4 Save
---13name for a game. Stanley's silly.|YZ[\]^_`|F5 XYXZ
+--13name for a game. Stanley's silly.|YZ[\]^_`|TAB ST.
+
+-- F-Key uses:
+-- F1: New [Global]
+-- F3: Load [Global]
+-- F4: Save [Global]
+-- F5: RotL [Global]
+-- F6: RotR [Global]
+-- F7: FileStats [None ?Selected]
+-- F8: Print [Global]
+-- F9: Texture [None +Selected]
+-- F10: Tint [None +Selected]
+-- F11: 
+-- F12: 
 
 -- program start
 
@@ -41,12 +54,14 @@ local boxes = {
 local redstone = false
 local button = false
 local fileLabel = "NB2018"
-local fileTooltip = nil
+local fileTooltip = ""
 
 -- program
 
 local xyz = false
 local state = false
+
+local rotation = 0
 
 local cx, cy, cz = 1, 1, 1
 local cursorBlink = false
@@ -54,12 +69,28 @@ local cursorBlink = false
 local selectedBox
 
 local tintDigi = 0
+local fstatSwap = false
 
 -- minX/minY/minZ are +1 from the usual values
 -- tex/rgb are defaults until edited
 -- maxX/maxY/maxZ only present after 2nd point placed
 -- final corrections performed on submission to boxes table
 local workingOnBox = nil
+
+local function runField(tx, l, r)
+ local fieldContent = unicode.safeTextFormat(tx)
+ fieldContent = fmttext.pad(fieldContent, 31, false, false)
+ fieldContent = unicode.sub(fieldContent, math.max(1, unicode.len(fieldContent) - 30))
+ return l .. fieldContent .. r
+end
+local function actField(tx, ka, kc)
+ if kc == 211 or ka == 8 then
+  tx = unicode.sub(tx, 1, unicode.len(tx) - 1)
+ elseif ka >= 32 then
+  tx = tx .. unicode.char(ka)
+ end
+ return tx
+end
 
 local programState = "none"
 -- ["state"] = {lines, keydown, clipboard}
@@ -79,10 +110,10 @@ local programStates = {
    end
    local str = string.format("%02i, %02i, %02i", cx, cy, cz)
    return {
-    "Nothing selected. " .. str,
-    "Enter starts a new box, while   ",
-    " boxes are selected by letter.  ",
-    "F8 prints, TAB toggles state.   "
+    "No selection. " .. str,
+    "Enter starts a new box, while the",
+    " box's letter selects. Rotate w/ ",
+    " F5/F6, F7 for stats, F8 prints. "
    }
   end,
   function (ka, kc)
@@ -100,6 +131,10 @@ local programStates = {
      }
      programState = "point2"
     end
+   elseif kc == 65 then
+    -- FStats
+    fstatSwap = false
+    programState = "fstats"
    elseif kc == 67 then
     -- Texture
     if selectedBox then programState = "texture" end
@@ -154,7 +189,7 @@ local programStates = {
     selectedBox = string.char(ch)
     boxes[state][selectedBox] = workingOnBox
     workingOnBox = nil
-    programState = "none"
+    programState = "texture"
    end
   end,
   function (text)
@@ -163,24 +198,19 @@ local programStates = {
  texture = {
   function (miText, mxText)
    local targetBox = boxes[state][selectedBox]
-   local fieldContent = unicode.safeTextFormat(targetBox.tex)
-   fieldContent = fmttext.pad(fieldContent, 30, false, false)
-   fieldContent = unicode.sub(fieldContent, math.max(1, unicode.len(fieldContent) - 29))
    return {
     "Texturing Box:" .. miText .. "/" .. mxText,
     "Type texture ID or use clipboard",
-    "[" .. fieldContent .. "]",
+    runField(targetBox.tex, "[", "]"),
     "Enter to confirm."
    }
   end,
   function (ka, kc)
    local targetBox = boxes[state][selectedBox]
-   if ka == 127 or ka == 8 then
-    targetBox.tex = unicode.sub(targetBox.tex, 1, unicode.len(targetBox.tex) - 1)
-   elseif ka == 13 then
+   if ka == 13 then
     programState = "none"
-   elseif ka >= 32 then
-    targetBox.tex = targetBox.tex .. unicode.char(ka)
+   else
+    targetBox.tex = actField(targetBox.tex, ka, kc)
    end
   end,
   function (text)
@@ -243,6 +273,40 @@ local programStates = {
      tintDigi = nil
      programState = "none"
     end
+   end
+  end,
+  function (text)
+  end
+ },
+ fstats = {
+  function (miText, mxText)
+   local aa, ab = "[", "]"
+   local ba, bb = " ", " "
+   if fstatSwap then
+    aa, ab = " ", " "
+    ba, bb = "[", "]"
+   end
+   return {
+    runField(fileLabel, aa, ab),
+    runField(fileTooltip, ba, bb),
+    "Redstone (F9): " .. ((redstone and "Y") or "N") .. " Button (F10): " .. ((button and "Y") or "N"),
+    "Enter to confirm."
+   }
+  end,
+  function (ka, kc)
+   if kc == 67 then
+    redstone = not redstone
+   elseif kc == 68 then
+    button = not button
+   elseif ka == 13 then
+    fstatSwap = not fstatSwap
+    if not fstatSwap then
+     programState = "none"
+    end
+   elseif fstatSwap then
+    fileTooltip = actField(fileTooltip, ka, kc)
+   else
+    fileLabel = actField(fileLabel, ka, kc)
    end
   end,
   function (text)
@@ -339,7 +403,19 @@ local function get3DPixel(xo, yo)
  end
  local cacheX = {}
  local cacheY = {}
+ local function rotate(x, y)
+  if rotation == 0 then return x, y end
+  x = x - 16
+  y = y - 16
+  local a = -rotation * 3.14159 / 8
+  local xBX, xBY = math.cos(a), math.sin(a)
+  local yBX, yBY = -xBY, xBX
+  local xo = (xBX * x) + (yBX * y)
+  local yo = (xBY * x) + (yBY * y)
+  return xo + 16, yo + 16
+ end
  local function point3(ax, ay, az)
+  ax, az = rotate(ax, az)
   local k = ax .. "_" .. ay .. "_" .. az
   if cacheX[k] then return cacheX[k], cacheY[k] end
   local ox = 16
@@ -428,12 +504,13 @@ local function render(line, doBraille)
   if not state then
    sts = "OFF"
   end
-  local actA = "--*F5"
-  local actB = "--*F5"
+  -- Bit odd, but makes sense in the end
+  local actA = "-----"
+  local actB = "-----"
   if not xyz then
-   actA = "ACT.-"
+   actA = "Space"
   else
-   actB = "ACT.-"
+   actB = "Space"
   end
   window.span(1, line, "-XY Ortho-" .. actA .. "-+-XZ Ortho-" .. actB .. "-+-ST:" .. sts .. "-+-FILE:-", 0, 0xFFFFFF)
  elseif line > 9 then
@@ -466,7 +543,7 @@ local function render(line, doBraille)
    "|        |F1 New ",
    "|        |F3 Load",
    "|        |F4 Save",
-   "|        |F5 XYXZ"
+   "|        |TAB ST."
   }
   for i = 1, 4 do
    text[i] = fmttext.pad(text[i], 33, true, true) .. menu[i]
@@ -493,6 +570,7 @@ end
 local function reset()
  boxes = {[true] = {}, [false] = {}}
  state = false
+ rotation = 0
  selectedBox = nil
  xyz = false
  cx, cy, cz = 1, 1, 1
@@ -615,7 +693,7 @@ while true do
      reset()
      refresh()
     elseif d == 61 then
-     -- Load
+     -- F3 Load
      local handle = icecap.showFileDialogAsync(false)
      if waitForDialog(handle) then return end
      if lastFile then
@@ -626,7 +704,7 @@ while true do
       lastFile.close()
      end
     elseif d == 62 then
-     -- Save
+     -- F4 Save
      local handle = icecap.showFileDialogAsync(true)
      if waitForDialog(handle) then return end
      if lastFile then
@@ -634,16 +712,13 @@ while true do
       lastFile.close()
      end
     elseif d == 63 then
-     xyz = not xyz
+     rotation = rotation + 1
      refresh()
     elseif d == 64 then
-     redstone = not redstone
-     refresh()
-    elseif d == 65 then
-     button = not button
+     rotation = rotation - 1
      refresh()
     elseif d == 66 then
-     -- Print
+     -- F8 Print
      neo.executeAsync("app-nprt2018", makeObj())
     elseif c == 9 then
      state = not state
@@ -672,8 +747,12 @@ while true do
      end
      refresh(true)
     else
+     if c == 32 then
+      xyz = not xyz
+     end
+     local oldSB = selectedBox
      programStates[programState][2](c, d)
-     refresh()
+     refresh((c ~= 13) and (oldSB == selectedBox))
     end
    end
   end
