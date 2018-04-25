@@ -34,6 +34,7 @@ local function doMainWin()
    -- download!
    local req, err = primaryINet.request(nurl)
    if not req then
+    fd.close()
     neoux.startDialog("failed request:\n" .. tostring(err))
     w.reset(doMainWin())
     return
@@ -43,12 +44,9 @@ local function doMainWin()
    while sRunning do
     local n, n2 = req.read(neo.readBufSize)
     if not n then
-     req.close()
-     fd.close()
      if n2 then
       neoux.startDialog("failed download:\n" .. tostring(n2))
-      w.reset(doMainWin())
-      return
+      break
      else
       break
      end
@@ -58,11 +56,8 @@ local function doMainWin()
      else
       local o, r = fd.write(n)
       if not o then
-       req.close()
-       fd.close()
        neoux.startDialog("failed write:\n" .. tostring(r))
-       w.reset(doMainWin())
-       return
+       break
       end
      end
     end
@@ -76,7 +71,7 @@ local function doMainWin()
   running = false
  end, 0xFFFFFF, 0)
 end
-local w = neoux.create(doMainWin)
+local w = neoux.create(doMainWin())
 
 while running do
  event.pull()
