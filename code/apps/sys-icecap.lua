@@ -276,9 +276,14 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
   end
   -- Prepare for success
   onReg[perm] = onReg[perm] or {}
-  table.insert(onReg[perm], function ()
-   finish()
-  end)
+  local orp = onReg[perm]
+  local function kme()
+   if finish then
+    finish()
+    finish = nil
+   end
+  end
+  table.insert(orp, kme)
   pcall(neo.executeAsync, "svc-" .. appAct)
   -- Fallback "quit now"
   local time = os.uptime() + 30
@@ -287,7 +292,15 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
   function f()
    if finish then
     if os.uptime() >= time then
-     finish()
+     -- we've given up
+     if onReg[perm] == orp then
+      for k, v in ipairs(orp) do
+       if v == kme then
+        table.remove(orp, k)()
+        break
+       end
+      end
+     end
     else
      table.insert(todo, f)
     end
