@@ -12,20 +12,20 @@ local sRunning = true
 -- useful to perform a system update
 local url = "http://20kdc.duckdns.org/neo/inst.lua"
 local function doWorking()
- return 25, 1, nil, neoux.tcwindow(25, 1, {
+ return 50, 1, nil, neoux.tcwindow(50, 1, {
   neoux.tcrawview(1, 1, {"Downloading now..."}),
  }, function (w)
   sRunning = false
  end, 0xFFFFFF, 0)
 end
 local function doMainWin()
- return 25, 3, nil, neoux.tcwindow(25, 3, {
+ return 50, 3, nil, neoux.tcwindow(50, 3, {
   neoux.tcrawview(1, 1, {"URL to download?"}),
-  neoux.tcfield(1, 2, 25, function (t)
+  neoux.tcfield(1, 2, 50, function (t)
    url = t or url
    return url
   end),
-  neoux.tcbutton(16, 3, "Confirm", function (w)
+  neoux.tcbutton(41, 3, "Download", function (w)
    sRunning = true
    w.reset(doWorking())
    local nurl = url

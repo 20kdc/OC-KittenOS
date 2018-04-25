@@ -123,7 +123,7 @@ local programStates = {
       minX = cx,
       minY = cy,
       minZ = cz,
-      tex = "",
+      tex = "stone",
       rgb = 0xFFFFFF
      }
      programState = "point2"
@@ -197,9 +197,9 @@ local programStates = {
    local targetBox = boxes[state][selectedBox]
    return {
     "Texturing Box:" .. miText .. "/" .. mxText,
-    "Type texture ID or use clipboard",
+    "Type texture ID, or use clipboard.",
     runField(targetBox.tex, "[", "]"),
-    "Enter to confirm."
+    "Enter confirms. \"\" is invisible."
    }
   end,
   function (ka, kc)
