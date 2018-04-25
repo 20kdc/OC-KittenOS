@@ -378,9 +378,7 @@ newNeoux = function (event, neo)
      bg = fg1
     end
     local text = unicode.safeTextFormat(textprop())
-    local txl = unicode.len(text)
-    local start = math.max(1, (txl - (w - 2)) + 1)
-    text = "[" .. neoux.pad(unicode.sub(text, start, start + (w - 3)), w - 2, false, true) .. "]"
+    text = "[" .. neoux.pad(text, w - 2, false, true, true) .. "]"
     window.span(x, y, text, bg, fg)
    end
   }

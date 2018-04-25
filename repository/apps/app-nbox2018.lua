@@ -78,10 +78,7 @@ local fstatSwap = false
 local workingOnBox = nil
 
 local function runField(tx, l, r)
- local fieldContent = unicode.safeTextFormat(tx)
- fieldContent = fmttext.pad(fieldContent, 31, false, false)
- fieldContent = unicode.sub(fieldContent, math.max(1, unicode.len(fieldContent) - 30))
- return l .. fieldContent .. r
+ return l .. fmttext.pad(unicode.safeTextFormat(tx), 31, false, true, true) .. r
 end
 local function actField(tx, ka, kc)
  if kc == 211 or ka == 8 then

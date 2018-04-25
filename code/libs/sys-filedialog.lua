@@ -45,27 +45,26 @@ local function prepareNodeI(node)
  --
  local function format(a)
   if a <= 1 then
-   return true, true, node.name
+   return false, fmt.pad(unicode.safeTextFormat(node.name), w, true, true)
   end
   local camY = math.max(1, selection - 3)
   local idx = a + camY - 2
-  if node.unknownAvailable then
-   if idx == #l + 1 then
-    return selection == #l + 1, false, ":" .. unknownTx
-   end
+  local utx = (" "):rep(w)
+  if node.unknownAvailable and idx == #l + 1 then
+   utx = "<OK>[" .. fmt.pad(unicode.safeTextFormat(unknownTx), w - 6, false, true, true) .. "]"
   end
   if l[idx] then
-   return selection == idx, false, l[idx][1]
+   utx = "<" .. fmt.pad(unicode.safeTextFormat(l[idx][1]), w - 2, false, true) .. ">"
   end
-  return true, true, "~~~"
+  return selection == idx, utx
  end
  local function updateLine(wnd, a)
   local colA, colB = 0xFFFFFF, 0
-  local sel, cen, text = format(a)
+  local sel, text = format(a)
   if sel then
    colB, colA = 0xFFFFFF, 0
   end
-  wnd.span(1, a, fmt.pad(unicode.safeTextFormat(text), w, cen, true), colA, colB)
+  wnd.span(1, a, text, colA, colB)
  end
  local function flush(wnd)
   for i = 1, h do
@@ -84,7 +83,7 @@ local function prepareNodeI(node)
    elseif kc == 208 then
     h = h + 1
    elseif kc == 203 then
-    w = math.max(1, w - 1)
+    w = math.max(6, w - 1)
    elseif kc == 205 then
     w = w + 1
    else
@@ -156,7 +155,7 @@ local function prepareNodeI(node)
    if node.unknownAvailable then
     max = max + 1
    end
-   if ns == selection and selection ~= #l + 1 then
+   if ns == selection and ((selection ~= #l + 1) or (a <= 4)) then
     key(wnd, 13, 0, true)
    else
     selection = math.min(math.max(1, ns), max)

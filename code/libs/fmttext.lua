@@ -3,7 +3,7 @@
 
 local fmt
 fmt = {
- pad = function (t, len, centre, cut)
+ pad = function (t, len, centre, cut, ra)
   local l = unicode.len(t)
   local add = len - l
   if add > 0 then
@@ -14,7 +14,11 @@ fmt = {
    end
   end
   if cut then
-   t = unicode.sub(t, 1, len)
+   local i = 0
+   if ra then
+    i = -math.min(0, add)
+   end
+   t = unicode.sub(t, i + 1, len + i)
   end
   return t
  end,

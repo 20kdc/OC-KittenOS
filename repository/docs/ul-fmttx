@@ -20,7 +20,8 @@ Essentially, it's job is to take some
  into a column of a given width.
 
 It has two functions for this task:
- pad(text, len[, centre[, cut]]):
+ pad(text, len[, centre
+  [, cut[, ra]]]):
   Pads the given safeTextFormat'd
    string to a given width, returning
    the resulting string.
@@ -33,6 +34,11 @@ It has two functions for this task:
    be reduced in size if necessary.
   Otherwise, text that is too long is
    not reduced.
+  If ra is true, the text is "semi-
+   right-aligned" - it's left-aligned
+   as normal *if it can be*, but if
+   it exceeds the width, it becomes
+   right-aligned.
 
  fmtText(text, width):
   Formats the given safeTextFormat'd
