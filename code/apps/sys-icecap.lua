@@ -282,6 +282,12 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  end
 end
 
+local function dcall(c, ...)
+ local ok, e = pcall(...)
+ if not ok then
+  nexus.startDialog(tostring(e), c .. "err")
+ end
+end
 function theEventHandler(...)
  local ev = {...}
  if ev[1] == "k.procdie" then
@@ -297,23 +303,20 @@ function theEventHandler(...)
   local nt = todo
   todo = {}
   for _, v in ipairs(nt) do
-   local ok, e = pcall(v)
-   if not ok then
-    nexus.startDialog(tostring(e), "terr")
-   end
+   dcall("t", v)
   end
  elseif ev[1] == "k.registration" then
   if onReg[ev[2]] then
    local tmp = onReg[ev[2]]
    onReg[ev[2]] = nil
    for _, v in ipairs(tmp) do
-    v()
+    dcall("r", v)
    end
   end
  elseif ev[1] == "x.neo.pub.window" then
   local v = everestWindows[ev[2]]
   if v then
-   v(table.unpack(ev, 3))
+   dcall("w", v, table.unpack(ev, 3))
   end
  end
 end

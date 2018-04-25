@@ -19,7 +19,6 @@ local w, h, ctrl = 30, 8, false
 local l, selection, unknownTx
 local node, wnd
 
-
 local function prepareNode(n)
  node = n
  l = node.list()
@@ -112,7 +111,7 @@ local function key(ka, kc, down)
    prepareNode(res)
   end
  elseif selection == #l + 1 then
-  if ka == 8 then
+  if ka == 8 or kc == 211 then
    unknownTx = unicode.sub(unknownTx, 1, unicode.len(unknownTx) - 1)
   elseif ka ~= 0 then
    unknownTx = unknownTx .. unicode.char(ka)

@@ -26,8 +26,9 @@ local lines = {
 --  and then after an action occurs switches to "append" until *any cursor action is performed*.
 -- The way I have things setup is that you perform J then K(repeat) *instead*, which means you have to explicitly say "destroy current clipboard".
 
-local event = require("event")(neo)
 local clipsrc = neo.requireAccess("x.neo.pub.globals", "clipboard")
+local windows = neo.requireAccess("x.neo.pub.window", "windows")
+local files = neo.requireAccess("x.neo.pub.base", "files").showFileDialogAsync
 
 local cursorX = 1
 local cursorY = math.ceil(#lines / 2)
@@ -36,8 +37,8 @@ local ctrlFlag = false
 local dialogLock = false
 local appendFlag = false
 local sW, sH = 37, #lines + 2
-local windows = neo.requestAccess("x.neo.pub.window")
 local window = windows(sW, sH)
+local filedialog = nil
 local flush
 
 local function splitCur()
@@ -59,26 +60,19 @@ end
 local cbs = {}
 
 local function fileDialog(writing, callback)
- local tag = neo.requestAccess("x.neo.pub.base").showFileDialogAsync(writing)
- local f
- function f(_, evt, tag2, res)
-  if evt == "filedialog" then
-   if tag == tag2 then
-    local ok, e = pcall(callback, res)
-    if not ok then
-     e = unicode.safeTextFormat(tostring(e))
-     local wnd = windows(unicode.len(e), 1, "ERROR")
-     cbs[wnd.id] = {
-      wnd.close,
-      wnd.span,
-      e
-     }
-    end
-    event.ignore(f)
-   end
+ filedialog = function (res)
+  local ok, e = pcall(callback, res)
+  if not ok then
+   e = unicode.safeTextFormat(tostring(e))
+   local wnd = windows(unicode.len(e), 1, "ERROR")
+   cbs[wnd.id] = {
+    wnd.close,
+    wnd.span,
+    e
+   }
   end
  end
- event.listen("x.neo.pub.base", f)
+ files(writing)
 end
 
 -- Save/Load
@@ -86,14 +80,19 @@ local function startSave()
  dialogLock = true
  fileDialog(true, function (res)
   dialogLock = false
+  local x = ""
   if res then
    for k, v in ipairs(lines) do
     if k ~= 1 then
-     res.write("\n" .. v)
-    else
-     res.write(v)
+     x = x .. "\n"
+    end
+    x = x .. v
+    while #x >= neo.readBufSize do
+     res.write(x:sub(1, neo.readBufSize))
+     x = x:sub(neo.readBufSize + 1)
     end
    end
+   res.write(x)
    res.close()
   end
  end)
@@ -107,7 +106,7 @@ local function startLoad()
    lines = {}
    local lb = ""
    while true do
-    local l = res.read(64)
+    local l = res.read(neo.readBufSize)
     if not l then
      table.insert(lines, lb)
      cursorX = 1
@@ -196,7 +195,7 @@ local function putLetter(ch)
  lines[cursorY] = a .. b
  cursorX = unicode.len(a) + 1
 end
-local function ev_key(ka, kc, down)
+local function key(ka, kc, down)
  if dialogLock then
   return false
  end
@@ -363,39 +362,27 @@ local function ev_key(ka, kc, down)
  return false
 end
 
-local function ev_clipboard(t)
- for i = 1, unicode.len(t) do
-  local c = unicode.sub(t, i, i)
-  if c ~= "\r" then
-   if c == "\n" then
-    c = "\r"
-   end
-   putLetter(c)
-  end
- end
-end
-
 flush = function ()
  for i = 1, sH do
   window.span(1, i, getline(i), 0xFFFFFF, 0)
  end
 end
-local flash
-flash = function ()
- cFlash = not cFlash
- -- reverse:
- --local rY = (y + cursorY) - math.ceil(sH / 2)
- local csY = math.ceil(sH / 2)
- window.span(1, csY, getline(csY), 0xFFFFFF, 0)
- event.runAt(os.uptime() + 0.5, flash)
-end
-event.runAt(os.uptime() + 0.5, flash)
+
+neo.scheduleTimer(os.uptime() + 0.5)
 
 while true do
- local e = {event.pull()}
- if e[1] == "x.neo.pub.window" then
+ local e = {coroutine.yield()}
+ if e[1] == "k.timer" then
+  cFlash = not cFlash
+  local csY = math.ceil(sH / 2)
+  window.span(1, csY, getline(csY), 0xFFFFFF, 0)
+  neo.scheduleTimer(os.uptime() + 0.5)
+ elseif e[1] == "x.neo.pub.window" then
   if e[2] == window.id then
-   if e[3] == "touch" then
+   if e[3] == "line" then
+    window.span(1, e[4], getline(e[4]), 0xFFFFFF, 0)
+   elseif filedialog then
+   elseif e[3] == "touch" then
     -- reverse:
     --local rY = (y + cursorY) - math.ceil(sH / 2)
     local csY = math.ceil(sH / 2)
@@ -403,33 +390,37 @@ while true do
     cursorY = nY
     clampCursorX()
     flush()
-   end
-   if e[3] == "key" then
-    if ev_key(e[4], e[5], e[6]) then
+   elseif e[3] == "key" then
+    if key(e[4], e[5], e[6]) then
      flush()
     end
-   end
-   if e[3] == "line" then
-    window.span(1, e[4], getline(e[4]), 0xFFFFFF, 0)
-   end
-   if e[3] == "focus" then
+   elseif e[3] == "focus" then
     ctrlFlag = false
-   end
-   if e[3] == "close" then
+   elseif e[3] == "close" then
     return
-   end
-   if e[3] == "clipboard" then
-    ev_clipboard(e[4])
+   elseif e[3] == "clipboard" then
+    local t = e[4]
+    for i = 1, unicode.len(t) do
+     local c = unicode.sub(t, i, i)
+     if c ~= "\r" then
+      if c == "\n" then
+       c = "\r"
+      end
+      putLetter(c)
+     end
+    end
     flush()
    end
   elseif cbs[e[2]] then
    if e[3] == "line" then
     cbs[e[2]][2](1, 1, cbs[e[2]][3], 0, 0xFFFFFF)
-   end
-   if e[3] == "close" then
+   elseif e[3] == "close" then
     cbs[e[2]][1]()
     cbs[e[2]] = nil
    end
   end
+ elseif e[1] == "x.neo.pub.base" and e[2] == "filedialog" and filedialog then
+  filedialog(e[4])
+  filedialog = nil
  end
 end

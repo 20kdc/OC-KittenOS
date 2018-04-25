@@ -30,7 +30,10 @@ local function doMainWin()
    w.reset(doWorking())
    local nurl = url
    local fd = neoux.fileDialog(true)
-   if not fd then return end
+   if not fd then
+    w.reset(doMainWin())
+    return
+   end
    -- download!
    local req, err = primaryINet.request(nurl)
    if not req then
