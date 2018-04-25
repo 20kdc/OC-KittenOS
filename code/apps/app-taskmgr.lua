@@ -67,6 +67,7 @@ local function updateConsistentProcList(pt, lp)
 end
 local p = os.uptime()
 neo.scheduleTimer(p)
+local ctrl = false
 while true do
  local n = {coroutine.yield()}
  if n[1] == "x.neo.pub.window" then
@@ -77,20 +78,38 @@ while true do
    return
   end
   if n[3] == "key" then
-   if n[6] then
-    if n[4] == 8 or n[5] == 211 then
-     if consistentProcList[camY] then
-      kill(consistentProcList[camY][1])
+   if n[5] == 29 then
+    ctrl = n[6]
+   elseif n[6] then
+    if ctrl then
+     if n[5] == 200 then
+      sH = math.max(headlines + 1, sH - 1)
+      window.setSize(sW, sH)
+     elseif n[5] == 208 then
+      sH = sH + 1
+      window.setSize(sW, sH)
+     elseif n[5] == 203 then
+      sW = math.max(20, sW - 1)
+      window.setSize(sW, sH)
+     elseif n[5] == 205 then
+      sW = sW + 1
+      window.setSize(sW, sH)
      end
-    end
-    if n[5] == 200 then
-     camY = camY - 1
-     if camY < 1 then camY = 1 end
-     for i = (headlines + 1), sH do drawLine(i) end
-    end
-    if n[5] == 208 then
-     camY = camY + 1
-     for i = (headlines + 1), sH do drawLine(i) end
+    else
+     if n[4] == 8 or n[5] == 211 then
+      if consistentProcList[camY] then
+       kill(consistentProcList[camY][1])
+      end
+     end
+     if n[5] == 200 then
+      camY = camY - 1
+      if camY < 1 then camY = 1 end
+      for i = (headlines + 1), sH do drawLine(i) end
+     end
+     if n[5] == 208 then
+      camY = camY + 1
+      for i = (headlines + 1), sH do drawLine(i) end
+     end
     end
    end
   end

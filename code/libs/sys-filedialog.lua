@@ -34,9 +34,10 @@ local function cb(...)
  end
 end
 
+local w, h = 30, 8
+
 local function prepareNodeI(node)
  local l = node.list()
- local w, h = 30, 8
  -- Local State
  -- Selection. Having this equal to #l + 1 means typing area ('unknown')
  local selection = 1
@@ -71,8 +72,27 @@ local function prepareNodeI(node)
    updateLine(wnd, i)
   end
  end
+ local ctrl = false
  local function key(wnd, ka, kc, down)
+  if kc == 29 then
+   ctrl = down
+  end
   if not down then return end
+  if ctrl then
+   if kc == 200 then
+    h = math.max(2, h - 1)
+   elseif kc == 208 then
+    h = h + 1
+   elseif kc == 203 then
+    w = math.max(1, w - 1)
+   elseif kc == 205 then
+    w = w + 1
+   else
+    return
+   end
+   wnd.setSize(w, h)
+   return
+  end
   if (ka == 9) or (kc == 208) then
    local lo = selection
    selection = selection + 1
