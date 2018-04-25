@@ -56,31 +56,31 @@ return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
   local buttons = {
    {"<No>", function (w)
     rsp(false)
-    nexus.close(w)
+    nexus.windows[w.id] = nil
+    w.close()
    end},
    {"<Always>", function (w)
     if settings then
      settings.setSetting("perm|" .. pkg .. "|" .. perm, "allow")
     end
     rsp(true)
-    nexus.close(w)
+    nexus.windows[w.id] = nil
+    w.close()
    end},
    {"<Yes>", function (w)
     rsp(true)
-    nexus.close(w)
+    nexus.windows[w.id] = nil
+    w.close()
    end}
   }
-  nexus.createNexusThread(function ()
-   local window = nexus.create(totalW, #fmt, "security")
-   local cButton = 0
-   local ev, a, b, c
-   while true do
-    if not ev then
-     ev, a, b, c = coroutine.yield()
-    end
+  local cButton = 0
+  nexus.create(totalW, #fmt, "security", function (window, ev, a, b, c)
+   while ev do
     if ev == "line" or ev == "touch" then
      local cor = b
-     if ev == "line" then
+     local iev = ev
+     ev = nil
+     if iev == "line" then
       cor = a
       if fmt[a] then
        window.span(1, a, fmt[a], 0xFFFFFF, 0)
@@ -89,7 +89,7 @@ return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
      if cor == #fmt then
       local x = 1
       for k, v in ipairs(buttons) do
-       if ev == "line" then
+       if iev == "line" then
         if k ~= cButton + 1 then
          window.span(x, a, v[1], 0xFFFFFF, 0)
         else
@@ -108,10 +108,10 @@ return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
      end
     elseif ev == "close" then
      rsp(false)
-     nexus.close(window)
-     return
-    end
-    if ev == "key" then
+     nexus.windows[w.id] = nil
+     w.close()
+     ev = nil
+    elseif ev == "key" then
      if c and (a == 9 or b == 205) then
       cButton = (cButton + 1) % #buttons
       ev = "line"

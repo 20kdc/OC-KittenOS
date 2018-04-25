@@ -26,72 +26,41 @@ local function addOnReg(p, f)
  table.insert(onReg[p], f)
 end
 
-local function resumeWF(...)
- local ok, e = coroutine.resume(...)
- if not ok then
-  e = tostring(e)
-  neo.emergency(e)
-  nexus.startDialog(e, "ice")
- end
- return ok, e
-end
-
 nexus = {
- createNexusThread = function (f, ...)
-  local t = coroutine.create(f)
-  local ok, cbi = resumeWF(t, ...)
-  if not ok then return end
-  local early = neo.requestAccess("x.neo.pub.window", theEventHandler)
-  if early then
-   local r = onReg["x.neo.pub.window"]
-   -- r should not be nil here
-   onReg["x.neo.pub.window"] = nil
-   for k, v in ipairs(r) do
-    v()
-   end
-  end
-  return function ()
-   local r = onReg["x.neo.pub.window"]
-   if not r then return end
-   for k, v in ipairs(r) do
-    if v == cbi then
-     table.remove(r, k)
-     return
-    end
-   end
-  end
- end,
- create = function (w, h, t)
-  local thr = coroutine.running()
+ create = function (w, h, t, c)
   local function cb()
-   coroutine.resume(thr, neo.requestAccess("x.neo.pub.window"))
+   local e = neo.requestAccess("x.neo.pub.window", theEventHandler)
+   if e then
+    if onReg["x.neo.pub.window"] then
+     neo.emergency("icecap nexus prereg issue")
+     theEventHandler("k.registration", "x.neo.pub.window")
+    end
+    local dw = e(w, h, t)
+    c(dw)
+    everestWindows[dw.id] = function (...)
+     return c(dw, ...)
+    end
+    return true
+   end
   end
-  addOnReg("x.neo.pub.window", cb)
-  local everest = coroutine.yield(cb)
-  local dw = everest(w, h, title)
-  everestWindows[dw.id] = thr
+  if not cb() then
+   addOnReg("x.neo.pub.window", cb)
+  end
   return dw
  end,
+ windows = everestWindows,
  startDialog = function (tx, ti)
-  local fmt = require("fmttext")
-  local txl = fmt.fmtText(unicode.safeTextFormat(tx), 40)
-  fmt = nil
-  nexus.createNexusThread(function ()
-   local w = nexus.create(40, #txl, ti)
-   while true do
-    local ev, a = coroutine.yield()
-    if ev == "line" then
-     w.span(1, a, txl[a], 0xFFFFFF, 0)
-    elseif ev == "close" then
-     w.close()
-     return
+  local txl = require("fmttext").fmtText(unicode.safeTextFormat(tx), 40)
+  nexus.create(40, #txl, ti, function (w, ev, a)
+   if ev == "line" then
+    if not pcall(w.span, 1, a, txl[a], 0xFFFFFF, 0) then
+     everestWindows[dw.id] = nil
     end
+   elseif ev == "close" then
+    w.close()
+    everestWindows[dw.id] = nil
    end
   end)
- end,
- close = function (wnd)
-  wnd.close()
-  everestWindows[wnd.id] = nil
  end
 }
 
@@ -344,10 +313,7 @@ function theEventHandler(...)
  elseif ev[1] == "x.neo.pub.window" then
   local v = everestWindows[ev[2]]
   if v then
-   resumeWF(v, table.unpack(ev, 3))
-   if coroutine.status(v) == "dead" then
-    everestWindows[ev[2]] = nil
-   end
+   v(table.unpack(ev, 3))
   end
  end
 end

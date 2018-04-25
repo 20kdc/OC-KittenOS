@@ -81,17 +81,17 @@ function getFsNode(fs, parent, fsc, path, mode)
   local t
   local confirmedDel = false
   t = {
-   name = "DIR : " .. va .. path,
+   name = "DIR: " .. va .. path,
    list = function ()
     local n = {}
     n[1] = {"..", function ()
      return nil, parent
     end}
     for k, v in ipairs(fsc.list(path)) do
-     local nm = "[F] " .. v
+     local nm = "F: " .. v
      local fp = path .. v
      if fsc.isDirectory(fp) then
-      nm = "[D] " .. v
+      nm = "D: " .. v
      end
      n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode) end}
     end
