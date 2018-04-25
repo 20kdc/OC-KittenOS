@@ -52,7 +52,7 @@ local function runBlock(blk)
  end
 end
 
-while true do
+while 1 do
  local blkd = io.read(512)
  runBlock(blkd)
  if #blkd < 512 then

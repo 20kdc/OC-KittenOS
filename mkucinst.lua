@@ -14,6 +14,7 @@ while true do
 end
 df:close()
 local df = io.open("code.tar", "rb")
+f:write("dieCB = function () end")
 f:write("sC = " .. sc .. "\n")
 while true do
  local d = df:read(512)

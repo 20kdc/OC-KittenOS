@@ -1,11 +1,10 @@
 -- KOSNEO inst.
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
-
 local C, O, G, D = component, computer
 
 if not C then
- error("Copy to init.lua on a blank disk. Thank you!")
+ error("Copy as init.lua to a blank disk, then remove all other disks and reboot. Thank you!")
 end
 
 local sa = C.list("screen", true)()
@@ -28,16 +27,12 @@ end
 
 D = C.proxy(O.getBootAddress())
 
-local tF = nil
-local tFN = "Starting..."
-local tFSR = 0
-local tW = 0
+local tFN,tFSR,tW,tF="Starting...",0,0
 
-local convoct
-convoct = function (oct)
+local function tO(oct)
  local v = oct:byte(#oct) - 0x30
  if #oct > 1 then
-  return (convoct(oct:sub(1, #oct - 1)) * 8) + v
+  return (tO(oct:sub(1, #oct - 1)) * 8) + v
  end
  return v
 end
@@ -56,7 +51,7 @@ local function tA(s)
   end
  else
   tFN = s:sub(1, 100):gsub("\x00", "")
-  local sz = convoct(s:sub(125, 135))
+  local sz = tO(s:sub(125, 135))
   if tFN:sub(1, 5) ~= "code/" then
    tW = math.ceil(sz / 512)
   else
@@ -79,12 +74,8 @@ local function tA(s)
  end
 end
 
-local dieCB = function () end
-
-local sN = 0
-local sC = 0
-
-local function sector(n)
+local sN,sC,dieCB,sector=0,0
+function sector(n)
  tA(n)
  sN = sN + 1
  if G then

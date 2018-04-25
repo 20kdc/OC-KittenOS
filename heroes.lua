@@ -10,11 +10,8 @@ local src = io.open("com2/bundiv.lua", "r")
 while true do
  local line = src:read()
  if not line then
-  src:close()
-  io.write("--[[")
   io.flush()
-  os.execute("cat com2/code.tar.bd")
-  io.write("]]")
+  src:close()
   return
  end
  local endix = line:sub(#line-1,#line)

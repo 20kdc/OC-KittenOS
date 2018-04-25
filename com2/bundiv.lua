@@ -3,36 +3,38 @@
 local sector = io.write -- XX
 -- BUNDIVIDE reference implementation for integration XX
 local Cs,Cbu,Cb,Cw,Cp,Ct,Ci,CP,CB,CD={},128,"",128,"",""
-CP=function(d,b)
- Ct=Ct..d
+CP = function(d,b)
+ Ct = Ct .. d
  while#Ct>2 do
-  b=Ct:byte()
-  Ct=Ct:sub(2)
-  if b==127then
-   b=Ct:byte()
-   Ct=Ct:sub(2)
-   if b==127then
-    b=Ct:byte()+254
-    if b>255then
-     b=b-256
+  b = Ct:byte()
+  Ct = Ct:sub(2)
+  if b == 127 then
+   b = Ct:byte()
+   Ct = Ct:sub(2)
+   if b == 127 then
+    b = Ct:byte()+254
+    if b > 255then
+     b = b - 256
     end
-    Ct=Ct:sub(2)
+    Ct = Ct:sub(2)
    else
-    b=b+127
+    b = b + 127
    end
   end
-  Cp=Cp..string.char(b)
-  if #Cp==512then
+  Cp = Cp..string.char(b)
+  if #Cp == 512 then
    sector(Cp)
-   Cp=""
+   Cp = ""
   end
  end
 end
-for i=128,127+Cbu do Cs[i]=("\x00"):rep(512) end
-Cs[Cw]=""
-CB=function(d,i,d2,x,y)
+for i = 128, 127 + Cbu do
+ Cs[i] = ("\x00"):rep(512)
+end
+Cs[Cw] = ""
+CB = function (d, i, d2, x, y)
  i=1
- while i<=#d-2 do
+ while i <= #d - 2 do
   b=d:byte(i)
   d2=d:sub(i,i)
   i=i+1
@@ -41,13 +43,15 @@ CB=function(d,i,d2,x,y)
     Ci=1
    end
   else
-   if b>=128then
-    x=d:byte(i)i=i+1
-    y=(d:byte(i)+((x%2)*256))i=i+1
-    d2=Cs[b]:sub(y+1,y+3+math.floor(x/2))
+   if b >= 128 then
+    x = d:byte(i)
+    i = i + 1
+    y=d:byte(i) + ((x % 2) * 256)
+    i = i + 1
+    d2=Cs[b]:sub(y + 1,y + 3 + math.floor(x / 2))
    end
    Cs[Cw]=Cs[Cw]..d2
-   if #Cs[Cw]>=512then
+   if #Cs[Cw]>=512 then
     CP(Cs[Cw])
     Cw=((Cw-127)%Cbu)+128
     Cs[Cw]=""
@@ -56,9 +60,9 @@ CB=function(d,i,d2,x,y)
  end
  return i
 end
-CD=function(d)
- Cb=Cb..d
- Cb=Cb:sub(CB(Cb))
+CD = function(d)
+ Cb = Cb .. d
+ Cb = Cb:sub(CB(Cb))
 end
 CD(io.read("*a")) -- XX
 --D.remove("init-bdivide.lua")--
