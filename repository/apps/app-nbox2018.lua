@@ -196,8 +196,8 @@ local programStates = {
   function (miText, mxText)
    local targetBox = boxes[state][selectedBox]
    return {
-    "Texturing Box:" .. miText .. "/" .. mxText,
-    "Type texture ID, or use clipboard.",
+    "Texturing. Type or paste texture ",
+    " ID. Pasting replaces contents.  ",
     runField(targetBox.tex, "[", "]"),
     "Enter confirms. \"\" is invisible."
    }
@@ -212,7 +212,6 @@ local programStates = {
   end,
   function (text)
    boxes[state][selectedBox].tex = text
-   programState = "none"
   end
  },
  tint = {
@@ -232,10 +231,10 @@ local programStates = {
     div = math.floor(div / 16)
    end
    return {
-    "Tinting Box:" .. miText .. "/" .. mxText,
+    "Tinting. Enter 6 hex digits,     ",
+    " which are 0 to 9, and A to F.   "
     a,
     b,
-    "Enter hexadecimal digits."
    }
   end,
   function (ka, kc)
