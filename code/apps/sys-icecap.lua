@@ -268,35 +268,33 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
   secPolicyStage2(pid, proc, perm, req)
  end
  -- Do we need to start it?
- if perm:sub(1, 6) == "x.svc." then
-  if not neo.usAccessExists(perm) then
-   local appAct = perm:sub(7)
-   local paP = appAct:match(endAcPattern)
-   if paP then
-    appAct = appAct:sub(1, #appAct - #paP)
-   end
-   -- Prepare for success
-   onReg[perm] = onReg[perm] or {}
-   table.insert(onReg[perm], function ()
-    finish()
-   end)
-   pcall(neo.executeAsync, "svc-" .. appAct)
-   -- Fallback "quit now"
-   local time = os.uptime() + 30
-   neo.scheduleTimer(time)
-   local f
-   function f()
-    if finish then
-     if os.uptime() >= time then
-      finish()
-     else
-      table.insert(todo, f)
-     end
+ if perm:sub(1, 6) == "x.svc." and not neo.usAccessExists(perm) then
+  local appAct = perm:sub(7)
+  local paP = appAct:match(endAcPattern)
+  if paP then
+   appAct = appAct:sub(1, #appAct - #paP)
+  end
+  -- Prepare for success
+  onReg[perm] = onReg[perm] or {}
+  table.insert(onReg[perm], function ()
+   finish()
+  end)
+  pcall(neo.executeAsync, "svc-" .. appAct)
+  -- Fallback "quit now"
+  local time = os.uptime() + 30
+  neo.scheduleTimer(time)
+  local f
+  function f()
+   if finish then
+    if os.uptime() >= time then
+     finish()
+    else
+     table.insert(todo, f)
     end
    end
-   table.insert(todo, f)
-   return
   end
+  table.insert(todo, f)
+  return
  else
   finish()
  end
