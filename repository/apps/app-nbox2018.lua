@@ -232,9 +232,9 @@ local programStates = {
    end
    return {
     "Tinting. Enter 6 hex digits,     ",
-    " which are 0 to 9, and A to F.   "
+    " which are 0 to 9, and A to F.   ",
     a,
-    b,
+    b
    }
   end,
   function (ka, kc)

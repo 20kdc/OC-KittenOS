@@ -1,10 +1,31 @@
-# KittenOS NEO (pre-release)
+# KittenOS NEO
 
 As per usual, no warranty, not my responsibility if this breaks, or if you somehow try to run it on an actual (non-OpenComputers) computer.
 
-The first commit is after I got the installer working again after the new compression system (BDIVIDE).
+## Description
 
-That's what the "SYSTEM HEROES" thing is about.
+At least in theory: "efficient. multi-tasking. clean. security-oriented".
+
+KittenOS NEO is an OpenComputers operating system designed for Tier 1 hardware.
+
+This means, among other things, it has an operating overhead limit of 192KiB real-world (on 32-bit or 64-bit).
+
+Unlike the original KittenOS (now in the "legacy" branch), it is also designed with some attempt at cleanliness.
+
+## User Guide
+
+It is recommended that you take out your OpenComputers CPU, and shift-right-click until it says "Architecture: Lua 5.3", if possible.
+
+Then simply download the installer from inst.lua here, rename it to "init.lua" and put it on a blank disk.
+
+Finally, remove all other disks and reboot.
+
+KittenOS NEO will install itself.
+
+(This does not account for custom EEPROMs.)
+
+NOTE: Attempting to run the KittenOS NEO installer as a program in an OS will fail,
+ giving you instructions as shown here.
 
 ## Authors & Licensing
 
@@ -93,28 +114,6 @@ So anyone who wants the design to be made even cleaner should probably reread th
 (In R0, editing the kernel causes 192K systems to fail to open filedialogs. I've fixed this in R1.
  I don't know if I've screwed this up in R2, because all this focus on usability improvements has probably gone back a step regarding memory use.)
 
-## Description
-
-At least in theory: "efficient. multi-tasking. clean. security-oriented".
-
-KittenOS NEO is an OpenComputers operating system designed for Tier 1 hardware.
-
-This means, among other things, it has an operating overhead limit of 192KiB real-world (on 32-bit or 64-bit).
-
-Unlike the original KittenOS (now in the "legacy" branch), it is also designed with some attempt at cleanliness.
-
-## User Guide
-
-It is recommended that you take out your OpenComputers CPU, and shift-right-click until it says "Architecture: Lua 5.3", if possible.
-
-Then simply download the installer from inst.lua here, rename it to "init.lua" and put it on a blank disk.
-
-Finally, remove all other disks and reboot.
-
-KittenOS NEO will install itself.
-
-(This does not account for custom EEPROMs.)
-
 ## Policy regarding updates
 
 KittenOS NEO's installer, including the full KittenOS NEO base operating system, is 65536 bytes or below.
@@ -133,24 +132,7 @@ The tools that I haven't gotten rid of are the ones that still work properly.
 
 Firstly, for an uncompressed installer (just to test installer basecode), you use `mkucinst.lua`.
 
-This kind of has some overlap with `package.sh` so that needs to be dealt with at some point.
+Secondly, for a compressed installer, you use `package.sh`.
 
-Secondly, for a compressed installer, you use `package.sh` to rebuild `code.tar` and `inst.lua`, which also prepares the final structure of the repository to upload.
-
-## Kernel Architecture
-
-KittenOS NEO is an idea of what a Lua-based 'efficient' microkernel might look like.
-
-Scheduling is based entirely around uptime and timers,
- which cause something to be executed at a given uptime.
-
-That said, for a microkernel it's still a bit larger than I'd have hoped.
-
-If anyone has any ideas, put them in an issue? If they're not too damaging, I'll use the saved space to add a thank-you-note to them in the kernel.
-
-## Installer Architecture
-
-The installer is split into a generic TAR extractor frontend `insthead.lua` and a replacable compression backend (written in by relevant tools - in current versions, `heroes.lua` is where it starts).
-
-There was more details on this but the details changed.
+That rebuilds `code.tar` and `inst.lua`, and also prepares the final structure of the repository to upload.
 

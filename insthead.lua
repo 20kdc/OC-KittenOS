@@ -1,13 +1,10 @@
 -- KOSNEO inst.
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
-local C, O, G, D = component, computer
+C, O, G, D = component, computer
+assert(C, "To install, please copy as init.lua to a blank disk or a system to update, then remove all other disks and reboot.")
 
-if not C then
- error("Copy as init.lua to a blank disk, then remove all other disks and reboot. Thank you!")
-end
-
-local sa = C.list("screen", true)()
+sa = C.list("screen", true)()
 if sa then
  G = C.list("gpu", true)()
  if G then
@@ -27,16 +24,16 @@ end
 
 D = C.proxy(O.getBootAddress())
 
-local tFN,tFSR,tW,tF="Starting...",0,0
+tFN,tFSR,tW,tF="Starting...",0,0
 
-local function tO(oct)
+function tO(oct)
  local v = oct:byte(#oct) - 0x30
  if #oct > 1 then
   return (tO(oct:sub(1, #oct - 1)) * 8) + v
  end
  return v
 end
-local function tA(s)
+function tA(s)
  if tW > 0 then
   tW = tW - 1
   return
@@ -74,7 +71,8 @@ local function tA(s)
  end
 end
 
-local sN,sC,dieCB,sector=0,0
+sN, sC = 0, 0
+
 function sector(n)
  tA(n)
  sN = sN + 1
