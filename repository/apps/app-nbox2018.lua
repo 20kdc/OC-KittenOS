@@ -579,10 +579,10 @@ local function reset()
 end
 
 local function loadObj(obj)
- fileLabel = obj.label
- fileTooltip = obj.tooltip
- redstone = obj.emitRedstone
- button = obj.buttonMode
+ fileLabel = obj.label or ""
+ fileTooltip = obj.tooltip or ""
+ redstone = obj.emitRedstone or false
+ button = obj.buttonMode or false
  local advances = {
   [false] = 65,
   [true] = 65
@@ -596,7 +596,7 @@ local function loadObj(obj)
    maxX = v[4],
    maxY = v[5],
    maxZ = v[6],
-   tex = v.texture,
+   tex = v.texture or "",
    rgb = v.tint or 0xFFFFFF
   }
   advances[vs] = advances[vs] + 1
