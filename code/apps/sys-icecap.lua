@@ -4,10 +4,9 @@
 -- s-icecap : Responsible for x.neo.pub API, crash dialogs, and security policy that isn't "sys- has ALL access, anything else has none"
 --            In general, this is what userspace will be interacting with in some way or another to get stuff done
 
-local settings = neo.requireAccess("x.neo.sys.manage", "security sysconf access")
-local fs = neo.requireAccess("c.filesystem", "file managers")
-local donkonitDFProvider = neo.requireAccess("r.neo.pub.base", "creating basic NEO APIs")
 local rootAccess = neo.requireAccess("k.root", "installing GUI integration")
+local settings = neo.requireAccess("x.neo.sys.manage", "security sysconf access")
+local donkonitDFProvider = neo.requireAccess("r.neo.pub.base", "creating basic NEO APIs")
 
 local targsDH = {} -- data disposal
 
@@ -98,8 +97,9 @@ end
 
 donkonitDFProvider(function (pkg, pid, sendSig)
  local prefixNS = "data/" .. pkg
- local prefixWS = "data/" .. pkg .. "/"
- fs.primary.makeDirectory(prefixNS)
+ local prefixWS = prefixNS .. "/"
+ local fs = rootAccess.primaryDisk
+ fs.makeDirectory(prefixNS)
  local openHandles = {}
  targsDH[pid] = function ()
   for k, v in pairs(openHandles) do
@@ -117,7 +117,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    neo.scheduleTimer(0)
    table.insert(todo, function ()
     -- sys-filedialog is yet another "library to control memory usage".
-    local closer = require("sys-filedialog")(event, nexus, function (res) openHandles[tag] = nil sendSig("filedialog", tag, res) end, fs, pkg, forWrite)
+    local closer = require("sys-filedialog")(event, nexus, function (res) openHandles[tag] = nil sendSig("filedialog", tag, res) end, neo.requireAccess("c.filesystem", "file managers"), pkg, forWrite)
     openHandles[tag] = closer
    end)
    return tag
@@ -144,14 +144,14 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) ~= "/" then error("Expected / at end") end
-   return fs.primary.list(path:sub(1, #path - 1))
+   return fs.list(path:sub(1, #path - 1))
   end,
   makeDirectory = function (path)
    neo.ensureType(path, "string")
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
-   return fs.primary.makeDirectory(path)
+   return fs.makeDirectory(path)
   end,
   rename = function (path1, path2)
    neo.ensureType(path1, "string")
@@ -162,7 +162,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    neo.ensurePath(path2, prefixWS)
    if path:sub(#path1, #path1) == "/" then error("Expected no / at end") end
    if path:sub(#path2, #path2) == "/" then error("Expected no / at end") end
-   return fs.primary.rename(path1, path2)
+   return fs.rename(path1, path2)
   end,
   open = function (path, mode)
    neo.ensureType(path, "string")
@@ -170,7 +170,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
-   local fw, closer = require("sys-filewrap").create(fs.primary, path, mode)
+   local fw, closer = require("sys-filewrap").create(fs, path, mode)
    if not fw then return nil, closer end
    local oc = fw.close
    fw.close = function ()
@@ -185,24 +185,24 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
-   return fs.primary.remove(path)
+   return fs.remove(path)
   end,
   stat = function (path)
    neo.ensureType(path, "string")
    path = prefixNS .. path
    neo.ensurePath(path, prefixWS)
    if path:sub(#path, #path) == "/" then error("Expected no / at end") end
-   if not fs.primary.exists(path) then return nil end
+   if not fs.exists(path) then return nil end
    return {
-    fs.primary.isDirectory(path),
-    fs.primary.size(path),
-    fs.primary.lastModified(path)
+    fs.isDirectory(path),
+    fs.size(path),
+    fs.lastModified(path)
    }
   end,
   -- getLabel/setLabel have nothing to do with this
-  spaceUsed = fs.primary.spaceUsed,
-  spaceTotal = fs.primary.spaceTotal,
-  isReadOnly = fs.primary.isReadOnly
+  spaceUsed = fs.spaceUsed,
+  spaceTotal = fs.spaceTotal,
+  isReadOnly = fs.isReadOnly
  }
 end)
 

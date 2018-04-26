@@ -111,69 +111,76 @@ local function getMonitorSettings(a)
  return w, h, d, t
 end
 
+-- Settings API
+
+local mBase = {
+ getSetting = function (name)
+  neo.ensureType(name, "string")
+  return settings[name]
+ end,
+ listSettings = function ()
+  local s = {}
+  for k, v in pairs(settings) do
+   table.insert(s, k)
+  end
+  return s
+ end,
+ delSetting = function ()
+  neo.ensureType(name, "string")
+  local val = nil
+  if name == "password" or name == "pub.clipboard" then val = "" end
+  settings[name] = val
+  sRattle(name, val)
+  pcall(saveSettings)
+ end,
+ setSetting = function (name, val)
+  neo.ensureType(name, "string")
+  neo.ensureType(val, "string")
+  settings[name] = val
+  -- NOTE: Either a monitor is under application control,
+  --  or it's not under any control.
+  -- Monitor settings are applied on the transition to control.
+  sRattle(name, val)
+  pcall(saveSettings)
+ end,
+ shutdown = function (reboot)
+  neo.ensureType(reboot, "boolean")
+  if shuttingDown then return end
+  shuttingDown = true
+  shutdownMode = reboot
+  local counter = 0
+  neo.scheduleTimer(os.uptime() + 5) -- in case the upcoming code fails in some way
+  for f, v in pairs(targsSD) do
+   counter = counter + 1
+   v("shutdown", reboot, function ()
+    counter = counter - 1
+    if counter == 0 then
+     shutdownFin(shutdownMode)
+    end
+   end)
+  end
+  if counter == 0 then
+   shutdownFin(shutdownMode)
+  end
+  -- donkonit will shutdown when the timer is hit.
+ end
+}
+
 donkonitSPProvider(function (pkg, pid, sendSig)
  targs[pid] = sendSig
- return {
-  listSettings = function ()
-   local s = {}
-   for k, v in pairs(settings) do
-    table.insert(s, k)
-   end
-   return s
-  end,
-  -- NOTE: REPLICATED IN GB
-  getSetting = function (name)
-   neo.ensureType(name, "string")
-   return settings[name]
-  end,
-  delSetting = function (name)
-   neo.ensureType(name, "string")
-   local val = nil
-   if name == "password" or name == "pub.clipboard" then val = "" end
-   settings[name] = val
-   sRattle(name, val)
-   pcall(saveSettings)
-  end,
-  setSetting = function (name, val)
-   neo.ensureType(name, "string")
-   neo.ensureType(val, "string")
-   settings[name] = val
-   -- NOTE: Either a monitor is under application control,
-   --  or it's not under any control.
-   -- Monitor settings are applied on the transition to control.
-   sRattle(name, val)
-   pcall(saveSettings)
-  end,
-  --
+ local n = {
   registerForShutdownEvent = function ()
    targsSD[pid] = sendSig
   end,
   registerSavingThrow = function (st)
    neo.ensureType(st, "function")
    targsST[pid] = st
-  end,
-  shutdown = function (reboot)
-   neo.ensureType(reboot, "boolean")
-   if shuttingDown then return end
-   shuttingDown = true
-   shutdownMode = reboot
-   local counter = 0
-   neo.scheduleTimer(os.uptime() + 5) -- in case the upcoming code fails in some way
-   for f, v in pairs(targsSD) do
-    counter = counter + 1
-    v("shutdown", reboot, function ()
-     counter = counter - 1
-     if counter == 0 then
-      shutdownFin(shutdownMode)
-     end
-    end)
-   end
-   if counter == 0 then
-    shutdownFin(shutdownMode)
-   end
-   -- donkonit will shutdown when the timer is hit.
   end
  }
+ return setmetatable(n, {
+  __index = mBase,
+  __metatable = 0
+ })
 end)
 
 donkonitRDProvider(function (pkg, pid, sendSig)
@@ -250,6 +257,11 @@ pcall(saveSettings)
 
 glacierDCProvider(function (pkg, pid, sendSig)
  targsDC[pid] = sendSig
+ local function sWrap(f)
+  return function (s, ...)
+   return f("pub." .. s, ...)
+  end
+ end
  return {
   getKnownMonitors = function ()
    local tbl = {}
@@ -288,25 +300,9 @@ glacierDCProvider(function (pkg, pid, sendSig)
   end,
   forceRescan = rescanDevs,
   -- NOTE: "pub." prefixed version of functions in sys.manage
-  getSetting = function (name)
-   neo.ensureType(name, "string")
-   return settings["pub." .. name]
-  end,
-  delSetting = function (name)
-   neo.ensureType(name, "string")
-   local val = nil
-   if name == "clipboard" then val = "" end
-   settings["pub." .. name] = val
-   sRattle("pub." .. name, val)
-   pcall(saveSettings)
-  end,
-  setSetting = function (name, val)
-   neo.ensureType(name, "string")
-   neo.ensureType(val, "string")
-   settings["pub." .. name] = val
-   sRattle("pub." .. name, val)
-   pcall(saveSettings)
-  end
+  getSetting = sWrap(mBase.getSetting),
+  delSetting = sWrap(mBase.delSetting),
+  setSetting = sWrap(mBase.setSetting)
  }
 end)
 
