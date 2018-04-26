@@ -54,11 +54,11 @@ nexus = {
   nexus.create(40, #txl, ti, function (w, ev, a)
    if ev == "line" then
     if not pcall(w.span, 1, a, txl[a], 0xFFFFFF, 0) then
-     everestWindows[dw.id] = nil
+     everestWindows[w.id] = nil
     end
    elseif ev == "close" then
     w.close()
-    everestWindows[dw.id] = nil
+    everestWindows[w.id] = nil
    end
   end)
  end

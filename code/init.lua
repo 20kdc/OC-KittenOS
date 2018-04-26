@@ -132,19 +132,22 @@ function wrapMeta(t)
    __call = function (_, ...)
     return t(...)
    end,
-   __pairs = function (a)
+   __pairs = function ()
     return function (x, key)
      local k, v = next(t, k)
      if k then return k, wrapMeta(v) end
     end, 9, nil
    end,
-   __ipairs = function (a)
+   __ipairs = function ()
     return function (x, key)
      key = key + 1
      if t[key] then
       return key, wrapMeta(t[key])
      end
     end, 9, 0
+   end,
+   __len = function ()
+    return #t
    end,
    __metatable = uniqueNEOProtectionObject
    -- Don't protect this table - it'll make things worse
