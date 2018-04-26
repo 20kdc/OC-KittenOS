@@ -108,8 +108,8 @@ return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
      end
     elseif ev == "close" then
      rsp(false)
-     nexus.windows[w.id] = nil
-     w.close()
+     nexus.windows[window.id] = nil
+     window.close()
      ev = nil
     elseif ev == "key" then
      if c and (a == 9 or b == 205) then

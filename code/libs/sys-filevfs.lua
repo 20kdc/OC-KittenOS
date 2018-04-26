@@ -77,16 +77,17 @@ end
 function getFsNode(fs, parent, fsc, path, mode)
  local va = fsc.address:sub(1, 4)
  local fscrw = not fsc.isReadOnly()
- if path:sub(#path, #path) == "/" then
-  local t
-  local confirmedDel = false
-  t = {
-   name = "DIR: " .. va .. path,
-   list = function ()
-    local n = {}
-    n[1] = {"..", function ()
-     return nil, parent
-    end}
+ local dir = path:sub(#path, #path) == "/"
+ local confirmedDel = false
+ local t
+ t = {
+  name = ((dir and "DIR: ") or "FILE: ") .. va .. path,
+  list = function ()
+   local n = {}
+   n[1] = {"..", function ()
+    return nil, parent
+   end}
+   if dir then
     for k, v in ipairs(fsc.list(path)) do
      local nm = "F: " .. v
      local fp = path .. v
@@ -95,42 +96,17 @@ function getFsNode(fs, parent, fsc, path, mode)
      end
      n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode) end}
     end
-    if fscrw then
-     if path ~= "/" then
-      local delText = "Delete"
-      if confirmedDel then
-       delText = "Delete <ARMED>"
-      end
-      table.insert(n, {delText, function ()
-       if not confirmedDel then
-        confirmedDel = true
-        return nil, t
-       end
-       fsc.remove(path)
-       return nil, dialog("Done.", parent)
-      end})
-     else
-      table.insert(n, {"Relabel Disk", function ()
-       return nil, {
-        name = "Disk Relabel...",
-        list = function () return {{
-         fsc.getLabel() or "Cancel",
-         function ()
-          return false, t
-         end
-        }} end,
-        unknownAvailable = true,
-        selectUnknown = function (tx)
-         fsc.setLabel(tx)
-         return false, t
-        end
-       }
-      end})
-     end
+   end
+   if fscrw then
+    if dir then
      table.insert(n, {"Mk. Directory", function ()
       return nil, {
        name = "MKDIR...",
-       list = function () return {} end,
+       list = function () return {{
+        "Cancel", function ()
+         return false, t
+        end
+       }} end,
        unknownAvailable = true,
        selectUnknown = function (text)
         fsc.makeDirectory(path .. text)
@@ -138,62 +114,76 @@ function getFsNode(fs, parent, fsc, path, mode)
        end
       }
      end})
-    end
-    return n
-   end,
-   unknownAvailable = (mode ~= nil) and ((mode == false) or fscrw),
-   selectUnknown = function (text)
-    local rt, re = require("sys-filewrap").create(fsc, path .. text, mode)
-    if not rt then
-     return false, dialog("Open Error: " .. tostring(re), parent)
-    end
-    return true, rt
-   end
-  }
-  return t
- end
- return {
-  name = "FILE: " .. va .. path,
-  list = function ()
-   local n = {}
-   table.insert(n, {"Back", function ()
-    return nil, parent
-   end})
-   if mode ~= nil then
-    local tx = "Open"
-    if mode == true then
-     tx = "Save"
-    elseif mode == "append" then
-     tx = "Append"
-    end
-    if fscrw or mode == false then
-     table.insert(n, {tx, function ()
-      local rt, re = require("sys-filewrap").create(fsc, path, mode)
+    else
+     if mode ~= nil then
+      local tx = "Open"
+      if mode == true then
+       tx = "Save"
+      elseif mode == "append" then
+       tx = "Append"
+      end
+      if fscrw or mode == false then
+       table.insert(n, {tx, function ()
+        local rt, re = require("sys-filewrap").create(fsc, path, mode)
+        if not rt then
+         return false, dialog("Open Error: " .. tostring(re), parent)
+        end
+        return true, rt
+       end})
+      end
+     end
+     table.insert(n, {"Copy", function ()
+      local rt, re = require("sys-filewrap").create(fsc, path, false)
       if not rt then
        return false, dialog("Open Error: " .. tostring(re), parent)
       end
-      return true, rt
+      return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
+     end})
+    end
+    if path ~= "/" then
+     local delText = "Delete"
+     if confirmedDel then
+      delText = "Delete <ARMED>"
+     end
+     table.insert(n, {delText, function ()
+      if not confirmedDel then
+       confirmedDel = true
+       return nil, t
+      end
+      fsc.remove(path)
+      return nil, dialog("Done.", parent)
+     end})
+    else
+     table.insert(n, {"Relabel Disk", function ()
+      return nil, {
+       name = "Disk Relabel...",
+       list = function () return {{
+        fsc.getLabel() or "Cancel",
+        function ()
+         return false, t
+        end
+       }} end,
+       unknownAvailable = true,
+       selectUnknown = function (tx)
+        fsc.setLabel(tx)
+        return false, t
+       end
+      }
      end})
     end
    end
-   table.insert(n, {"Copy", function ()
-    local rt, re = require("sys-filewrap").create(fsc, path, false)
-    if not rt then
-     return false, dialog("Open Error: " .. tostring(re), parent)
-    end
-    return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
-   end})
-   if fscrw then
-    table.insert(n, {"Delete", function ()
-     fsc.remove(path)
-     return nil, dialog("Done.", parent)
-    end})
-   end
    return n
   end,
-  unknownAvailable = false,
-  selectUnknown = function (text) end
+  unknownAvailable = dir and (mode ~= nil) and ((mode == false) or fscrw),
+  selectUnknown = function (text)
+   local rt, re = require("sys-filewrap").create(fsc, path .. text, mode)
+   if not rt then
+    return false, dialog("Open Error: " .. tostring(re), parent)
+   end
+   return true, rt
+  end
  }
+ return t
 end
 function getRoot(fs, mode)
  local t

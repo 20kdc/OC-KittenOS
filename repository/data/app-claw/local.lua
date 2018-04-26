@@ -71,6 +71,23 @@ return {
    "docs/repoauthors/app-nbox2018"
   },
  },
+ ["app-allmem"] = {
+  desc = "Near-reproducible memory usage figures",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-allmem.lua",
+   "docs/repoauthors/app-allmem"
+  },
+ },
  ["svc-ghostie"] = {
   desc = "Application that schedules a scare after a random time to test svc autostart",
   v = 0,

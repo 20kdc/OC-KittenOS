@@ -8,17 +8,12 @@ local donkonitSPProvider = neo.requireAccess("r.neo.sys.manage", "creating NEO c
 local donkonitRDProvider = neo.requireAccess("r.neo.sys.screens", "creating NEO core APIs")
 local glacierDCProvider = neo.requireAccess("r.neo.pub.globals", "creating NEO core APIs")
 
-local computer = neo.requireAccess("k.computer", "shutting down")
-local fs = neo.requireAccess("c.filesystem", "settings I/O")
-local gpus = neo.requireAccess("c.gpu", "screen control")
-local screens = neo.requireAccess("c.screen", "screen control")
+local shutdownFin = neo.requireAccess("k.computer", "shutting down").shutdown
+local primary = neo.requireAccess("c.filesystem", "settings I/O").primary
+local gpus = neo.requireAccess("c.gpu", "screen control").list
+local screens = neo.requireAccess("c.screen", "screen control").list
 neo.requireAccess("s.h.component_added", "HW management")
 neo.requireAccess("s.h.component_removed", "HW management")
-
-local function shutdownFin(reboot)
- -- any final actions donkonit needs to take here
- computer.shutdown(reboot)
-end
 
 -- keys are pids
 local targs = {} -- settings notify targs
@@ -50,7 +45,7 @@ local function loadSettings()
  pcall(function ()
   local fw = require("sys-filewrap").create
   local se = require("serial").deserialize
-  local st = fw(fs.primary, "data/sys-glacier/sysconf.lua", false)
+  local st = fw(primary, "data/sys-glacier/sysconf.lua", false)
   local cfg = st.read("*a")
   st.close()
   st = nil
@@ -65,11 +60,12 @@ local function loadSettings()
   end
  end)
 end
+
 local function saveSettings()
  local fw = require("sys-filewrap").create
  local se = require("serial").serialize
- fs.primary.makeDirectory("data/sys-glacier")
- local st = fw(fs.primary, "data/sys-glacier/sysconf.lua", true)
+ primary.makeDirectory("data/sys-glacier")
+ local st = fw(primary, "data/sys-glacier/sysconf.lua", true)
  st.write(se(settings))
  st.close()
 end
@@ -83,7 +79,7 @@ local currentGPUBinding = {}
 -- [gpuAddr] = userCount
 local currentGPUUsers = {}
 
--- Thanks to Skye for this!
+-- Thanks to Skye for this design!
 local keyboardMonCacheK, keyboardMonCacheV = nil
 
 local function announceFreeMonitor(address, except)
@@ -92,40 +88,6 @@ local function announceFreeMonitor(address, except)
    v[1]("available", address)
   end
  end
-end
-
-local function getGPU(monitor)
- local bestG, bestStats = nil, {-math.huge, -math.huge, -math.huge}
- currentGPUBinding = {}
- for v in gpus.list() do
-  v.bind(monitor.address, false)
-  local w, h = v.maxResolution()
-  local quality = w * h * v.maxDepth()
-  local users = (currentGPUUsers[v.address] or 0)
-  local gquality = 0
-  for scr in screens.list() do
-   v.bind(scr.address, false)
-   w, h = v.maxResolution()
-   local squality = w * h * v.maxDepth()
-   gquality = math.max(gquality, squality)
-  end
-  local stats = {quality, -users, -gquality}
-  for i = 1, #stats do
-   if stats[i] > bestStats[i] then
-    bestG = v
-    bestStats = stats
-    break
-   elseif stats[i] < bestStats[i] then
-    break
-   end
-  end
- end
- if bestG then
-  neo.emergency("glacier bound " .. monitor.address .. " to " .. bestG.address)
- else
-  neo.emergency("glacier failed to bind " .. monitor.address)
- end
- return bestG
 end
 
 local function sRattle(name, val)
@@ -147,32 +109,6 @@ local function getMonitorSettings(a)
  local t = ((settings["scr.t." .. a] == "yes") and "yes") or "no"
  w, h, d = math.floor(w), math.floor(h), math.floor(d)
  return w, h, d, t
-end
-local function setupMonitor(gpu, monitor)
- monitor.setPrecise(true)
- monitor.turnOn()
- gpu.bind(monitor.address, false)
- currentGPUBinding[gpu.address] = monitor.address
- local maxW, maxH = gpu.maxResolution()
- local maxD = gpu.maxDepth()
- local w, h, d, t = getMonitorSettings(monitor.address)
- w, h, d = math.min(w, maxW), math.min(h, maxH), math.min(d, maxD)
- if monitor.setTouchModeInverted then
-  monitor.setTouchModeInverted(t == "yes")
- else
-  t = "no"
- end
- settings["scr.w." .. monitor.address] = tostring(w)
- settings["scr.h." .. monitor.address] = tostring(h)
- settings["scr.d." .. monitor.address] = tostring(d)
- settings["scr.t." .. monitor.address] = t
- sRattle("scr.w." .. monitor.address, tostring(w))
- sRattle("scr.h." .. monitor.address, tostring(h))
- sRattle("scr.d." .. monitor.address, tostring(d))
- sRattle("scr.t." .. monitor.address, t)
- gpu.setResolution(w, h)
- gpu.setDepth(d)
- pcall(saveSettings)
 end
 
 donkonitSPProvider(function (pkg, pid, sendSig)
@@ -228,12 +164,12 @@ donkonitSPProvider(function (pkg, pid, sendSig)
     v("shutdown", reboot, function ()
      counter = counter - 1
      if counter == 0 then
-      shutdownFin(reboot)
+      shutdownFin(shutdownMode)
      end
     end)
    end
    if counter == 0 then
-    shutdownFin(reboot)
+    shutdownFin(shutdownMode)
    end
    -- donkonit will shutdown when the timer is hit.
   end
@@ -253,7 +189,7 @@ donkonitRDProvider(function (pkg, pid, sendSig)
    if keyboardMonCacheK == kb then
     return keyboardMonCacheV
    end
-   for v in screens.list() do
+   for v in screens() do
     for _, v2 in ipairs(v.getKeyboards()) do
      if v2 == kb then
       keyboardMonCacheK, keyboardMonCacheV = kb, v.address
@@ -265,53 +201,19 @@ donkonitRDProvider(function (pkg, pid, sendSig)
   getClaimable = function ()
    local c = {}
    -- do we have gpu?
-   if not gpus.list()() then return c end
+   if not gpus()() then return c end
    for _, v in ipairs(monitorPool) do
     table.insert(c, v.address)
    end
    return c
   end,
-  claim = function (address)
-   neo.ensureType(address, "string")
-   for k, v in ipairs(monitorPool) do
-    if v.address == address then
-     local gpu = getGPU(v)
-     if gpu then
-      setupMonitor(gpu, v)
-      gpu = gpu.address
-      currentGPUBinding[gpu] = address
-      currentGPUUsers[gpu] = (currentGPUUsers[gpu] or 0) + 1
-      local disclaimer = function (wasDevLoss)
-       -- we lost it
-       monitorClaims[address] = nil
-       claimed[address] = nil
-       if not wasDevLoss then
-        currentGPUUsers[gpu] = currentGPUUsers[gpu] - 1
-        table.insert(monitorPool, v)
-        announceFreeMonitor(address, pid)
-       else
-        sendSig("lost", address)
-       end
-      end
-      claimed[address] = disclaimer
-      monitorClaims[address] = {gpu, disclaimer}
-      table.remove(monitorPool, k)
-      return function ()
-       for v in gpus.list() do
-        if v.address == gpu then
-         local didBind = false
-         if currentGPUBinding[gpu] ~= address then
-          v.bind(address, false)
-          didBind = true
-         end
-         currentGPUBinding[gpu] = address
-         return v, didBind
-        end
-       end
-      end, v
-     end
-    end
-   end
+  claim = function (...) -- see sys-gpualloc
+   return require("sys-gpualloc")(
+    gpus, screens,
+    getMonitorSettings, settings, sRattle, saveSettings,
+    announceFreeMonitor, pid, claimed, sendSig,
+    monitorClaims, monitorPool, currentGPUUsers, currentGPUBinding,
+    ...)
   end,
   disclaim = function (address)
    if not address then error("Cannot disclaim nothing.") end
@@ -329,14 +231,13 @@ local function rescanDevs()
  currentGPUBinding = {}
  currentGPUUsers = {}
  keyboardMonCacheK, keyboardMonCacheV = nil, nil
- local hasGPU = gpus.list()()
  for k, v in pairs(monitorClaims) do
   v[2](true)
  end
  monitorClaims = {}
- for m in screens.list() do
+ for m in screens() do
   table.insert(monitorPool, m)
-  if hasGPU then
+  if gpus()() then
    announceFreeMonitor(m.address)
   end
  end

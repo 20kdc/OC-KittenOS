@@ -359,7 +359,6 @@ function baseProcEnv()
  local pe = setmetatable({}, baseProcEnvMT)
  pe.neo = setmetatable({}, baseProcNeoMT)
  pe._G = pe
- pe._ENV = pe
  return pe
 end
 

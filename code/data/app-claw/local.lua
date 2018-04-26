@@ -20,7 +20,8 @@ return {
    "libs/neoux.lua",
    "libs/braille.lua",
    "libs/bmp.lua",
-   "libs/sys-filewrap.lua"
+   "libs/sys-filewrap.lua",
+   "libs/sys-gpualloc.lua"
   },
  },
  ["neo-init"] = {
