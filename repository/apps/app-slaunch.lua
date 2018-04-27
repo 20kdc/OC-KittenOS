@@ -19,7 +19,6 @@ function searchApps(str)
   if v:sub(1, 4) == "app-" then
    if v:find(str) then
     rt[#rt+1] = v
-    neo.emergency(v)
    end
   end
  end

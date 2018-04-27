@@ -17,7 +17,6 @@ local icecap = neo.requireAccess("x.neo.pub.base", "load pinned applications")
 local w,f = pcall(icecap.open,"/pinned", false)
 
 if w and f then
- neo.emergency(f)
  local fcontent = f.read("*a")
  for s in fcontent:gmatch("[^\n]+") do
   for k,v in ipairs(neo.listApps()) do
@@ -102,7 +101,6 @@ end
 
 local function appMenu(autoclose)
  local wwidth, wheight, buttons = genAppMenu(autoclose)
- neo.emergency(wwidth,wheight,buttons)
  neoux.create(wwidth+3, wheight, "apps", neoux.tcwindow(wwidth+3, wheight, buttons, function (w)
   w.close()
  end, 0xFFFFFF, 0))
