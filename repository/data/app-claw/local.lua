@@ -22,32 +22,6 @@ return {
    "docs/repoauthors/app-eeprog"
   },
  },
- ["app-launchbar"] = {
-  desc = "Application launcher bar",
-  v = 0,
-  deps = {
-   "neo"
-  },
-  dirs = {
-   "apps"
-  },
-  files = {
-   "apps/app-launchbar.lua"
-  },
- },
- ["app-slaunch"] = {
-  desc = "Searching launcher",
-  v = 0,
-  deps = {
-   "neo"
-  },
-  dirs = {
-   "apps"
-  },
-  files = {
-   "apps/app-slaunch.lua"
-  },
- },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
   v = 2,
@@ -130,6 +104,36 @@ return {
    "apps/svc-ghostie.lua",
    "apps/app-ghostcall.lua",
    "docs/repoauthors/svc-ghostie"
+  },
+ },
+ ["app-launchbar"] = {
+  desc = "Application launcher bar",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-launchbar.lua",
+   "docs/repoauthors/app-launchbar"
+  },
+ },
+ ["app-slaunch"] = {
+  desc = "Searching launcher",
+  v = 0,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-slaunch.lua",
+   "docs/repoauthors/app-slaunch"
   },
  },
  -- licenses (MUST BE IMMUTABLE)
