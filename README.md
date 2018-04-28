@@ -8,7 +8,7 @@ At least in theory: "efficient. multi-tasking. clean. security-oriented".
 
 KittenOS NEO is an OpenComputers operating system designed for Tier 1 hardware.
 
-This means, among other things, it has an operating overhead limit of 192KiB real-world (on 32-bit or 64-bit).
+This means, among other things, it has an operating overhead limit of 192KiB in os.totalMemory() units, on 32-bit or 64-bit runtimes (given the default scale value).
 
 Unlike the original KittenOS (now in the "legacy" branch), it is also designed with some attempt at cleanliness.
 
