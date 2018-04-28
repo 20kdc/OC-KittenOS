@@ -174,7 +174,8 @@ return {
   },
   files = {
    "apps/app-claw.lua",
-   "libs/claw.lua"
+   "libs/app-claw-core.lua",
+   "libs/app-claw-csi.lua"
   },
  },
  ["neo-meta"] = {

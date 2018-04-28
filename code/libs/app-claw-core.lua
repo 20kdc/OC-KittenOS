@@ -1,9 +1,15 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- claw: assistant to app-claw
+-- app-claw-core: assistant to app-claw
 -- should only ever be one app-claw at a time
+-- USING THIS LIBRARY OUTSIDE OF APP-CLAW IS A BAD IDEA.
+-- SO DON'T DO IT.
+
+-- Also serves to provide a mutex.
+
 local lock = false
+
 return function ()
  if lock then
   error("libclaw safety lock in use")
@@ -12,6 +18,7 @@ return function ()
  local sourceList = {}
  local sources = {}
  --              1              2          3           4                5           6
+ -- source ents: src            dst        index
  -- dst entries: writeFile(fn), mkdir(fn), exists(fn), isDirectory(fn), remove(fn), rename(fna, fnb)
  -- writeFile(fn) -> function (data/nil to close)
  local function saveInfo(dn)
@@ -25,21 +32,78 @@ return function ()
   if not _ then return false, r end
   return true
  end
- local remove, installTo
+ local remove, installTo, expandCSI, compressCSI
+ local function expandS(v)
+  return v:sub(2, v:byte(1) + 1), v:sub(v:byte(1) + 2)
+ end
+ local function expandT(v)
+  local t = {}
+  local n = v:byte(1)
+  v = v:sub(2)
+  for i = 1, n do
+   t[i], v = expandS(v)
+  end
+  return t, v
+ end
+ local function compressT(x)
+  local b = string.char(#x)
+  for _, v in ipairs(x) do
+   b = b .. string.char(#v) .. v
+  end
+  return b
+ end
+ local function expandCSI(v)
+  local t = {}
+  local k
+  k, v = expandS(v)
+  t.desc, v = expandS(v)
+  t.v = (v:byte(1) * 256) + v:byte(2)
+  v = v:sub(3)
+  t.dirs, v = expandT(v)
+  t.files, v = expandT(v)
+  t.deps, v = expandT(v)
+  return k, t, v
+ end
+ local function compressCSI(k, v)
+  local nifo = string.char(#k) .. k
+  nifo = nifo .. string.char(math.min(255, #v.desc)) .. v.desc:sub(1, 255)
+  nifo = nifo .. string.char(math.floor(v.v / 256), v.v % 256)
+  nifo = nifo .. compressT(v.dirs)
+  nifo = nifo .. compressT(v.files)
+  nifo = nifo .. compressT(v.deps)
+  return nifo
+ end
+ local function findPkg(idx, pkg, del)
+  del = del and ""
+  idx = sources[idx][3]
+  while #idx > 0 do
+   local k, d
+   k, d, idx = expandCSI(idx)
+   if del then
+    if k == pkg then
+     return d, del .. idx
+    end
+    del = del .. compressCSI(k, d)
+   else
+    if k == pkg then return d end
+   end
+  end
+ end
  -- NOTE: Functions in this must return something due to the checked-call wrapper,
  --        but should all use error() for consistency.
  -- Operations
  installTo = function (dstName, pkg, srcName, checked, yielder)
-  local installed = {pkg}
   local errs = {}
   if srcName == dstName then
    error("Invalid API use")
   end
   -- preliminary checks
+  local srcPkg = findPkg(srcName, pkg, false)
+  assert(srcPkg)
   if checked then
-   for _, v in ipairs(sources[srcName][3][pkg].deps) do
-    if not sources[dstName][3][v] then
-     if not sources[srcName][3][v] then
+   for _, v in ipairs(srcPkg.deps) do
+    if not findPkg(dstName, v) then
+     if not findPkg(srcName, v) then
       table.insert(errs, pkg .. " depends on " .. v .. "\n")
      elseif #errs == 0 then
       installTo(dstName, v, srcName, checked, yielder)
@@ -51,12 +115,14 @@ return function ()
   end
   -- Files from previous versions to get rid of
   local ignFiles = {}
-  if sources[dstName][3][pkg] then
-   for _, v in ipairs(sources[dstName][3][pkg].files) do
+  local oldDst = findPkg(dstName, pkg)
+  if oldDst then
+   for _, v in ipairs(oldDst.files) do
     ignFiles[v] = true
    end
   end
-  for _, v in ipairs(sources[srcName][3][pkg].files) do
+  oldDst = nil
+  for _, v in ipairs(srcPkg.files) do
    if not ignFiles[v] then
     if sources[dstName][2][3](v) then
      table.insert(errs, v .. " already exists (corrupt system?)")
@@ -66,13 +132,13 @@ return function ()
   if #errs > 0 then
    error(table.concat(errs))
   end
-  for _, v in ipairs(sources[srcName][3][pkg].dirs) do
+  for _, v in ipairs(srcPkg.dirs) do
    sources[dstName][2][2](v)
    if not sources[dstName][2][4](v) then
     error("Unable to create directory " .. v)
    end
   end
-  for _, v in ipairs(sources[srcName][3][pkg].files) do
+  for _, v in ipairs(srcPkg.files) do
    local tmpOut, r, ok = sources[dstName][2][1](v .. ".claw-tmp")
    ok = tmpOut
    if ok then
@@ -82,31 +148,40 @@ return function ()
     yielder()
    else
     -- Cleanup...
-    for _, v in ipairs(sources[srcName][3][pkg].files) do
+    for _, v in ipairs(srcPkg.files) do
      sources[dstName][2][5](v .. ".claw-tmp")
     end
     error(r)
    end
   end
   -- PAST THIS POINT, ERRORS CORRUPT!
-  sources[dstName][3][pkg] = nil
+  -- Remove package from DB
+  local oldDst2, oldDst3 = findPkg(dstName, pkg, true)
+  sources[dstName][3] = oldDst3 or sources[dstName][3]
+  oldDst2, oldDst3 = nil
   saveInfo(dstName)
+  -- Delete old files
   for k, _ in pairs(ignFiles) do
    yielder()
    sources[dstName][2][5](k)
   end
-  for _, v in ipairs(sources[srcName][3][pkg].files) do
+  -- Create new files
+  for _, v in ipairs(srcPkg.files) do
    yielder()
    sources[dstName][2][6](v .. ".claw-tmp", v)
   end
-  sources[dstName][3][pkg] = sources[srcName][3][pkg]
+  -- Insert into DB
+  sources[dstName][3] = sources[dstName][3] .. compressCSI(pkg, srcPkg)
   saveInfo(dstName)
   return true
  end
  remove = function (dstName, pkg, checked)
   if checked then
    local errs = {}
-   for dpsName, dpsV in pairs(sources[dstName][3]) do
+   local buf = sources[dstName][3]
+   while #buf > 0 do
+    local dpsName, dpsV
+    dpsName, dpsV, buf = expandCSI(buf)
     for _, v in ipairs(dpsV.deps) do
      if v == pkg then
       table.insert(errs, dpsName .. " depends on " .. pkg .. "\n")
@@ -117,10 +192,12 @@ return function ()
     return nil, table.concat(errs)
    end
   end
-  for _, v in ipairs(sources[dstName][3][pkg].files) do
+  local dstPkg, nbuf = findPkg(dstName, pkg, true)
+  assert(dstPkg, "Package wasn't installed")
+  for _, v in ipairs(dstPkg.files) do
    sources[dstName][2][5](v)
   end
-  sources[dstName][3][pkg] = nil
+  sources[dstName][3] = nbuf
   saveInfo(dstName)
   return true
  end
@@ -128,50 +205,39 @@ return function ()
   -- Gets the latest info, or if given a source just gives that source's info.
   -- Do not modify output.
   getInfo = function (pkg, source, oldest)
-   if source then return sources[source][3][pkg] end
+   if source then return findPkg(source, pkg) end
    local bestI = {
     v = -1,
     desc = "An unknown package.",
     deps = {}
    }
    if oldest then bestI.v = 10000 end
-   for _, v in pairs(sources) do
-    if v[3][pkg] then
-     if ((not oldest) and (v[3][pkg].v > bestI.v)) or (oldest and (v[3][pkg].v > bestI.v)) then
-      bestI = v[3][pkg]
+   for k, v in pairs(sources) do
+    local pkgv = findPkg(k, pkg)
+    if pkgv then
+     if ((not oldest) and (pkgv.v > bestI.v)) or (oldest and (pkgv.v > bestI.v)) then
+      bestI = pkgv
      end
     end
    end
    return bestI
   end,
-  -- Provides an ordered list of sources, with writable.
-  -- Do not modify output.
-  getSources = function ()
-   return sourceList
-  end,
-  -- NOTE: If a source is writable, it's added anyway despite any problems.
-  addSource = function (name, src, dst)
-   local ifo = ""
-   local ifok, e = src("data/app-claw/local.lua", function (t)
-    ifo = ifo .. (t or "")
-    return true
-   end)
-   e = e or "local.lua parse error"
-   ifo = ifok and require("serial").deserialize(ifo)
-   if not (dst or ifo) then return false, e end
-   table.insert(sourceList, {name, not not dst})
-   sources[name] = {src, dst, ifo or {}}
-   return not not ifo, e
-  end,
+  sources = sources,
+  sourceList = sourceList,
   remove = remove,
   installTo = installTo,
+  expandCSI = expandCSI,
+  compressCSI = compressCSI,
 
   -- Gets a total list of packages, as a table of strings. You can modify output.
   getList = function ()
    local n = {}
    local seen = {}
    for k, v in pairs(sources) do
-    for kb, vb in pairs(v[3]) do
+    local p3 = v[3]
+    while #p3 > 0 do
+     local kb, _, nx = expandCSI(p3)
+     p3 = nx
      if not seen[kb] then
       seen[kb] = true
       table.insert(n, kb)

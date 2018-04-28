@@ -8,9 +8,10 @@ local event = require("event")(neo)
 local neoux, err = require("neoux")
 if not neoux then error(err) end
 neoux = neoux(event, neo)
-local claw = require("claw")()
+local claw = require("app-claw-core")()
+local clawcsi = require("app-claw-csi")
 
-local source = "http://20kdc.duckdns.org/neo/"
+local source = "http://20kdc.duckdns.org/neo/DEV/"
 local disks = neo.requireAccess("c.filesystem", "searching disks for packages")
 local primaryDisk = disks.primary
 local primaryINet = neo.requestAccess("c.internet")
@@ -101,7 +102,7 @@ end
 -- Beginning Of The App (well, the actual one)
 
 local genCurrent, genPrimary, genPackage, primaryWindow
-local windows = 1
+local running = true
 
 -- primary
 local primarySearchTx = ""
@@ -134,7 +135,7 @@ local function primaryWindowRegenCore()
  local gen, gens = genCurrent()
  return 25, 12, "claw", neoux.tcwindow(25, 12, gen, function (w)
    w.close()
-   windows = windows - 1
+   running = false
   end, 0xFF8F00, 0, gens)
 end
 local function primaryWindowRegen()
@@ -153,7 +154,7 @@ for pass = 1, 3 do
    nam = v.address
   end
   if nam then
-   local ok, r = claw.addSource(nam, fsSrc(v), (not v.isReadOnly()) and fsDst(v))
+   local ok, r = clawcsi(claw, nam, fsSrc(v), (not v.isReadOnly()) and fsDst(v))
    if not ok and nam == "local" then
     claw.unlock()
     error(r)
@@ -162,9 +163,14 @@ for pass = 1, 3 do
  end
 end
 
+-- No longer needed
+disks = nil
+
 if primaryINet then
- checked(claw.addSource, "inet", download)
+ checked(clawcsi, claw, "inet", download)
 end
+
+clawcsi = nil
 
 primaryList = claw.getList()
 
@@ -197,6 +203,14 @@ function genPrimary()
   if ent then
    local enttx = describe(ent)
    table.insert(elems, neoux.tcbutton(1, i + 1, unicode.safeTextFormat(enttx), function (w)
+    -- FREE UP MEMORY NOW
+    elems = {}
+    w.reset(25, 12, "claw", function (ev)
+     if ev == "close" then
+      w.close()
+      running = false
+     end
+    end)
     packageId = ent
     genCurrent = genPackage
     primaryWindowRegen()
@@ -302,10 +316,9 @@ function genPackage()
    primaryWindowRegen()
   end)
  }
- local srcs = claw.getSources()
- for k, v in ipairs(srcs) do
+ for k, v in ipairs(claw.sourceList) do
   local lI = claw.getInfo(packageId, v[1])
-  local row = 12 + k - #srcs
+  local row = 12 + k - #(claw.sourceList)
   local pfx = "      "
   if lI then
    pfx = "v" .. string.format("%04i", lI.v) .. " "
@@ -327,7 +340,7 @@ end
 genCurrent = genPrimary
 primaryWindow = neoux.create(primaryWindowRegenCore())
 
-while windows > 0 do
+while running do
  event.pull()
 end
 claw.unlock()
