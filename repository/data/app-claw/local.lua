@@ -110,7 +110,8 @@ return {
   desc = "Application launcher bar",
   v = 0,
   deps = {
-   "neo"
+   "neo",
+   "zzz-license-pd"
   },
   dirs = {
    "apps",
@@ -125,7 +126,8 @@ return {
   desc = "Searching launcher",
   v = 0,
   deps = {
-   "neo"
+   "neo",
+   "zzz-license-pd"
   },
   dirs = {
    "apps",

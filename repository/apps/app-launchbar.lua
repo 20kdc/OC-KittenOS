@@ -2,6 +2,7 @@
 -- No warranty is provided, implied or otherwise.
 
 -- app-launchbar: launchbar with application pinning
+-- Authors: Izaya
 
 local event = require("event")(neo)
 local neoux, err = require("neoux")

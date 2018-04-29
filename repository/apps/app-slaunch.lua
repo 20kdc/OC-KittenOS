@@ -2,6 +2,8 @@
 -- No warranty is provided, implied or otherwise.
 
 -- app-slaunch: searching launcher
+-- Authors: Izaya
+
 local event = require("event")(neo)
 local neoux, err = require("neoux")
 if not neoux then error(err) end
