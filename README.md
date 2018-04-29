@@ -48,7 +48,7 @@ It should be considered equivalent to CC0, and this is the intent,
 
 At this time, the majority of the code/ folder is by 20kdc, but exceptions may occur.
 
-These exceptions must be documented below.
+These exceptions will be documented below, and must be for a PR affecting code/ to be accepted:
 
 ```
 No exceptions exist at this time.
