@@ -106,6 +106,38 @@ return {
    "docs/repoauthors/svc-ghostie"
   },
  },
+ ["app-launchbar"] = {
+  desc = "Application launcher bar",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-launchbar.lua",
+   "docs/repoauthors/app-launchbar"
+  },
+ },
+ ["app-slaunch"] = {
+  desc = "Searching launcher",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-slaunch.lua",
+   "docs/repoauthors/app-slaunch"
+  },
+ },
  -- licenses (MUST BE IMMUTABLE)
  ["zzz-license-pd"] = {
   desc = "license file 'Public Domain'",
