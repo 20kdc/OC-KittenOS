@@ -11,7 +11,7 @@ neoux = neoux(event, neo)
 local claw = require("app-claw-core")()
 local clawcsi = require("app-claw-csi")
 
-local source = "http://20kdc.duckdns.org/neo/DEV/"
+local source = "http://20kdc.duckdns.org/neo/"
 local disks = neo.requireAccess("c.filesystem", "searching disks for packages")
 local primaryDisk = disks.primary
 local primaryINet = neo.requestAccess("c.internet")
