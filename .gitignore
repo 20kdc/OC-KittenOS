@@ -21,7 +21,10 @@ repobuild/*/*/
 repobuild/*/*/*
 
 inst.lua
+# Available as the respective release
+inst-gold.lua
 com2/code.tar.bd
 upldr.sh
 upldr-dev.sh
+upldr-gold.sh
 repository/inst.lua
