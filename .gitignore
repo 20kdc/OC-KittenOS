@@ -20,6 +20,13 @@ repobuild/*/*
 repobuild/*/*/
 repobuild/*/*/*
 
+laboratory/*/
+laboratory/*/*
+laboratory/*/*/
+laboratory/*/*/*
+laboratory/*/*/*/
+laboratory/*/*/*/*
+
 inst.lua
 # Available as the respective release
 inst-gold.lua

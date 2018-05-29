@@ -269,7 +269,7 @@ local function moveSurface(surface, m, x, y, w, h, force)
     monitorResetBF(monitors[m])
    end
    if cb then
-    cb.copy(ox, oy, w, h, x - ox, y - oy)
+    pcall(cb.copy, ox, oy, w, h, x - ox, y - oy)
     if surface == surfaces[1] then
      local cacheControl = {}
      for i = 1, h do

@@ -34,18 +34,20 @@ nexus = {
      neo.emergency("icecap nexus prereg issue")
      theEventHandler("k.registration", "x.neo.pub.window")
     end
-    local dw = e(w, h, t)
+    local dwo, dw = pcall(e, w, h, t)
+    if not dwo then
+     addOnReg("x.neo.pub.window", cb)
+     return
+    end
     c(dw)
     everestWindows[dw.id] = function (...)
      return c(dw, ...)
     end
-    return true
+   else
+    addOnReg("x.neo.pub.window", cb)
    end
   end
-  if not cb() then
-   addOnReg("x.neo.pub.window", cb)
-  end
-  return dw
+  cb()
  end,
  windows = everestWindows,
  startDialog = function (tx, ti)

@@ -134,7 +134,7 @@ function wrapMeta(t)
    end,
    __pairs = function ()
     return function (x, key)
-     local k, v = next(t, k)
+     local k, v = next(t, key)
      if k then return k, wrapMeta(v) end
     end, 9, nil
    end,
@@ -166,7 +166,7 @@ function ensureType(a, t)
 end
 
 function ensurePathComponent(s)
- if not string.match(s, "^[a-zA-Z0-9_%-%+%,%.%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^]+$") then error("chars disallowed: " .. s) end
+ if not string.match(s, "^[a-zA-Z0-9_%-%+%,%.%#%~%@%'%;%[%]%(%)%&%%%$%! %=%{%}%^\x80-\xFF]+$") then error("chars disallowed: " .. s) end
  if s == "." then error("single dot disallowed") end
  if s == ".." then error("double dot disallowed") end
 end
@@ -302,7 +302,6 @@ baseProcEnvCore = {
  utf8 = wrapUtf8,
  require = loadLibraryInner,
  assert = assert,     ipairs = ipairs,
- load = load,
  next = function (t, k)
   local mt = getmetatable(t)
   if mt == uniqueNEOProtectionObject then error("NEO-Protected Object") end
@@ -314,14 +313,15 @@ baseProcEnvCore = {
  tonumber = tonumber, tostring = tostring,
  setmetatable = setmetatable, getmetatable = function (n)
   local mt = getmetatable(n)
-  if mt == uniqueNEOProtectionObject then return "NEO-Protected Object" end
+  if rawequal(mt, uniqueNEOProtectionObject) then return "NEO-Protected Object" end
   return mt
  end,
  rawset = function (t, i, v)
   local mt = getmetatable(t)
-  if mt == uniqueNEOProtectionObject then error("NEO-Protected Object") end
+  if rawequal(mt, uniqueNEOProtectionObject) then error("NEO-Protected Object") end
   return rawset(t, i, v)
  end, rawget = rawget, rawlen = rawlen, rawequal = rawequal,
+ checkArg = checkArg
 }
 baseProcNeo = {
  emergency = emergencyFunction,
@@ -357,6 +357,12 @@ baseProcNeoMT = {
 
 function baseProcEnv()
  local pe = setmetatable({}, baseProcEnvMT)
+ pe.load = function (a, b, c, d, ...)
+  if rawequal(d, nil) then
+   d = pe
+  end
+  return load(a, b, c, d, ...)
+ end
  pe.neo = setmetatable({}, baseProcNeoMT)
  pe._G = pe
  return pe
@@ -490,6 +496,7 @@ end
 function start(pkg, ppkg, ppid, ...)
  local proc = {}
  local pid = lastPID
+ emergencyFunction("starting:", pkg)
  lastPID = lastPID + 1
 
  local function startFromUser(ipkg, ...)
