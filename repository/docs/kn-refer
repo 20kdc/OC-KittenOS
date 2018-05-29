@@ -123,28 +123,19 @@ os is extended with:
  address = computer.address
 
 The following are just host functions
- (*: wrapped for security - these
-  functions detect metatable abuse):
+ (*: wrapped for security):
 
- assert, ipairs, load, next*,
+ assert, ipairs, load*, next*,
  pairs, pcall, xpcall, select,
  type, error, tonumber, tostring,
  setmetatable, getmetatable*,
  rawset*, rawget, rawlen, rawequal
 
-(NOTE: Before you consider that load
- has no checks: The policy regarding
- load is taken from the host system.
- Which means bytecode loading is
-  almost certainly off. If it's not
-  off, then this is the user's fault,
-  as doing so is marked as a security
-  risk for very obvious reasons.
- As for trying to use the environment
-  to bypass a metatable, I tested.
- Metatables do apply to environments,
-  including global creation.
- There is no way to win.)
+(Apparently load, if not given an
+ argument, uses the global metatable.
+ This is of course a security hole.
+ A very big one. So it ended up
+  getting wrapped as of R3.)
 
 "require" and "neo" are the parts of
  the environment where a NEO-specific

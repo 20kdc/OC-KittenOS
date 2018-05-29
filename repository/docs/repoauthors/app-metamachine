@@ -1,0 +1,6 @@
+repository/apps/app-metamachine.lua: 20kdc, Public Domain
+repository/libs/metamachine-vgpu.lua: 20kdc, Public Domain
+repository/libs/metamachine-vfs.lua: 20kdc, Public Domain
+repository/data/app-metamachine/confboot.lua: 20kdc, Public Domain
+repository/data/app-metamachine/lucaboot.lua: 20kdc, Public Domain
+

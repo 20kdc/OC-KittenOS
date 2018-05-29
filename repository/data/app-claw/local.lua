@@ -24,7 +24,7 @@ return {
  },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
-  v = 2,
+  v = 3,
   deps = {
    "zzz-license-pd"
   },
@@ -106,6 +106,30 @@ return {
    "docs/repoauthors/svc-ghostie"
   },
  },
+ ["app-metamachine"] = {
+  desc = "Virtual machine",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "libs",
+   "docs",
+   "docs/repoauthors",
+   "data",
+   "data/app-metamachine"
+  },
+  files = {
+   "apps/app-metamachine.lua",
+   "libs/metamachine-vgpu.lua",
+   "libs/metamachine-vfs.lua",
+   "docs/repoauthors/app-metamachine",
+   "data/app-metamachine/confboot.lua",
+   "data/app-metamachine/lucaboot.lua"
+  },
+ },
  ["app-launchbar"] = {
   desc = "Application launcher bar",
   v = 0,
@@ -115,6 +139,7 @@ return {
   },
   dirs = {
    "apps",
+   "docs",
    "docs/repoauthors"
   },
   files = {
@@ -131,6 +156,7 @@ return {
   },
   dirs = {
    "apps",
+   "docs",
    "docs/repoauthors"
   },
   files = {
