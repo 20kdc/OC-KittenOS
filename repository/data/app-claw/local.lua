@@ -24,7 +24,7 @@ return {
  },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
-  v = 3,
+  v = 4,
   deps = {
    "zzz-license-pd"
   },

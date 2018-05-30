@@ -227,22 +227,10 @@ For libraries, it contains:
  ensurePathComponent(s):
   Ensures that a string is a safe
    filename via a character list and
-   some special filename checks.
-  UTF-8 characters are just flat out
-   disallowed until someone can give
-   me proof they won't blow up
-   something somewhere.
-  (This restriction is Windows's
-   fault - I can't trust the encoding
-   mess to not find some new and
-   imaginative way of breaking
-   filenames, so I'd rather that they
-   get avoided until someone can try
-   actually using them.)
-  This does NOT ACCOUNT for *all* the
-   Windows total nonsense (aux, com1)
-   because if OC doesn't cover up
-   that then you're kinda doomed.
+   some special filename checks, for
+   ".." and ".".
+  Rather permissive right now, but
+   don't go relying on that.
  ensureType(v, ts):
   Checks that a value is of a given
    type, and errors otherwise. If the
