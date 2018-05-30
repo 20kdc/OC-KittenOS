@@ -201,10 +201,10 @@ local insertionCallbacks = {
    f.close()
    return contents
   end
-  local function setCore(fd, size, contents)
+  local function setCore(fd, size, contents, important)
    checkArg(1, contents, "string")
    if #contents > size then return nil, "too large" end
-   if ro then
+   if ro and important then
     return nil, "storage is readonly"
    end
    local f = icecap.open(fd, true)
@@ -219,7 +219,7 @@ local insertionCallbacks = {
     return getCore(boot)
    end,
    set = function (contents)
-    return setCore(boot, codeSize, contents)
+    return setCore(boot, codeSize, contents, true)
    end,
    makeReadonly = function ()
     ro = true
@@ -237,8 +237,8 @@ local insertionCallbacks = {
    getData = function ()
     return getCore(data)
    end,
-   setData = function ()
-    return setCore(data, dataSize, contents)
+   setData = function (contents)
+    return setCore(data, dataSize, contents, false)
    end
   }
  end,
@@ -304,7 +304,11 @@ vmComputer.energy = os.energy
 vmOs.energy = nil
 vmComputer.maxEnergy = os.maxEnergy
 vmOs.maxEnergy = nil
-vmComputer.uptime = os.uptime
+
+local startupUptime = os.uptime()
+vmComputer.uptime = function ()
+ return os.uptime() - startupUptime
+end
 vmOs.uptime = nil
 vmComputer.address = os.address
 vmOs.address = nil
@@ -319,10 +323,12 @@ vmComputer.tmpAddress = function ()
  return tmpAddress
 end
 
+local eepromAddress = "k-eeprom"
 vmComputer.getBootAddress = function ()
- return "k-eeprom"
+ return eepromAddress
 end
-vmComputer.setBootAddress = function ()
+vmComputer.setBootAddress = function (a)
+ eepromAddress = a
 end
 vmComputer.users = function ()
  return {}
@@ -469,7 +475,7 @@ end
 
 vmBaseCoroutineWrap = coroutine.wrap(function ()
  vmBaseCoroutine = coroutine.running()
- local eepromAddress = vmComponent.list("eeprom")()
+ eepromAddress = vmComponent.list("eeprom")()
  if not eepromAddress then
   error("No EEPROM")
  end

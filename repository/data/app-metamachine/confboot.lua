@@ -1,3 +1,9 @@
+-- This is released into the public domain.
+-- No warranty is provided, implied or otherwise.
+
+-- confboot.lua : VM configuration program
+-- Authors: 20kdc
+
 -- _MMstartVM(name)
 -- _MMcomList(...)
 -- _MMserial(str)
@@ -86,6 +92,24 @@ function genEditor()
   table.insert(menu, {"Del. " .. v1 .. " " .. k, function ()
    currentVM[k] = nil
    genEditor()
+  end})
+ end
+ if not currentVM["k-eeprom"] then
+  table.insert(menu, {"+ Virtual EEPROM (R/W, preloaded w/ LUCcABOOT)...", function ()
+   currentVM[currentVMId .. "-eeprom"] = {"eeprom", "/vc-" .. currentVMId .. ".lua", "/vd-" .. currentVMId .. ".bin", "VM BIOS", false}
+   genEditor()
+   -- do file copy now!
+   local handleA = fs.open("/lucaboot.lua", "rb")
+   local handleB = fs.open("/vc-" .. currentVMId .. ".lua", "wb")
+   if not handleA then if handleB then fs.close(handleB) end return end
+   if not handleB then fs.close(handleA) return end
+   while true do
+    local s = fs.read(handleA, 2048)
+    if not s then break end
+    fs.write(handleB, s)
+   end
+   fs.close(handleA)
+   fs.close(handleB)
   end})
  end
  table.insert(menu, {"+ Virtual FS (R/W)...", function ()
