@@ -99,6 +99,7 @@ vmComponent = {
  list = function (filter, exact)
   -- This is an iterator :(
   local t = {}
+  local tk = {}
   for k, v in pairs(components) do
    local ok = false
    if filter then
@@ -110,13 +111,17 @@ vmComponent = {
    end
    if ok then
     table.insert(t, {k, v.type})
+    tk[k] = v.type
    end
   end
-  return function ()
-   local tr1 = table.remove(t, 1)
-   if not tr1 then return end
-   return table.unpack(tr1)
-  end, 9, nil
+  setmetatable(tk, {
+   __call = function ()
+    local tr1 = table.remove(t, 1)
+    if not tr1 then return end
+    return table.unpack(tr1)
+   end
+  })
+  return tk
  end,
  invoke = function (com, me, ...)
   if not components[com] then error("no component " .. com) end
