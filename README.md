@@ -135,9 +135,3 @@ Firstly, for an uncompressed installer (just to test installer basecode), you us
 Secondly, for a compressed installer, you use `package.sh`.
 
 That rebuilds `code.tar` and `inst.lua`, and also prepares the final structure of the repository to upload.
-
-NOTE! Future OS changes after r2 will be kept in a "future" branch.
-
-The "future" branch gets rebased onto master and then recreated.
-
-So expect that.
