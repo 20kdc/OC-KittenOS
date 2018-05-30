@@ -125,7 +125,7 @@ return {
  },
  ["app-klogo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 2,
+  v = 4,
   deps = {
   },
   dirs = {
