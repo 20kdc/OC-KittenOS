@@ -124,8 +124,8 @@ vmComponent = {
   return tk
  end,
  invoke = function (com, me, ...)
-  if not components[com] then error("no component " .. com) end
-  if not components[com][me] then error("no method " .. com .. "." .. me) end
+  if not components[com] then error("no such component") end
+  if not components[com][me] then error("no such method") end
   return components[com][me](...)
  end,
  proxy = function (com)
@@ -148,8 +148,11 @@ vmComponent = {
   return components[com].type
  end,
  methods = function (com)
+  if not components[com] then
+   return nil, "no such component"
+  end
   local mt = {}
-  for k, v in pairs(components[address]) do
+  for k, v in pairs(components[com]) do
    if type(v) == "function" then
     mt[k] = true
    end
@@ -164,10 +167,10 @@ vmComponent = {
  end,
  doc = function (address, method)
   if not components[address] then
-   error("No such component " .. address)
+   error("no such component")
   end
   if not components[address][method] then
-   error("No such method " .. method)
+   return
   end
   return tostring(components[address][method])
  end
@@ -381,6 +384,7 @@ vmEnvironment = {
  -- This is not exactly the same, but is very similar, to that of machine.lua,
  --  differing mainly in how pullSignal timeout scheduling occurs.
  coroutine = {
+  -- NOTE: I can't give you a definitive list from OC because OC (or OpenOS?) screws up a metatable!
   yield = function (...)
    return coroutine.yield(nil, ...)
   end,
