@@ -9,13 +9,12 @@ return function (
  address
 )
  neo.ensureType(address, "string")
- for _, monitor in ipairs(monitorPool) do
+ for k, monitor in ipairs(monitorPool) do
   if monitor.address == address then
    -- find GPU
    local gpu, bestStats = nil, {-math.huge, -math.huge, -math.huge}
-   currentGPUBinding = {}
-   for k, _ in pairs(currentGPUBinding) do
-    currentGPUBinding[k] = nil
+   for a, _ in pairs(currentGPUBinding) do
+    currentGPUBinding[a] = nil
    end
    for v in gpus() do
     v.bind(monitor.address, false)
