@@ -54,7 +54,7 @@ return {
  },
  ["neo-everest"] = {
   desc = "KittenOS NEO / Everest (windowing)",
-  v = 3,
+  v = 5,
   deps = {
    "neo"
   },
@@ -125,7 +125,7 @@ return {
  },
  ["app-klogo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 4,
+  v = 5,
   deps = {
   },
   dirs = {

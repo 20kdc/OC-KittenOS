@@ -671,13 +671,13 @@ local function key(ku, ka, kc, down)
     changeFocus(n)
    end return
   end
-  if ka == 3 then
-   -- Ctrl-Alt-C (!?!?!!)
-   if isCtrDown then
-    error("User-authorized Everest crash.")
+  if ka == 97 then
+   if not down then
+    isAltDown = false
    end
+   return
   end
-  if ka == 99 then
+  if ka == 3 or ka == 99 then
    if down then
     if isCtrDown then
      error("User-authorized Everest crash.")
