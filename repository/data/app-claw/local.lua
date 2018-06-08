@@ -130,6 +130,40 @@ return {
    "data/app-metamachine/lucaboot.lua"
   },
  },
+ ["app-pclogix-upload"] = {
+  desc = "paste.pc-logix.com text uploader",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-pclogix-upload.lua",
+   "docs/repoauthors/app-pclogix-upload"
+  },
+ },
+ ["app-rsctrl"] = {
+  desc = "Redstone control",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-rsctrl.lua",
+   "docs/repoauthors/app-rsctrl"
+  },
+ },
  ["app-launchbar"] = {
   desc = "Application launcher bar",
   v = 0,
