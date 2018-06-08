@@ -213,8 +213,8 @@ local function ensureOnscreen(monitor, x, y, w, h)
  if monitor >= (#monitors + 1) then monitor = 1 end
  -- Failing anything else, revert to monitor 0
  if #monitors == 0 then monitor = 0 end
- x = math.min(math.max(1, x), monitors[monitor][3] - (w - 1))
- y = math.max(1, math.min(monitors[monitor][4] - (h - 1), y))
+ x = math.min(math.max(1, x - (w - 1)), monitors[monitor][3])
+ y = math.max(2 - h, math.min(monitors[monitor][4], y))
  return monitor, x, y
 end
 
@@ -551,11 +551,7 @@ everestProvider(function (pkg, pid, sendSig)
    end,
    span = function (x, y, text, bg, fg)
     if neo.dead then error("everest died") end
-    if type(x) ~= "number" then error("X must be number.") end
-    if type(y) ~= "number" then error("Y must be number.") end
-    if type(bg) ~= "number" then error("Background must be number.") end
-    if type(fg) ~= "number" then error("Foreground must be number.") end
-    if type(text) ~= "string" then error("Text must be string.") end
+    checkArg(3, text, "string")
     x, y, bg, fg = math.floor(x), math.floor(y), math.floor(bg), math.floor(fg)
     if y == 0 then return end
     handleSpan(surf, x, y + 1, text, bg, fg)
@@ -586,7 +582,7 @@ end)
 -- THE EVEREST USER API ENDS (now for the session API, which just does boring stuff)
 -- used later on for lost monitor, too
 local function disclaimMonitor(mon)
- neo.ensureType(mon, "string")
+ checkArg(1, mon, "string")
  screens.disclaim(mon)
  for k, v in ipairs(monitors) do
   if v[2] == mon then
@@ -600,7 +596,7 @@ end
 everestSessionProvider(function (pkg, pid, sendSig)
  return {
   endSession = function (gotoBristol)
-   neo.ensureType(gotoBristol, "boolean")
+   checkArg(1, gotoBristol, "boolean")
    shuttingDown = true
    if gotoBristol then
     suggestAppsStop()
