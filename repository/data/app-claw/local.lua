@@ -166,7 +166,7 @@ return {
  },
  ["app-nbcompose"] = {
   desc = "Music player/composer using the NBS format",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
    "lib-knbs",
@@ -219,7 +219,7 @@ return {
  -- libraries
  ["lib-knbs"] = {
   desc = "NBS reader/writer library",
-  v = 0,
+  v = 1,
   deps = {
    "zzz-license-pd"
   },

@@ -125,7 +125,7 @@ return {
    nbs.layers[i] = nil
   end
   -- add layers up to target
-  for i = nbs.height - 1, layers - 1 do
+  for i = nbs.height, layers - 1 do
    nbs.layers[i] = {"L" .. i, 100}
   end
   -- clean up song

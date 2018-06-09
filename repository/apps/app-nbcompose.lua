@@ -212,7 +212,9 @@ function genMain()
       file.ticks[songPosition][layer][1] = defInst
       nt = file.ticks[songPosition][layer][2]
      end
-     nb.playNote(iTranslation[defInst] or 0, nt - 33, file.layers[layer][2] / 100)
+     if nb then
+      nb.playNote(iTranslation[defInst] or 0, nt - 33, file.layers[layer][2] / 100)
+     end
      require("knbs").correctSongLH(file)
      update()
      theStatusBar.update(window)
@@ -220,7 +222,9 @@ function genMain()
      file.ticks[songPosition] = file.ticks[songPosition] or {}
      local note = noteKey:find(string.char(a), 1, true) - 1
      file.ticks[songPosition][layer] = {defInst, note + 33}
-     nb.playNote(iTranslation[defInst] or 0, note, file.layers[layer][2] / 100)
+     if nb then
+      nb.playNote(iTranslation[defInst] or 0, note, file.layers[layer][2] / 100)
+     end
      require("knbs").correctSongLH(file)
      update()
      theStatusBar.update(window)
@@ -299,13 +303,13 @@ function genMain()
   neoux.tcbutton(30, 2, "Layers", function (w)
    window.reset(genLayers())
   end),
-  neoux.tcrawview(39, 2, {"qT/S"}),
+  neoux.tcrawview(39, 2, {"cT/S"}),
   neoux.tcfield(43, 2, 8, function (tx)
    if tx then
     local txn = tonumber(tx) or 0
-    file.tempo = math.min(math.max(0, math.floor(txn * 4)), 65535)
+    file.tempo = math.min(math.max(0, math.floor(txn)), 65535)
    end
-   return tostring(math.floor(file.tempo / 25))
+   return tostring(file.tempo)
   end),
   theStatusBar,
   table.unpack(theNotePane)
@@ -323,7 +327,7 @@ function tick()
   local temp = 1 / math.max(file.tempo / 100, 0.01)
   if os.uptime() >= uptime + temp then
    -- execute at this song position
-   if file.ticks[songPosition] then
+   if file.ticks[songPosition] and nb then
     for i = 0, file.height - 1 do
      local tck = file.ticks[songPosition][i]
      if tck then
