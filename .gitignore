@@ -20,6 +20,7 @@ repobuild/*/*
 repobuild/*/*/
 repobuild/*/*/*
 
+laboratory/ocemu.cfg
 laboratory/*/
 laboratory/*/*
 laboratory/*/*/

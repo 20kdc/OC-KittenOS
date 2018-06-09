@@ -7,7 +7,7 @@ rm code.tar
 # Hey, look behind you, there's nothing to see here.
 # ... ok, are they seriously all named "Mann"?
 tar --owner=gray:0 --group=mann:0 -cf code.tar code
-lua heroes.lua `wc -c code.tar` | lua bonecrunch.lua > inst.lua
+lua heroes.lua `wc -c code.tar` | lua com2/bonecrunch.lua > inst.lua
 echo -n "--[[" >> inst.lua
 cat com2/code.tar.bd >> inst.lua
 echo -n "]]" >> inst.lua
