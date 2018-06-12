@@ -139,7 +139,7 @@ return {
  },
  ["app-flash"] = {
   desc = "KittenOS NEO EEPROM Flasher",
-  v = 2,
+  v = 5,
   deps = {
    "neo"
   },

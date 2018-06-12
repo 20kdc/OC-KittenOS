@@ -20,12 +20,14 @@ local busy = false
 local regenCore
 
 local function regenLabeller(set, get, wd)
+ local tx = get()
  return wd, 2, nil, neoux.tcwindow(wd, 1, {
   neoux.tcfield(1, 1, wd, function (nt)
    if nt then
+    tx = nt
     set(nt)
    end
-   return get()
+   return tx
   end)
  }, function (w)
   busy = false
@@ -39,7 +41,7 @@ function regenCore()
  for v in eeprom.list() do
   local lbl = unicode.safeTextFormat(v.getLabel())
   table.insert(elems, neoux.tcrawview(1, l, {
-   v.address:sub(1, 8) .. " " .. lbl
+   require("fmttext").pad(v.address:sub(1, 8) .. " " .. lbl, 25, false, true)
   }))
   table.insert(elems, neoux.tcbutton(1, l + 1, "get", function (window)
    if busy then return end
