@@ -96,7 +96,7 @@ return {
  },
  ["neo-coreapps"] = {
   desc = "KittenOS NEO Core Apps",
-  v = 2,
+  v = 5,
   deps = {
    "neo"
   },
@@ -105,6 +105,7 @@ return {
   },
   files = {
    "apps/app-textedit.lua",
+   "apps/app-batmon.lua",
    "apps/app-control.lua",
    "apps/app-taskmgr.lua"
   }

@@ -11,7 +11,7 @@ local lines = {
  "F5, F6, ^←: Copy, Paste, Delete Line",
  -- These two are meant to replace similar functionality in GNU Nano
  --  (which I consider the best console text editor out there - Neolithic is an *imitation* and a poor one at that),
- --  except fixing a UI flaw by instead making J responsible for resetting the append flag,
+ --  except fixing a UI flaw by instead adding a visible way to reset the append flag,
  --  so the user can more or less arbitrarily mash together lines
  "F7: Reset 'append' flag for Cut Lines",
  "F8: Cut Line(s)",
@@ -33,9 +33,8 @@ local files = neo.requireAccess("x.neo.pub.base", "files").showFileDialogAsync
 local cursorX = 1
 local cursorY = math.ceil(#lines / 2)
 local cFlash = true
-local ctrlFlag = false
+local ctrlFlag, focFlag, appendFlag
 local dialogLock = false
-local appendFlag = false
 local sW, sH = 37, #lines + 2
 local window = windows(sW, sH)
 local filedialog = nil
@@ -213,23 +212,19 @@ local function key(ka, kc, down)
     sH = 1
    end
    sW, sH = window.setSize(sW, sH)
-  end
-  if kc == 208 then -- Down
+  elseif kc == 208 then -- Down
    sH = sH + 1
    sW, sH = window.setSize(sW, sH)
-  end
-  if kc == 203 then -- Left
+  elseif kc == 203 then -- Left
    sW = sW - 1
    if sW == 0 then
     sW = 1
    end
    sW, sH = window.setSize(sW, sH)
-  end
-  if kc == 205 then -- Right
+  elseif kc == 205 then -- Right
    sW = sW + 1
    sW, sH = window.setSize(sW, sH)
-  end
-  if kc == 14 then -- ^Backspace
+  elseif kc == 14 then -- ^Backspace
    delLine()
    return true
   end
@@ -247,8 +242,7 @@ local function key(ka, kc, down)
    end
    clampCursorX()
    return true
-  end
-  if kc == 208 or kc == 209 then -- Go down one - go down page
+  elseif kc == 208 or kc == 209 then -- Go down one - go down page
    local moveAmount = 1
    if kc == 209 then
     moveAmount = math.floor(sH / 2)
@@ -259,8 +253,7 @@ local function key(ka, kc, down)
    end
    clampCursorX()
    return true
-  end
-  if kc == 203 then
+  elseif kc == 203 then
    if cursorX > 1 then
     cursorX = cursorX - 1
    else
@@ -272,8 +265,7 @@ local function key(ka, kc, down)
     end
    end
    return true
-  end
-  if kc == 205 then
+  elseif kc == 205 then
    cursorX = cursorX + 1
    if clampCursorX() then
     if cursorY < #lines then
@@ -287,8 +279,7 @@ local function key(ka, kc, down)
   if kc == 199 then
    cursorX = 1
    return true
-  end
-  if kc == 207 then
+  elseif kc == 207 then
    cursorX = unicode.len(lines[cursorY]) + 1
    return true
   end
@@ -298,17 +289,13 @@ local function key(ka, kc, down)
    cursorX = 1
    cursorY = 1
    return true
-  end
-  if kc == 61 then -- F3
+  elseif kc == 61 then -- F3
    startLoad()
-  end
-  if kc == 62 then -- F4
+  elseif kc == 62 then -- F4
    startSave()
-  end
-  if kc == 63 then -- F5
+  elseif kc == 63 then -- F5
    clipsrc.setSetting("clipboard", lines[cursorY])
-  end
-  if kc == 64 then -- F6
+  elseif kc == 64 then -- F6
    local tx = clipsrc.getSetting("clipboard") or ""
    local txi = tx:find("\n")
    local nt = {}
@@ -322,11 +309,9 @@ local function key(ka, kc, down)
     table.insert(lines, cursorY, v)
    end
    return true
-  end
-  if kc == 65 then -- F7
+  elseif kc == 65 then -- F7
    appendFlag = false
-  end
-  if kc == 66 then -- F8
+  elseif kc == 66 then -- F8
    if appendFlag then
     local base = clipsrc.getSetting("clipboard")
     clipsrc.setSetting("clipboard", base .. "\n" .. delLine())
@@ -372,11 +357,11 @@ neo.scheduleTimer(os.uptime() + 0.5)
 
 while true do
  local e = {coroutine.yield()}
- if e[1] == "k.timer" then
+ if e[1] == "k.timer" and e[2] == focFlag then
   cFlash = not cFlash
   local csY = math.ceil(sH / 2)
   window.span(1, csY, getline(csY), 0xFFFFFF, 0)
-  neo.scheduleTimer(os.uptime() + 0.5)
+  focFlag = neo.scheduleTimer(os.uptime() + 0.5)
  elseif e[1] == "x.neo.pub.window" then
   if e[2] == window.id then
    if e[3] == "line" then
@@ -395,6 +380,7 @@ while true do
      flush()
     end
    elseif e[3] == "focus" then
+    focFlag = e[4] and neo.scheduleTimer(0)
     ctrlFlag = false
    elseif e[3] == "close" then
     return
