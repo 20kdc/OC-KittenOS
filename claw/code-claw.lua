@@ -164,18 +164,16 @@ return {
  },
  ["app-claw"] = {
   desc = "KittenOS NEO Package Manager",
-  v = 2,
+  v = 3,
   deps = {
    "neo"
   },
   dirs = {
-   "apps",
-   "libs"
+   "apps"
   },
   files = {
    "apps/app-claw.lua",
-   "libs/app-claw-core.lua",
-   "libs/app-claw-csi.lua"
+   "apps/svc-app-claw-worker.lua"
   },
  },
  ["neo-meta"] = {

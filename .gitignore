@@ -4,6 +4,7 @@
 # leaving in preSH.tar.gz for anyone who's interested
 # in how NOT to do compression
 code.tar
+code/data/app-claw/*
 work.tar
 work
 work/

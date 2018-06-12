@@ -9,5 +9,6 @@ echo -n c1-sda > c1-eeprom/data.bin
 cd ..
 cp -r code/* laboratory/c1-sdb/
 cp -r repository/* laboratory/c1-sdb/
-lua clawmerge.lua repository/data/app-claw/local.lua code/data/app-claw/local.lua > laboratory/c1-sdb/data/app-claw/local.lua
+lua claw/clawconv.lua laboratory/c1-sdb/data/app-claw/ < claw/code-claw.lua > /dev/null
+lua claw/clawconv.lua laboratory/c1-sdb/data/app-claw/ < claw/repo-claw.lua >> /dev/null
 cp -r laboratory/c1-sdb/* laboratory/c1-sda/
