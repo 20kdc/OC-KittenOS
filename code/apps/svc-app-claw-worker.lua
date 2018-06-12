@@ -3,7 +3,7 @@
 
 -- svc-app-claw-worker: Who stays stays. Who goes goes.
 
-local callerPkg, _, destProx, packageId, downloadSrc, checked = ...
+local callerPkg, _, destProx, packageId, downloadSrc, checked, primaryINet = ...
 if callerPkg ~= "app-claw" then error("Internal process for app-claw's bidding.") end
 -- This 'mutex' remains active as long as the process does.
 neo.requireAccess("r.svc.app-claw-worker", "CLAW mutex")
@@ -66,25 +66,36 @@ local opInstall, opRemove
 
 function opInstall(packageId, checked)
  local gback = {} -- the ultimate strategy
+ local gdir = {}
+ local preinstall = {}
  download("data/app-claw/" .. packageId .. ".c2x", wrapLines(function (l)
   if l:sub(1, 1) == "?" and checked then
-   if not destProx.exists("data/app-claw/" .. l:sub(2) .. ".c2x") then
-    opInstall(l:sub(2), true)
-   end
+   preinstall[l:sub(2)] = true
   elseif l:sub(1, 1) == "+" then
    table.insert(gback, l:sub(2))
   elseif l:sub(1, 1) == "/" then
-   destProx.makeDirectory(l)
-   assert(destProx.isDirectory(l), "unable to create dir " .. l)
+   table.insert(gdir, l:sub(2))
   end
  end), downloadSrc)
+ for _, v in ipairs(gdir) do
+  destProx.makeDirectory(v)
+  assert(destProx.isDirectory(v), "unable to create dir " .. v)
+ end
+ gdir = nil
+ for k, _ in pairs(preinstall) do
+  if not destProx.exists("data/app-claw/" .. k .. ".c2x") then
+   opInstall(k, true)
+  end
+ end
+ preinstall = nil
  for _, v in ipairs(gback) do
   local f = destProx.open(v .. ".C2T", "wb")
   assert(f, "unable to create download file")
-  local ok, err = pcall(download, v, function (b)
+  xpcall(function ()
+   destProx.close(f)
+  end, download, v, function (b)
    assert(destProx.write(f, b or ""), "unable to save data")
   end, downloadSrc)
-  assert(ok, err)
   destProx.close(f)
  end
  -- CRITICAL SECTION --
@@ -130,15 +141,15 @@ function opRemove(packageId, checked)
  end
 end
 
-local ok, err
-if downloadSrc then
- ok, err = pcall(opInstall, packageId, checked)
-else
- ok, err = pcall(opRemove, packageId, checked)
+local function ender(...)
+ destProx = nil
+ downloadSrc = nil
+ primaryINet = nil
+ neo.executeAsync("app-claw", packageId)
+ return ...
 end
-fsProxy = nil
-downloadSrc = nil
-neo.executeAsync("app-claw", packageId)
-if not ok then
- error(err)
+if downloadSrc then
+ xpcall(ender, opInstall, packageId, checked)
+else
+ xpcall(ender, opRemove, packageId, checked)
 end

@@ -262,7 +262,7 @@ local function packageGetBB(src, lclI, srcI, srcW)
    function (w)
     w.close()
     running = false
-    neo.executeAsync("svc-app-claw-worker", sources[src], packageId, nil, src == "local")
+    neo.executeAsync("svc-app-claw-worker", sources[src], packageId, nil, src == "local", primaryINet)
    end
   })
  end
@@ -272,7 +272,7 @@ local function packageGetBB(src, lclI, srcI, srcW)
    function (w)
     w.close()
     running = false
-    neo.executeAsync("svc-app-claw-worker", sources["local"], packageId, sources[src], true)
+    neo.executeAsync("svc-app-claw-worker", sources["local"], packageId, sources[src], true, primaryINet)
    end
   })
  end
@@ -282,7 +282,7 @@ local function packageGetBB(src, lclI, srcI, srcW)
    function (w)
     w.close()
     running = false
-    neo.executeAsync("svc-app-claw-worker", sources[src], packageId, sources["local"], true)
+    neo.executeAsync("svc-app-claw-worker", sources[src], packageId, sources["local"], true, primaryINet)
    end
   })
   table.insert(buttons, {
@@ -290,7 +290,7 @@ local function packageGetBB(src, lclI, srcI, srcW)
    function (w)
     w.close()
     running = false
-    neo.executeAsync("svc-app-claw-worker", sources[src], packageId, sources["local"], false)
+    neo.executeAsync("svc-app-claw-worker", sources[src], packageId, sources["local"], false, primaryINet)
    end
   })
  end

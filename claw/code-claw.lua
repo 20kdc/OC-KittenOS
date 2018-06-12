@@ -165,7 +165,7 @@ return {
  },
  ["app-claw"] = {
   desc = "KittenOS NEO Package Manager",
-  v = 3,
+  v = 5,
   deps = {
    "neo"
   },

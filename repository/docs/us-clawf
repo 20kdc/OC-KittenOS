@@ -1,0 +1,230 @@
+As of KittenOS NEO r5, CLAW has been
+ rewritten to be lighter on memory
+ usage. This has caused a change in
+ the formats CLAW uses, and this
+ has made them non-trivial.
+
+Note that this documentation should
+ not be considered the final format
+ CLAW will ever use.
+
+There was a format before this, and
+ a format before that, and there may
+ be a format after this, and a format
+ further out into the future.
+
+So all the CLAW formats over time
+ will be described here.
+
+-- CLAW "local.lua" Lua format
+
+A CLAW "local.lua" file, like the
+ "-claw.lua" files used in the 'claw'
+ directory of the OC-KittenOS Git
+ repository, is a full index of what
+ the other formats are meant to
+ represent.
+
+It is a serialized Lua table, with
+ the keys being package IDs,
+ and the values being tables of the
+ form as follows:
+
+ desc = A description
+ v = The version number
+ deps = ipairsable table, list of
+  packages required for installation
+ dirs = ipairsable table, list of
+  the dirs, no pre/post '/'.
+ files = ipairsable table, list of
+  the files, no prefixed '/'.
+
+ All mentioned directories must be
+  in dirs.
+
+-- CLAWr2 "local.lua" binary format
+
+The first attempt at saving memory
+ lead to local.lua being stored in
+ memory in a binary format.
+
+This did lead to a reduction in use,
+ but I found it insufficient.
+
+The following two notes are from
+ testing KittenOS NEO r4.
+
+Even a slightly loaded system with a
+ simple background service could run
+ out of memory on the package screen.
+
+Indeed, even a baseline "just claw
+ and allmem" reading failed for tests
+ due to the launcher refusing to work
+ with CLAW loaded.
+
+The format is slightly weird, since
+ it being on disk resulted from a bug
+ in what was meant to be only an
+ *in-memory* compression scheme.
+
+Firstly, I should define a length-
+ byte-prefixed-string.
+
+It's a byte, followed by that many
+ bytes for the contents.
+
+Secondly, I should define a length-
+ byte-prefixed list.
+
+It's a byte, followed by that many
+ length-prefixed-strings.
+
+It is a list of entries made up of
+ the following form:
+
+ LPStr packageId
+ LPStr desc
+ u16be v
+ LPList dirs
+ LPList files
+ LPList deps
+
+The idea here is simply that the Lua
+ table format is extremely memory-
+ inefficient, prioritizing speed, so
+ by packing stuff into a string, it
+ can save some memory.
+
+However, more code was needed to
+ encode and decode this format, so
+ the savings weren't great.
+
+-- CLAWr5 (C2) ".c2x"/".c2p"/".c2l"
+
+This is the current format, and is
+ hopefully the last format that will
+ be needed.
+
+The solution was to rewrite CLAW, to
+ make the GUI stay a GUI and separate
+ the logic up via separate file
+ formats entirely.
+
+All 3 of these formats are line-based
+ formats that use "\n" to split their
+ entries, and they are rather strict
+ about this.
+
+All 3 kinds of files are found in the
+ data/app-claw/ directory, and their
+ names matter.
+
+--- C2L
+
+".c2l" is the simplest format, simply
+ being a file listing of the app-claw
+ directory. It is only used for a
+ remote repository, where it is
+ called "local.c2l".
+
+--- C2P
+
+".c2p" is the second simplest.
+It is the raw text, unlinewrapped, of
+ the package description panel.
+
+The name given to it is important:
+ "PACKAGE.VERSION.c2p"
+
+Thus, the app-claw that currently
+ exists has a c2p file with name:
+ "app-claw.5.c2p"
+
+This is only used by the app-claw UI,
+ for version numbers, descriptions,
+ and to show the entries in the first
+ place. Since none of these matter to
+ the installation/removal process,
+ they are ignored completely by the
+ installer/remover.
+
+--- C2X
+
+The app-claw UI runs a separate
+ program to perform actions based on
+ the .c2p files it finds and what the
+ user chooses to do.
+
+These actions summarize to 4 kinds of
+ possible action between any readable
+ source (for installations) and a
+ local filesystem for a given package
+ ID:
+
+1. Install with dependencies
+2. Install without dependencies
+3. Remove checking for dep. errors
+4. Remove regardless of dep. errors
+
+C2X files use the name "PACKAGE.c2x",
+ and following the example previously
+ the app-claw file is "app-claw.c2x".
+
+C2X files solely serve the role of
+ dependency, install, and removal
+ instructions, and thus do not have
+ any user-friendly information such
+ as a description.
+
+The first character of each line in
+ the file describes what the line
+ does.
+
+'+' means the remainder is a filename
+ to be installed/removed.
+ CLAW will fail to overwrite a file
+  that already exists.
+ Upgrades are handled by an unchecked
+  package removal prior to install.
+
+'/' means the remainder's a directory
+ to be added on installation.
+
+'?' means the remainder's a package
+ that this package requires.
+
+Note that the C2P and C2X files are
+ NOT automatically installed/removed,
+ the C2X file must specify them
+ explicitly. Otherwise, a package may
+ enter some errant states:
+
+1. Not installed according to UI, but
+ installed for dependency purposes,
+ and could be theoretically removed
+ (no C2P, but a C2X)
+
+2. Installed according to UI, but
+ cannot be removed, cannot be
+ reinstalled, and does not count
+ for dependency purposes
+ (no C2X, but a C2P)
+
+3. Completely uninstalled according
+ to both UI and dependencies, and
+ cannot be removed or reinstalled
+ (no C2P or C2X)
+
+C2X files are entirely responsible
+ for the management of packages, and
+ a basic CLAW client could be made
+ with only support for C2L and C2X,
+ C2P files being handled as part of
+ C2X handling but having no inherent
+ meaning of their own.
+
+This client would not have versioning
+ information or other such things,
+ but it would work.
+

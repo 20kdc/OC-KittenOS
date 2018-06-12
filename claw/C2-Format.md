@@ -62,7 +62,7 @@ svc-app-claw-worker does all package consistency & such work.
 
 It can only be run from app-claw, and runs app-claw after it's done.
 
-It takes 4 arguments:
+It takes 5 arguments:
 
 1. The target filesystem proxy.
 2. The target package name. This package is viewed in app-claw after completion.
@@ -72,3 +72,4 @@ It takes 4 arguments:
    Proxy means it's a filesystem,
     string means it's an internet base.
 4. Checked flag
+5. primary inet card proxy, if any
