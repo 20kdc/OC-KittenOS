@@ -46,7 +46,7 @@ local monitors = {}
 -- This is where we stuff processes until monitors show up
 monitors[0] = {nil, nil, 160, 50}
 
--- {monitor, x, y, w, h, callback}
+-- {monitor, x, y, w, h, callback, title}
 -- callback events are:
 -- key ka kc down
 -- line y
@@ -61,10 +61,12 @@ local shuttingDown = false
 -- Also used for settings.
 local savingThrow = neo.requestAccess("x.neo.sys.manage")
 
+local draggingWindowX, draggingWindowY
+
 local function suggestAppsStop()
  for k, v in ipairs(surfaces) do
   for i = 1, 4 do
-   v[6]("close")
+   v[6](v[8], "close")
   end
  end
 end
@@ -81,8 +83,8 @@ local function dying()
  -- If a process evades the deathtrap then it clearly has reason to stay alive regardless of Everest status.
  -- Also note, should savingThrow fail, neo.dead is now a thing.
  for _, v in ipairs(surfaces) do
-  pcall(v[6], "line", 1)
-  pcall(v[6], "line", 2)
+  pcall(v[6], v[8], "line", 1)
+  pcall(v[6], v[8], "line", 2)
  end
  surfaces = {}
 end
@@ -147,155 +149,6 @@ local function doBackgroundLine(m, mg, bdx, bdy, bdl)
  end
 end
 
-local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
- if not renderingAllowed() then return end
- local m = monitors[monitorId]
- local mg, rb = m[1]()
- if not mg then return end
- if rb then
-  monitorResetBF(m)
- end
- -- The input region is the one that makes SENSE.
- -- Considering WC handling, that's not an option.
- -- WCHAX: start
- if x > 1 then
-  x = x - 1
-  w = w + 1
- end
- -- this, in combination with 'forcefully blank out last column of window during render',
- -- cleans up littering
- w = w + 1
- -- WCHAX: end
-
- for span = 1, h do
-  local backgroundMarkStart = nil
-  for sx = 1, w do
-   local t, tx, ty = surfaceAt(monitorId, sx + x - 1, span + y - 1)
-   if t then
-    -- Background must occur first due to wide char weirdness
-    if backgroundMarkStart then
-     local bdx, bdy, bdl = backgroundMarkStart + x - 1, span + y - 1, sx - backgroundMarkStart
-     doBackgroundLine(m, mg, bdx, bdy, bdl)
-     backgroundMarkStart = nil
-    end
-    if not surfaceSpanCache[monitorId .. "_" .. t .. "_" .. ty] then
-     surfaceSpanCache[monitorId .. "_" .. t .. "_" .. ty] = true
-     surfaces[t][6]("line", ty)
-    end
-   elseif not backgroundMarkStart then
-    backgroundMarkStart = sx
-   end
-  end
-  if backgroundMarkStart then
-   doBackgroundLine(monitors[monitorId], mg, backgroundMarkStart + x - 1, span + y - 1, (w - backgroundMarkStart) + 1)
-  end
- end
-end
-
-local function updateStatus()
- statusLine = "Λ-¶: menu (launch 'control' to logout)"
- if surfaces[1] then
-  if #monitors > 1 then
-   --            123456789X123456789X123456789X123456789X123456789X
-   statusLine = "Λ-+: move, Λ-Z: switch, Λ-X: swMonitor, Λ-C: close"
-  else
-   statusLine = "Λ-+: move, Λ-Z: switch, Λ-C: close"
-  end
- end
- statusLine = unicode.safeTextFormat(statusLine)
- for k, v in ipairs(monitors) do
-  updateRegion(k, 1, 1, v[3], 1, {})
- end
-end
-
-local function ensureOnscreen(monitor, x, y, w, h)
- if monitor <= 0 then monitor = #monitors end
- if monitor >= (#monitors + 1) then monitor = 1 end
- -- Failing anything else, revert to monitor 0
- if #monitors == 0 then monitor = 0 end
- x = math.min(math.max(1, x - (w - 1)), monitors[monitor][3])
- y = math.max(2 - h, math.min(monitors[monitor][4], y))
- return monitor, x, y
-end
-
--- This is the "a state change occurred" function, only for use when needed
-local function reconcileAll()
- for k, v in ipairs(surfaces) do
-  -- About to update whole screen anyway so avoid the wait.
-  v[1], v[2], v[3] = ensureOnscreen(v[1], v[2], v[3], v[4], v[5])
- end
- local k = 1
- while k <= #monitors do
-  local v = monitors[k]
-  local mon, rb = v[1]()
-  if rb then
-   monitorResetBF(v)
-  end
-  if mon then
-   -- This *can* return null if something went wonky. Let's detect that
-   v[3], v[4] = mon.getResolution()
-   if not v[3] then
-    neo.emergency("everest: monitor went AWOL and nobody told me u.u")
-    table.remove(monitors, k)
-    v = nil
-   end
-  end
-  if v then
-   updateRegion(k, 1, 1, v[3], v[4], {})
-   k = k + 1
-  end
- end
- updateStatus()
-end
-
--- NOTE: If the M, X, Y, W and H are the same, this function ignores you, unless you put , true on the end.
-local function moveSurface(surface, m, x, y, w, h, force)
- local om, ox, oy, ow, oh = table.unpack(surface, 1, 5)
- m = m or om
- x = x or ox
- y = y or oy
- w = w or ow
- h = h or oh
- surface[1], surface[2], surface[3], surface[4], surface[5] = m, x, y, w, h
- local cache = {}
- if om == m and ow == w and oh == h then
-  if ox == x and oy == y and not force then
-   return
-  end
-  -- note: this doesn't always work due to WC support, and due to resize-to-repaint
-  if renderingAllowed() and not force then
-   local cb, b = monitors[m][1]()
-   if b then
-    monitorResetBF(monitors[m])
-   end
-   if cb then
-    pcall(cb.copy, ox, oy, w, h, x - ox, y - oy)
-    if surface == surfaces[1] then
-     local cacheControl = {}
-     for i = 1, h do
-      cacheControl[om .. "_1_" .. i] = true
-     end
-     updateRegion(om, ox, oy, ow, oh, cacheControl)
-     return
-    end
-   end
-  end
- end
- updateRegion(om, ox, oy, ow, oh, cache)
- updateRegion(m, x, y, w, h, cache)
-end
--- Returns offset from where we expected to be to where we are.
-local function ofsSurface(focus, dx, dy)
- local exX, exY = focus[2] + dx, focus[3] + dy
- local m, x, y = ensureOnscreen(focus[1], exX, exY, focus[4], focus[5])
- moveSurface(focus, nil, x, y)
- return focus[2] - exX, focus[3] - exY
-end
-local function ofsMSurface(focus, dm)
- local m, x, y = ensureOnscreen(focus[1] + dm, focus[2], focus[3], focus[4], focus[5])
- moveSurface(focus, m, x, y)
-end
-
 local function handleSpan(target, x, y, text, bg, fg)
  if not renderingAllowed() then return end
  local m = monitors[target[1]]
@@ -351,6 +204,178 @@ local function handleSpan(target, x, y, text, bg, fg)
   end
  end
  submitSegment()
+end
+
+local function updateRegion(monitorId, x, y, w, h, surfaceSpanCache)
+ if not renderingAllowed() then return end
+ local m = monitors[monitorId]
+ local mg, rb = m[1]()
+ if not mg then return end
+ if rb then
+  monitorResetBF(m)
+ end
+ -- The input region is the one that makes SENSE.
+ -- Considering WC handling, that's not an option.
+ -- WCHAX: start
+ if x > 1 then
+  x = x - 1
+  w = w + 1
+ end
+ -- this, in combination with 'forcefully blank out last column of window during render',
+ -- cleans up littering
+ w = w + 1
+ -- WCHAX: end
+
+ for span = 1, h do
+  local backgroundMarkStart = nil
+  for sx = 1, w do
+   local t, tx, ty = surfaceAt(monitorId, sx + x - 1, span + y - 1)
+   if t then
+    -- Background must occur first due to wide char weirdness
+    if backgroundMarkStart then
+     local bdx, bdy, bdl = backgroundMarkStart + x - 1, span + y - 1, sx - backgroundMarkStart
+     doBackgroundLine(m, mg, bdx, bdy, bdl)
+     backgroundMarkStart = nil
+    end
+    if not surfaceSpanCache[monitorId .. "_" .. t .. "_" .. ty] then
+     surfaceSpanCache[monitorId .. "_" .. t .. "_" .. ty] = true
+     if ty == 1 then
+      local lw = surfaces[t][4]
+      local bg = 0x0080FF
+      local fg = 0x000000
+      local tx = "-"
+      if t == 1 then
+       bg = 0x000000
+       fg = 0x0080FF
+       tx = "+"
+      end
+      local vtitle = surfaces[t][7]
+      local vto = unicode.len(vtitle)
+      if vto < lw then
+       vtitle = vtitle .. (tx):rep(lw - vto)
+      else
+       vtitle = unicode.sub(vtitle, 1, lw)
+      end
+      handleSpan(surfaces[t], 1, 1, vtitle, bg, fg)
+     else
+      surfaces[t][6](surfaces[t][8], "line", ty - 1)
+     end
+    end
+   elseif not backgroundMarkStart then
+    backgroundMarkStart = sx
+   end
+  end
+  if backgroundMarkStart then
+   doBackgroundLine(monitors[monitorId], mg, backgroundMarkStart + x - 1, span + y - 1, (w - backgroundMarkStart) + 1)
+  end
+ end
+end
+
+local function updateStatus()
+ statusLine = "Λ-¶: menu (launch 'control' to logout)"
+ if surfaces[1] then
+  if #monitors > 1 then
+   --            123456789X123456789X123456789X123456789X123456789X
+   statusLine = "Λ-+: move, Λ-Z: switch, Λ-X: swMonitor, Λ-C: close"
+  else
+   statusLine = "Λ-+: move, Λ-Z: switch, Λ-C: close"
+  end
+ end
+ statusLine = unicode.safeTextFormat(statusLine)
+ for k, v in ipairs(monitors) do
+  updateRegion(k, 1, 1, v[3], 1, {})
+ end
+end
+
+local function ensureOnscreen(monitor, x, y, w, h)
+ if monitor <= 0 then monitor = #monitors end
+ if monitor >= (#monitors + 1) then monitor = 1 end
+ -- Failing anything else, revert to monitor 0
+ if #monitors == 0 then monitor = 0 end
+ x = math.min(math.max(x, 1), monitors[monitor][3] - (w - 1))
+ y = math.max(2 - h, math.min(monitors[monitor][4], y))
+ return monitor, x, y
+end
+
+-- This is the "a state change occurred" function, only for use when needed
+local function reconcileAll()
+ for k, v in ipairs(surfaces) do
+  -- About to update whole screen anyway so avoid the wait.
+  v[1], v[2], v[3] = ensureOnscreen(v[1], v[2], v[3], v[4], v[5])
+ end
+ local k = 1
+ while k <= #monitors do
+  local v = monitors[k]
+  local mon, rb = v[1]()
+  if rb then
+   monitorResetBF(v)
+  end
+  if mon then
+   -- This *can* return null if something went wonky. Let's detect that
+   v[3], v[4] = mon.getResolution()
+   if not v[3] then
+    neo.emergency("everest: monitor went AWOL and nobody told me u.u")
+    table.remove(monitors, k)
+    v = nil
+   end
+  end
+  if v then
+   updateRegion(k, 1, 1, v[3], v[4], {})
+   k = k + 1
+  end
+ end
+ updateStatus()
+end
+
+-- NOTE: If the M, X, Y, W and H are the same, this function ignores you, unless you put , true on the end.
+local function moveSurface(surface, m, x, y, w, h, force)
+ local om, ox, oy, ow, oh = table.unpack(surface, 1, 5)
+ m = m or om
+ x = x or ox
+ y = y or oy
+ w = w or ow
+ h = h or oh
+ surface[1], surface[2], surface[3], surface[4], surface[5] = m, x, y, w, h
+ local cache = {}
+ if om == m and ow == w and oh == h then
+  if ox == x and oy == y and not force then
+   return
+  end
+  -- note: this doesn't always work due to WC support, and due to resize-to-repaint
+  if renderingAllowed() and not force then
+   local cb, b = monitors[m][1]()
+   if b then
+    monitorResetBF(monitors[m])
+   end
+   if cb then
+    local monH = monitors[m][4]
+    local cutTop = math.max(0, 1 - math.min(oy, y))
+    local cutBottom = math.max(0, (math.max(oy + oh, y + h) - 1) - monH)
+    pcall(cb.copy, ox, oy + cutTop, w, h - (cutTop + cutBottom), x - ox, y - oy)
+    if surface == surfaces[1] then
+     local cacheControl = {}
+     for i = 1 + cutTop, h - cutBottom do
+      cacheControl[om .. "_1_" .. i] = true
+     end
+     updateRegion(om, ox, oy, ow, oh, cacheControl)
+     return
+    end
+   end
+  end
+ end
+ updateRegion(om, ox, oy, ow, oh, cache)
+ updateRegion(m, x, y, w, h, cache)
+end
+-- Returns offset from where we expected to be to where we are.
+local function ofsSurface(focus, dx, dy)
+ local exX, exY = focus[2] + dx, focus[3] + dy
+ local m, x, y = ensureOnscreen(focus[1], exX, exY, focus[4], focus[5])
+ moveSurface(focus, nil, x, y)
+ return focus[2] - exX, focus[3] - exY
+end
+local function ofsMSurface(focus, dm)
+ local m, x, y = ensureOnscreen(focus[1] + dm, focus[2], focus[3], focus[4], focus[5])
+ moveSurface(focus, m, x, y)
 end
 
 local basePalT2 = {
@@ -416,11 +441,11 @@ local function changeFocus(oldSurface, optcache)
  if ns1 ~= oldSurface then
   if oldSurface then
    setSurfacePalette(oldSurface, nil)
-   oldSurface[6]("focus", false)
+   oldSurface[6](oldSurface[8], "focus", false)
   end
   if ns1 then
    setSurfacePalette(ns1, nil)
-   ns1[6]("focus", true)
+   ns1[6](ns1[8], "focus", true)
   end
   updateStatus()
   if oldSurface then
@@ -459,70 +484,11 @@ everestProvider(function (pkg, pid, sendSig)
   else
    title = base .. ":" .. title
   end
-  local surf = {math.min(#monitors, math.max(1, lIM)), 1, 2, w, h}
-  if h >= monitors[surf[1]][4] then
-   surf[3] = 1
-  end
-  local focusState = false
   local llid = lid
   lid = lid + 1
-  local specialDragHandler
-  surf[6] = function (ev, a, b, c, d, e)
-   -- Must forward surface events
-   if ev == "focus" then
-    focusState = a
-   end
-   if ev == "touch" then
-    specialDragHandler = nil
-    if math.floor(b) == 1 then
-     if e == 1 then
-      sendSig(llid, "close")
-      return
-     end
-     specialDragHandler = function (x, y)
-      local ofsX, ofsY = math.floor(x) - math.floor(a), math.floor(y) - math.floor(b)
-      if (ofsX == 0) and (ofsY == 0) then return end
-      ofsSurface(surf, ofsX, ofsY)
-     end
-     return
-    end
-    b = b - 1
-   end
-   if ev == "drag" then
-    if specialDragHandler then
-     specialDragHandler(a, b)
-     return
-    end
-    b = b - 1
-   end
-   if ev == "scroll" or ev == "drop" then
-    specialDragHandler = nil
-    b = b - 1
-   end
-   if ev == "line" then
-    if a == 1 then
-     local lw = surf[4]
-     local bg = 0x0080FF
-     local fg = 0x000000
-     local tx = "-"
-     if focusState then
-      bg = 0x000000
-      fg = 0x0080FF
-      tx = "+"
-     end
-     local vtitle = title
-     local vto = unicode.len(vtitle)
-     if vto < lw then
-      vtitle = vtitle .. (tx):rep(lw - vto)
-     else
-      vtitle = unicode.sub(vtitle, 1, lw)
-     end
-     handleSpan(surf, 1, 1, vtitle, bg, fg)
-     return
-    end
-    a = a - 1
-   end
-   sendSig(llid, ev, a, b, c, d, e)
+  local surf = {math.min(#monitors, math.max(1, lIM)), 1, 2, w, h, sendSig, title, llid}
+  if h >= monitors[surf[1]][4] then
+   surf[3] = 1
   end
   local osrf = surfaces[1]
   table.insert(surfaces, 1, surf)
@@ -557,7 +523,7 @@ everestProvider(function (pkg, pid, sendSig)
     handleSpan(surf, x, y + 1, text, bg, fg)
    end,
    recommendPalette = function (pal)
-    if not focusState then return 0 end
+    if surfaces[1] ~= surf then return 0 end
     return setSurfacePalette(surf, pal)
    end,
    close = function ()
@@ -679,7 +645,7 @@ local function key(ku, ka, kc, down)
      error("User-authorized Everest crash.")
     else
      if focus then
-      focus[6]("close")
+      focus[6](focus[8], "close")
      end
     end
    end
@@ -696,7 +662,7 @@ local function key(ku, ka, kc, down)
   if kc ~= 56 then
    lIM = focus[1]
   end
-  focus[6]("key", ka, kc, down)
+  focus[6](focus[8], "key", ka, kc, down)
  end
 end
 
@@ -729,7 +695,7 @@ while not shuttingDown do
   end
   if s[1] == "h.clipboard" then
    if surfaces[1] then
-    surfaces[1][6]("clipboard", s[3])
+    surfaces[1][6](surfaces[1][8], "clipboard", s[3])
    end
   end
   -- next on my list: high-res coordinates
@@ -745,7 +711,16 @@ while not shuttingDown do
       local ns = table.remove(surfaces, sid)
       table.insert(surfaces, 1, ns)
       changeFocus(os)
-      ns[6]("touch", lx, ly, ix, iy, s[5])
+      draggingWindowX, draggingWindowY = nil
+      if ly == 1 then
+       if s[5] == 1 then
+        ns[6](ns[8], "close")
+       else
+        draggingWindowX, draggingWindowY = lx, ly
+       end
+      else
+       ns[6](ns[8], "touch", lx, ly - 1, ix, iy, s[5])
+      end
      else
       if s[5] == 1 then startLauncher() end
      end
@@ -762,8 +737,16 @@ while not shuttingDown do
       if k == focus[1] then
        local x, y = (math.ceil(s[3]) - focus[2]) + 1, (math.ceil(s[4]) - focus[3]) + 1
        local ix, iy = s[3] - math.floor(s[3]), s[4] - math.floor(s[4])
-       -- Ok, so let's see...
-       focus[6](s[1]:sub(3), x, y, ix, iy, s[5])
+       if s[1] == "h.drag" and draggingWindowX then
+        local ofsX, ofsY = x - draggingWindowX, y - draggingWindowY
+        if ofsX ~= 0 or ofsY ~= 0 then
+         ofsSurface(focus, ofsX, ofsY)
+        end
+       else
+        draggingWindowX, draggingWindowY = nil
+        -- Ok, so let's see...
+        focus[6](focus[8], s[1]:sub(3), x, y - 1, ix, iy, s[5])
+       end
       end
       break
      end
