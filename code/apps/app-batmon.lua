@@ -5,8 +5,8 @@
 -- Port of the original 'batmon.lua' from KittenOS Legacy.
 local window = neo.requireAccess("x.neo.pub.window", "window")(10, 2)
 
--- OCE/s, OCE at last check, uptime of last check
-local lastChange, lastValue, lastTimer = 0
+-- OCE/s, OCE at last check, uptime of last timer set, uptime of last check
+local lastChange, lastValue, lastTimer, lpTimer = 0
 local usage = {
  "[####]:",
  "[###:]:",
@@ -45,8 +45,9 @@ end
 local function update()
  local nv = os.energy()
  if lastValue then
-  lastChange = (nv - lastValue) / (os.uptime() - lastTimer)
+  lastChange = (nv - lastValue) / (os.uptime() - lpTimer)
  end
+ lpTimer = os.uptime()
  lastValue = nv
  lastTimer = os.uptime() + 10
  if lastChange then
