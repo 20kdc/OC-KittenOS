@@ -96,7 +96,7 @@ end
 disks = nil
 
 if primaryINet then
- sources["inet"] = "http://20kdc.duckdns.org/neo/"
+ sources["inet"] = "http://20kdc.duckdns.org/neo/DEV/"
  table.insert(sourceList, "inet")
 end
 
