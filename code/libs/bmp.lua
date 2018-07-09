@@ -153,26 +153,26 @@ return {
   local planes = get16(0x1A)
   local bpp = get16(0x1C)
   local compression = get32(0x1E)
-  local paletteCol = 0
-  local other = get32(0x2E)
-  paletteCol = other
-  -- postprocess
+  local paletteCol = get32(0x2E)
 
-  -- The actual values used for addressing, for cMode to mess with
-  local basePtr = 14 + hdrSize + (paletteCol * 4)
-  local scanWB = math.ceil((bpp * width) / 32) * 4
-  local monoWB = (math.ceil((bpp * width) / 32) * 4)
-  local planeWB = scanWB * height
-
-  if not packed then
-   basePtr = get32(0x0A) -- 'BM' header
-  end
   -- negative height means sane coords
   local upDown = true
   if height >= 0x80000000 then
    height = height - 0x100000000
    height = -height
    upDown = false
+  end
+
+  -- postprocess
+
+  -- The actual values used for addressing, for cMode to mess with
+  local basePtr = 14 + hdrSize + (paletteCol * 4)
+  local scanWB = math.ceil((bpp * width) / 32) * 4
+  local monoWB = math.ceil(width / 32) * 4
+  local planeWB = scanWB * height
+
+  if not packed then
+   basePtr = get32(0x0A) -- 'BM' header
   end
 
   -- Cursor/Icon

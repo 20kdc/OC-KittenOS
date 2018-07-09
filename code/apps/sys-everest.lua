@@ -142,10 +142,10 @@ local function doBackgroundLine(m, mg, bdx, bdy, bdl)
   local str = unicode.sub(statusLine, bdx, bdx + bdl - 1)
   local strl = unicode.len(str)
   pcall(mg.set, bdx, bdy, unicode.undoSafeTextFormat(str))
-  pcall(mg.fill, bdx + strl, bdy, bdl - strl, 1, " ")
+  pcall(mg.set, bdx + strl, bdy, (" "):rep(bdl - strl))
  else
   monitorGPUColours(m, mg, 0x000040, 0)
-  pcall(mg.fill, bdx, bdy, bdl, 1, " ")
+  pcall(mg.set, bdx, bdy, (" "):rep(bdl))
  end
 end
 
@@ -778,7 +778,7 @@ while not shuttingDown do
   if os1 then
    changeFocus(os1)
   else
-   changeFocus(surfaces[1])
+   changeFocus()
   end
  end
  if s[1] == "x.neo.sys.screens" then

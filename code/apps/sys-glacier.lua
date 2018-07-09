@@ -125,7 +125,7 @@ local mBase = {
   end
   return s
  end,
- delSetting = function ()
+ delSetting = function (name)
   neo.ensureType(name, "string")
   local val = nil
   if name == "password" or name == "pub.clipboard" then val = "" end

@@ -3,7 +3,7 @@
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
-  v = 4,
+  v = 5,
   deps = {
   },
   dirs = {
