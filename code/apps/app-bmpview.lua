@@ -5,8 +5,7 @@ local event = require("event")(neo)
 local neoux = require("neoux")(event, neo)
 local braille = require("braille")
 local bmp = require("bmp")
-local icecap = neo.requireAccess("x.neo.pub.base", "loadimg")
-local file = icecap.open("/logo.bmp", false)
+local file = neoux.fileDialog(false)
 
 local header = file.read(bmp.headerMinSzBMP)
 local palette = ""
@@ -61,9 +60,6 @@ lcWidth = bitmap.dsSpan
 local running = true
 
 local function decodeRGB(rgb, igp, col)
- if igp and bitmap.bpp > 24 then
-  rgb = math.floor(rgb / 256)
- end
  local r, g, b = math.floor(rgb / 65536) % 256, math.floor(rgb / 256) % 256, rgb % 256
  -- the new KittenOS NEO logo is 'sensitive' to dithering, so disable it
  if not col then
@@ -82,6 +78,8 @@ local fp = neoux.tcwindow(bW, bH, {
  braille.new(1, 1, bW, bH, {
   selectable = true,
   get = function (window, x, y, bg, fg, selected, colour)
+   if x > bitmap.width then return 0, 0, 0 end
+   if y > bitmap.height then return 0, 0, 0 end
    if bitmap.ignoresPalette then
     return decodeRGB(bitmap.getPixel(x - 1, y - 1, 0), true, colour)
    end
@@ -95,9 +93,9 @@ end, 0xFFFFFF, 0)
 
 neoux.create(bW, bH, nil, function (w, t, r, ...)
  if t == "focus" then
-  if r then
+  if r and not bitmap.ignoresPalette then
    local pal = {}
-   for i = 0, 15 do
+   for i = 0, math.min(15, bitmap.paletteCol - 1) do
     pal[i + 1] = bitmap.getPalette(i)
    end
    w.recommendPalette(pal)

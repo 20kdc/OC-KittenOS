@@ -110,31 +110,29 @@ return {
    "apps/app-taskmgr.lua"
   }
  },
- ["app-klogo"] = {
-  desc = "KittenOS NEO Logo shower",
-  v = 2,
+ ["app-bmpview"] = {
+  desc = "KittenOS NEO .bmp viewer",
+  v = 5,
   deps = {
    "neo",
-   "app-klogo-logo"
   },
   dirs = {
    "apps"
   },
   files = {
-   "apps/app-klogo.lua",
+   "apps/app-bmpview.lua",
   },
  },
- ["app-klogo-logo"] = {
+ ["neo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
   v = 5,
   deps = {
   },
   dirs = {
-   "data",
-   "data/app-klogo"
+   "doc"
   },
   files = {
-   "data/app-klogo/logo.bmp"
+   "doc/logo.bmp"
   },
  },
  ["app-flash"] = {
@@ -179,7 +177,7 @@ return {
  },
  ["neo-meta"] = {
   desc = "KittenOS NEO: Use 'All' to install to other disks",
-  v = 2,
+  v = 5,
   deps = {
    "neo",
    "neo-init",
@@ -188,7 +186,8 @@ return {
    "neo-icecap",
    "neo-secpolicy",
    "neo-coreapps",
-   "app-klogo",
+   "neo-logo",
+   "app-bmpview",
    "app-flash",
    "app-claw",
    "app-wget"
