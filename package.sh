@@ -18,10 +18,5 @@ echo -n "--[[" >> inst.lua
 cat com2/code.tar.bd >> inst.lua
 echo -n "]]" >> inst.lua
 
-stat repobuild/data/app-claw && rm -rf repobuild
-mkdir repobuild
-cp -r code/* repobuild/
-cp -r repository/* repobuild/
-cp inst.lua repobuild/
-lua claw/clawconv.lua repobuild/data/app-claw/ < claw/code-claw.lua > repobuild/data/app-claw/local.c2l
-lua claw/clawconv.lua repobuild/data/app-claw/ < claw/repo-claw.lua >> repobuild/data/app-claw/local.c2l
+# Common Repository Setup Code
+./package-repo.sh inst.lua
