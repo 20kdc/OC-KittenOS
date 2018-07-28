@@ -129,10 +129,10 @@ return {
   deps = {
   },
   dirs = {
-   "doc"
+   "docs"
   },
   files = {
-   "doc/logo.bmp"
+   "docs/logo.bmp"
   },
  },
  ["app-flash"] = {
