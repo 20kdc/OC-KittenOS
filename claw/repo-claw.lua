@@ -131,6 +131,58 @@ return {
    "data/app-metamachine/lucaboot.lua"
   },
  },
+ ["app-pclogix-upload"] = {
+  desc = "paste.pc-logix.com text uploader",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-pclogix-upload.lua",
+   "docs/repoauthors/app-pclogix-upload"
+  },
+ },
+ ["app-rsctrl"] = {
+  desc = "Redstone control",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-rsctrl.lua",
+   "docs/repoauthors/app-rsctrl"
+  },
+ },
+ ["app-nbcompose"] = {
+  desc = "Music player/composer using the NBS format",
+  v = 1,
+  deps = {
+   "neo",
+   "lib-knbs",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-nbcompose.lua",
+   "docs/repoauthors/app-nbcompose"
+  },
+ },
  ["app-launchbar"] = {
   desc = "Application launcher bar",
   v = 0,
@@ -163,6 +215,23 @@ return {
   files = {
    "apps/app-slaunch.lua",
    "docs/repoauthors/app-slaunch"
+  },
+ },
+ -- libraries
+ ["lib-knbs"] = {
+  desc = "NBS reader/writer library",
+  v = 1,
+  deps = {
+   "zzz-license-pd"
+  },
+  dirs = {
+   "libs",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "libs/knbs.lua",
+   "docs/repoauthors/lib-knbs"
   },
  },
  -- licenses (MUST BE IMMUTABLE)
