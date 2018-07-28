@@ -91,12 +91,11 @@ function opInstall(packageId, checked)
  for _, v in ipairs(gback) do
   local f = destProx.open(v .. ".C2T", "wb")
   assert(f, "unable to create download file")
-  xpcall(function ()
-   destProx.close(f)
-  end, download, v, function (b)
+  local ok, e = pcall(download, v, function (b)
    assert(destProx.write(f, b or ""), "unable to save data")
   end, downloadSrc)
   destProx.close(f)
+  if not ok then error(e) end
  end
  -- CRITICAL SECTION --
  if destProx.exists("data/app-claw/" .. packageId .. ".c2x") then
@@ -141,15 +140,16 @@ function opRemove(packageId, checked)
  end
 end
 
-local function ender(...)
- destProx = nil
- downloadSrc = nil
- primaryINet = nil
- neo.executeAsync("app-claw", packageId)
- return ...
-end
+local ok, e
 if downloadSrc then
- xpcall(ender, opInstall, packageId, checked)
+ ok, e = pcall(opInstall, packageId, checked)
 else
- xpcall(ender, opRemove, packageId, checked)
+ ok, e = pcall(opRemove, packageId, checked)
+end
+destProx = nil
+downloadSrc = nil
+primaryINet = nil
+neo.executeAsync("app-claw", packageId)
+if not ok then
+ error(e)
 end
