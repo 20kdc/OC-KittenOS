@@ -113,7 +113,7 @@ while true do
  local e = {coroutine.yield()}
  if e[1] == "k.timer" then
   while true do
-   local b, e = tcp.read(1)
+   local b, e = tcp.read(neo.readBufSize)
    if not b then
     if e then
      incoming(":Warning: " .. e)
@@ -123,12 +123,16 @@ while true do
     break
    elseif b == "" then
     break
-   elseif b ~= "\r" then
-    if b == "\n" then
-     incoming("<" .. tcpBuf)
-     tcpBuf = ""
-    else
-     tcpBuf = tcpBuf .. b
+   else
+    tcpBuf = tcpBuf .. b:gsub("\r", "")
+    while true do
+     local nlp = tcpBuf:find("\n")
+     if nlp then
+      incoming("<" .. tcpBuf:sub(1, nlp - 1))
+      tcpBuf = tcpBuf:sub(nlp + 1)
+     else
+      break
+     end
     end
    end
   end
