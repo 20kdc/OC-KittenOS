@@ -89,6 +89,23 @@ return {
    "docs/repoauthors/app-allmem"
   },
  },
+ ["app-kmt"] = {
+  desc = "Line-terminal for MUDs & such",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-kmt.lua",
+   "docs/repoauthors/app-kmt"
+  },
+ },
  ["svc-ghostie"] = {
   desc = "Application that schedules a scare after a random time to test svc autostart",
   v = 0,
