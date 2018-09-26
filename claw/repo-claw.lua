@@ -202,7 +202,7 @@ return {
  },
  ["app-tapedeck"] = {
   desc = "Computronics Tape Drive interface",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
    "zzz-license-pd"
