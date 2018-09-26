@@ -200,6 +200,23 @@ return {
    "docs/repoauthors/app-nbcompose"
   },
  },
+ ["app-tapedeck"] = {
+  desc = "Computronics Tape Drive interface",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-tapedeck.lua",
+   "docs/repoauthors/app-tapedeck"
+  },
+ },
  ["app-launchbar"] = {
   desc = "Application launcher bar",
   v = 0,
