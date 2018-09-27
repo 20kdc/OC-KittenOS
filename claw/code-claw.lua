@@ -26,7 +26,7 @@ return {
  },
  ["neo-init"] = {
   desc = "KittenOS NEO / sys-init (startup)",
-  v = 2,
+  v = 6,
   deps = {
    "neo",
    "neo-icecap",
@@ -125,7 +125,7 @@ return {
  },
  ["neo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 5,
+  v = 6,
   deps = {
   },
   dirs = {

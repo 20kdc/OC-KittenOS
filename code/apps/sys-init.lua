@@ -6,16 +6,18 @@
 
 local callerPkg, callerPid, callerScr = ...
 
-local gpuG, screen = nil, nil
 local shutdownEmergency = neo.requestAccess("k.computer").shutdown
 neo.requestAccess("s.h.key_down")
+neo.requestAccess("s.h._kosneo_syslog")
 
+-- gpuG/performDisclaim are GPU management, while screen is used for prioritization
+local gpuG, performDisclaim, screen = nil
 local scrW, scrH
-local warnings = {
- "",
- "",
- ""
-}
+local nssInst
+
+local console = {}
+local helpActive = false
+local buttonsActive = false
 
 -- Attempts to call upon nsm for a safe shutdown
 local function shutdown(reboot)
@@ -30,32 +32,42 @@ local function shutdown(reboot)
  end
 end
 
-local function rstfbDraw(gpu)
- pcall(gpu.setBackground, 0xFFFFFF)
+local function basicDraw(bg)
+ local gpu = gpuG()
+ pcall(gpu.setBackground, bg or 0xFFFFFF)
  pcall(gpu.setForeground, 0x000000)
-end
-
-local function basicDraw(gpu)
  local ok, sw, sh = pcall(gpu.getResolution)
  if not ok then return end
  scrW, scrH = sw, sh
  pcall(gpu.fill, 1, 1, scrW, scrH, " ")
  pcall(gpu.set, 2, 2, "KittenOS NEO")
-end
-
-local function advDraw(gpu)
- basicDraw(gpu)
  local usage = math.floor((os.totalMemory() - os.freeMemory()) / 1024)
  pcall(gpu.set, 2, 3, "RAM Usage: " .. usage .. "K / " .. math.floor(os.totalMemory() / 1024) .. "K")
- for i = 1, #warnings do
-  pcall(gpu.set, 2, 6 + i, warnings[i])
+ local cut = 7
+ if buttonsActive then cut = 9 end
+ local areaSize = scrH - cut
+ local n2 = 0
+ if helpActive then
+  if _VERSION == "Lua 5.2" then
+   table.insert(console, "WARNING: Lua 5.2 memory usage issue!")
+   table.insert(console, "Shift-right-click while holding the CPU/APU.")
+   n2 = 2
+  end
+  table.insert(console, "TAB to change option, ENTER to select.")
+  n2 = n2 + 1
  end
+ for i = 1, areaSize do
+  pcall(gpu.set, 2, 6 + i, console[#console + i - areaSize] or "")
+ end
+ for i = 1, n2 do
+  table.remove(console, #console)
+ end
+ return gpu
 end
 
--- Callback setup by finalPrompt to disclaim the main monitor first
-local performDisclaim = nil
-
-local function retrieveNssMonitor(nss)
+-- Attempts to get an NSS monitor with a priority list of screens
+local function retrieveNssMonitor(...)
+ local spc = {...}
  gpuG = nil
  local subpool = {}
  while not gpuG do
@@ -67,19 +79,23 @@ local function retrieveNssMonitor(nss)
   -- If no monitors are available, shut down now.
   -- NSS monitor pool output is smaller than, but similar to, Everest monitor data:
   -- {gpu, screenAddr}
-  local pool = nss.getClaimable()
+  local pool = nssInst.getClaimable()
   while not pool[1] do
-   coroutine.yield() -- wait for presumably a NSS notification
-   pool = nss.getClaimable()
+   -- wait for presumably a NSS notification
+   consoleEventHandler({coroutine.yield()})
+   pool = nssInst.getClaimable()
   end
   subpool = {}
   -- Specifies which element to elevate to top priority
   local optimalSwap = nil
+  local optimal = #spc + 1
   if screen then
    for k, v in ipairs(pool) do
-    if v == screen then
-     optimalSwap = k
-     break
+    for k2, v2 in ipairs(spc) do
+     if v == v2 and optimal > k2 then
+      optimalSwap, optimal = k, k2
+      break
+     end
     end
    end
   end
@@ -89,7 +105,7 @@ local function retrieveNssMonitor(nss)
    pool[1] = swapA
   end
   for _, v in ipairs(pool) do
-   local gpu = nss.claim(v)
+   local gpu = nssInst.claim(v)
    if gpu then
     local gcb = gpu()
     if gcb then
@@ -102,52 +118,64 @@ local function retrieveNssMonitor(nss)
     end
    end
   end
- 
-  if not subpool[1] then
-   error("None of the GPUs we got were actually usable")
+  if subpool[1] then
+   gpuG, screen = table.unpack(subpool[1])
   end
-  gpuG = subpool[1][1]
-  screen = subpool[1][2]
  end
  -- done with search
- local gpu = gpuG()
- rstfbDraw(gpu)
  performDisclaim = function (full)
-  nss.disclaim(subpool[1][2])
+  nssInst.disclaim(subpool[1][2])
   if full then
    for _, v in ipairs(subpool) do
-    nss.disclaim(v[2])
+    nssInst.disclaim(v[2])
    end
   end
  end
- return gpu
+end
+
+local function consoleEventHandler(ev)
+ if ev[1] == "h._kosneo_syslog" then
+  local text = ""
+  for i = 3, #ev do
+   if i ~= 3 then text = text .. " " end
+   text = text .. tostring(ev[i])
+  end
+  table.insert(console, text)
+ end
 end
 
 local function sleep(t)
  neo.scheduleTimer(os.uptime() + t)
  while true do
   local ev = {coroutine.yield()}
+  consoleEventHandler(ev)
   if ev[1] == "k.timer" then
    break
   end
   if ev[1] == "x.neo.sys.screens" then
-   -- This implies we have and can use nss, but check anyway
-   local nss = neo.requestAccess("x.neo.sys.screens")
-   if nss then
-    local gpu = retrieveNssMonitor(nss)
-    basicDraw(gpu)
-   end
+   retrieveNssMonitor(screen)
+   basicDraw()
   end
  end
 end
 
+local function alert(s)
+ console = {s}
+ helpActive, buttonsActive = false, false
+ basicDraw()
+ sleep(1)
+ buttonsActive = true
+end
+
 local function finalPrompt()
- local nss = neo.requestAccess("x.neo.sys.screens")
- if nss then
-  retrieveNssMonitor(nss)
- else
-  error("no glacier to provide GPU for the prompt")
+ nssInst = neo.requestAccess("x.neo.sys.screens")
+ if not nssInst then
+  console = {"sys-glacier not available"}
+  basicDraw()
+  error("no nssInst")
  end
+ retrieveNssMonitor()
+ helpActive, buttonsActive = true, true
  -- This is nsm's final chance to make itself available and thus allow the password to be set
  local nsm = neo.requestAccess("x.neo.sys.manage")
  local waiting = true
@@ -159,24 +187,11 @@ local function finalPrompt()
    return false
   end
  end
- if _VERSION == "Lua 5.2" then
-  warnings[1] = "NOTE: It's recommended you use Lua 5.3."
-  warnings[2] = "Shift-right-click while holding the CPU item."
- else
-  warnings[1] = "TAB to change option,"
-  warnings[2] = "ENTER to select..."
- end
  -- The actual main prompt loop
  while waiting do
-  local gpu = gpuG()
-  rstfbDraw(gpu)
-  advDraw(gpu)
   local entry = ""
   local entry2 = ""
   local active = true
-  local shButton = "<Shutdown>"
-  local rbButton = "<Reboot>"
-  local smButton = "<Safe Mode>"
   local pw = {function ()
      return "Password: " .. entry2
     end, function (key)
@@ -188,10 +203,7 @@ local function finalPrompt()
       if entry == password then
        waiting = false
       else
-       local gpu = gpuG()
-       rstfbDraw(gpu)
-       advDraw(gpu)
-       sleep(1)
+       alert("Incorrect password")
       end
       active = false
      end
@@ -208,68 +220,68 @@ local function finalPrompt()
   end
   local controls = {
    {function ()
-     return shButton
+     return "<Shutdown>"
     end, function (key)
      if key == 13 then
-      local gpu = gpuG()
-      rstfbDraw(gpu)
-      basicDraw(gpu)
-      pcall(gpu.set, 2, 4, "Shutting down...")
+      alert("Shutting down...")
       shutdown(false)
      end
-    end, 2, scrH - 1, unicode.len(shButton)},
+    end, 2, scrH - 1, 10},
    {function ()
-     return rbButton
+     return "<Reboot>"
     end, function (key)
      if key == 13 then
-      local gpu = gpuG()
-      rstfbDraw(gpu)
-      basicDraw(gpu)
-      pcall(gpu.set, 2, 4, "Rebooting...")
+      alert("Rebooting...")
       shutdown(true)
      end
-    end, 3 + unicode.len(shButton), scrH - 1, unicode.len(rbButton)},
+    end, 13, scrH - 1, 8},
    {function ()
-     return smButton
+     return "<Safe Mode>"
     end, function (key)
      if key == 13 then
-      local gpu = gpuG()
-      rstfbDraw(gpu)
-      basicDraw(gpu)
-      pcall(gpu.set, 2, 4, "Login to activate Safe Mode.")
-      sleep(1)
-      gpu = gpuG()
       safeModeActive = true
-      rstfbDraw(gpu)
-      advDraw(gpu)
+      alert("Login to activate Safe Mode.")
      end
-    end, 4 + unicode.len(shButton) + unicode.len(rbButton), scrH - 1, unicode.len(smButton)},
+    end, 22, scrH - 1, 11},
    pw,
   }
   local control = #controls
+  local lastKeyboard
   while active do
-   local gpu = gpuG()
-   for k, v in ipairs(controls) do
-    if k == control then
-     pcall(gpu.setBackground, 0x000000)
-     pcall(gpu.setForeground, 0xFFFFFF)
-    else
-     pcall(gpu.setBackground, 0xFFFFFF)
-     pcall(gpu.setForeground, 0x000000)
+   local gpu = basicDraw()
+   if gpu then
+    for k, v in ipairs(controls) do
+     if k == control then
+      pcall(gpu.setBackground, 0x000000)
+      pcall(gpu.setForeground, 0xFFFFFF)
+     else
+      pcall(gpu.setBackground, 0xFFFFFF)
+      pcall(gpu.setForeground, 0x000000)
+     end
+     pcall(gpu.fill, v[3], v[4], v[5], 1, " ")
+     pcall(gpu.set, v[3], v[4], v[1]())
     end
-    pcall(gpu.fill, v[3], v[4], v[5], 1, " ")
-    pcall(gpu.set, v[3], v[4], v[1]())
    end
    -- event handling...
    local sig = {coroutine.yield()}
+   consoleEventHandler(sig)
    if sig[1] == "x.neo.sys.screens" then
     -- We need to reinit screens no matter what.
-    retrieveNssMonitor(nss)
+    retrieveNssMonitor(screen)
    end
    if sig[1] == "h.key_down" then
+    if sig[2] ~= lastKeyboard then
+     lastKeyboard = sig[2]
+     local nScreen = nssInst.getMonitorByKeyboard(lastKeyboard)
+     if nScreen and nScreen ~= screen then
+      neo.emergency("new primary:", nScreen)
+      retrieveNssMonitor(nScreen, screen)
+      basicDraw()
+     end
+    end
     if sig[4] == 15 then
      -- this makes sense in context
-     control = control % (#controls)
+     control = control % #controls
      control = control + 1
     else
      controls[control][2](sig[3])
@@ -277,24 +289,21 @@ local function finalPrompt()
    end
   end
  end
- local gpu = gpuG()
- rstfbDraw(gpu)
- advDraw(gpu)
+ helpActive, buttonsActive = false, false
  return safeModeActive
 end
 local function postPrompt()
- local gpu = gpuG()
  local nsm = neo.requestAccess("x.neo.sys.manage")
  local sh = "sys-everest"
- warnings = {"Unable to get sys-init.shell due to no NSM, using sys-everest"}
+ console = {"Unable to get shell (no sys-glacier)"}
  if nsm then
   sh = nsm.getSetting("sys-init.shell") or sh
-  warnings = {"Starting "  .. sh}
+  console = {"Starting "  .. sh}
  end
- rstfbDraw(gpu)
- advDraw(gpu)
+ basicDraw()
  performDisclaim()
  neo.executeAsync(sh)
+ -- There's a delay here to allow taking the monitor.
  sleep(0.5)
  for i = 1, 9 do
   local v = neo.requestAccess("x.neo.sys.session")
@@ -304,16 +313,16 @@ local function postPrompt()
   end
  end
  -- ...oh. hope this works then?
- warnings = {"That wasn't a shell. Try Safe Mode."}
- rstfbDraw(gpu)
- advDraw(gpu)
+ console = {"x.neo.sys.session not found, try Safe Mode."}
+ retrieveNssMonitor(screen)
+ basicDraw()
  sleep(1)
  shutdown(true)
 end
 
 local function initializeSystem()
  -- System has just booted, bristol is in charge
- -- Firstly, since we don't know scrcfg, let's work out something sensible.
+ -- No screen configuration, so just guess.
  -- Note that we should try to keep going with this if there's no reason to do otherwise.
  local gpuAc = neo.requestAccess("c.gpu")
  local screenAc = neo.requestAccess("c.screen")
@@ -340,55 +349,36 @@ local function initializeSystem()
   gW, gH = math.min(80, gW), math.min(25, gH)
   pcall(gpu.setResolution, gW, gH)
   pcall(gpu.setDepth, gpu.maxDepth()) -- can crash on OCEmu if done at the "wrong time"
-  pcall(gpu.setForeground, 0x000000)
  end
+ -- Setup the new GPU provider
+ gpuG = function () return gpu end
+ -- 
  local w = 1
- local steps = {
-  "sys-glacier", -- (Glacier : Config, Screen, Power)
-  -- Let that start, and system GC
-  "WAIT",
-  "WAIT",
-  "WAIT",
-  "WAIT",
-  -- Start services
-  "INJECT",
-  -- extra GC time
-  "WAIT",
-  "WAIT",
-  "WAIT",
-  "WAIT",
-  "WAIT",
-  "WAIT",
-  "WAIT"
- }
+ local steps = {"sys-glacier"}
+ for i = 1, 4 do table.insert(steps, "WAIT") end
+ table.insert(steps, "INJECT")
+ for i = 1, 8 do table.insert(steps, "WAIT") end
+
  local stepCount = #steps
 
  neo.scheduleTimer(os.uptime())
  while true do
   local ev = {coroutine.yield()}
-  if ev[1] == "k.procnew" then
-   table.insert(warnings, ev[2] .. "/" .. ev[3] .. " UP")
-  end
-  if ev[1] == "k.procdie" then
-   table.insert(warnings, ev[2] .. "/" .. ev[3] .. " DOWN")
-   table.insert(warnings, tostring(ev[4]))
-  end
+  consoleEventHandler(ev)
   if ev[1] == "k.timer" then
    if gpu then
-    pcall(gpu.setForeground, 0x000000)
+    local bg = 0xFFFFFF
     if w < stepCount then
      local n = math.floor((w / stepCount) * 255)
-     pcall(gpu.setBackground, (n * 0x10000) + (n * 0x100) + n)
-    else
-     pcall(gpu.setBackground, 0xFFFFFF)
+     bg = (n * 0x10000) + (n * 0x100) + n
     end
-    basicDraw(gpu)
+    basicDraw(bg)
    end
    if steps[w] then
     if steps[w] == "INJECT" then
      local nsm = neo.requestAccess("x.neo.sys.manage")
      if not nsm then
-      table.insert(warnings, "Settings not available for INJECT.")
+      table.insert(console, "Settings not available for INJECT.")
      else
       local nextstepsA = {}
       local nextstepsB = {}
@@ -412,10 +402,8 @@ local function initializeSystem()
     else
      local v, err = neo.executeAsync(steps[w])
      if not v then
-      neo.emergency(steps[w] .. " STF")
+      neo.emergency("failed start:", steps[w])
       neo.emergency(err)
-      table.insert(warnings, steps[w] .. " STF")
-      table.insert(warnings, err)
      end
     end
    else
@@ -437,12 +425,10 @@ end
 -- System initialized
 if finalPrompt() then
  -- Safe Mode
- local gpu = gpuG()
- rstfbDraw(gpu)
- basicDraw(gpu)
  local nsm = neo.requestAccess("x.neo.sys.manage")
  if nsm then
-  pcall(gpu.set, 2, 4, "Rebooting for Safe Mode...")
+  console = {"Rebooting for Safe Mode..."}
+  basicDraw()
   for _, v in ipairs(nsm.listSettings()) do
    if v ~= "password" then
     nsm.delSetting(v)
@@ -450,12 +436,14 @@ if finalPrompt() then
   end
  else
   -- assume sysconf.lua did something very bad
-  pcall(gpu.set, 2, 4, "No NSM. Wiping configuration completely.")
+  console = {"No NSM. Wiping configuration completely."}
   local fs = neo.requestAccess("c.filesystem")
   if not fs then
-   pcall(gpu.set, 2, 4, "Failed to get permission, you're doomed.")
+   table.insert(console, "Failed to get permission, you're doomed.")
+  else
+   fs.primary.remove("/data/sys-glacier/sysconf.lua")
   end
-  fs.primary.remove("/data/sys-glacier/sysconf.lua")
+  basicDraw()
  end
  -- Do not give anything a chance to alter the new configuration
  shutdownEmergency(true)
