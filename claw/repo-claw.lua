@@ -91,7 +91,7 @@ return {
  },
  ["app-kmt"] = {
   desc = "Line-terminal for MUDs & such",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
    "zzz-license-pd"
@@ -198,6 +198,23 @@ return {
   files = {
    "apps/app-nbcompose.lua",
    "docs/repoauthors/app-nbcompose"
+  },
+ },
+ ["app-tapedeck"] = {
+  desc = "Computronics Tape Drive interface",
+  v = 1,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/app-tapedeck.lua",
+   "docs/repoauthors/app-tapedeck"
   },
  },
  ["app-launchbar"] = {
