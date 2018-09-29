@@ -533,6 +533,9 @@ while ((not vmBaseCoroutine) or (coroutine.status(vmBaseCoroutine) ~= "dead")) a
      break
     elseif ev[3] == "line" then
      screensInt[id][2].line(ev[4])
+    elseif ev[3] == "clipboard" then
+     table.insert(signalStack, {ev[3], screensInt[id][1] .. "-kb", ev[4], "neo"})
+     break
     elseif ev[3] == "touch" or ev[3] == "drag" or ev[3] == "drop" or ev[3] == "scroll" then
      local x = ev[4]
      local y = ev[5]
