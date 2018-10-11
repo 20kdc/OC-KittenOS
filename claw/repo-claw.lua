@@ -126,7 +126,7 @@ return {
  },
  ["app-metamachine"] = {
   desc = "Virtual machine",
-  v = 3,
+  v = 4,
   deps = {
    "neo",
    "zzz-license-pd"
