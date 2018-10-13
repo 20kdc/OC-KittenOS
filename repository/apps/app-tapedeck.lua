@@ -5,12 +5,9 @@
 -- Added note: Computerized record discs aren't available, so it can't be called vinylscratch.
 -- Authors: 20kdc
 
-local tapes = {}
-for v in neo.requireAccess("c.tape_drive", "tapedrives").list() do
- table.insert(tapes, v)
-end
-
 local tapeRate = 4096
+
+local tapeAccess = neo.requireAccess("c.tape_drive", "tapedrives")
 
 local event = require("event")(neo)
 local neoux = require("neoux")(event, neo)
@@ -35,10 +32,11 @@ local updateTick
 
 local downloadCancelled = false
 
-local genPlayer -- used to return to player
+local genPlayer, genList -- used to return to player
 
-local function genDownloading(inst)
- local lclLabelText = {"downloading..."}
+local function genDownloading(downloadText, inst)
+ downloadCancelled = false
+ local lclLabelText = {downloadText}
  local lclLabel = neoux.tcrawview(1, 1, lclLabelText)
  local thr = {
   "/",
@@ -48,7 +46,7 @@ local function genDownloading(inst)
  }
  local thri = 0
  updateTick = function ()
-  lclLabelText[1] = "downloading... " .. (inst.getPosition() / (1024 * 1024)) .. "MB " .. thr[(thri % #thr) + 1]
+  lclLabelText[1] = downloadText .. " " .. (inst.getPosition() / (1024 * 1024)) .. "MB " .. thr[(thri % #thr) + 1]
   thri = thri + 1
   lclLabel.update(window)
  end
@@ -59,14 +57,18 @@ local function genDownloading(inst)
  end, 0xFFFFFF, 0)
 end
 
+local function maybeSleep()
+ if math.random() > 0.98 then
+  event.sleepTo(os.uptime() + 0.05)
+ end
+end
+
 local function doINetThing(inet, url, inst)
  inet = inet.list()()
  assert(inet, "No available card")
  inst.stop()
  inst.seek(-inst.getSize())
- downloadCancelled = false
- downloadPercent = 0
- window.reset(genDownloading(inst))
+ window.reset(genDownloading("downloading...", inst))
  local req = assert(inet.request(url))
  req.finishConnect()
  local tapePos = 0
@@ -130,16 +132,15 @@ genPlayer = function (inst)
   window.reset(genPlayer(inst))
  end
  -- Common code for reading/writing tapes.
- -- Note that it tries to allow playback to resume later.
  local function rwButton(mode)
   local fh = neoux.fileDialog(mode)
   if not fh then return end
   inst.stop()
-  local sp = inst.getPosition()
   local tapeSize = inst.getSize()
   inst.seek(-tapeSize)
   local tapePos = 0
-  while tapePos < tapeSize do
+  window.reset(genDownloading("working...", inst))
+  while tapePos < tapeSize and not downloadCancelled do
    if mode then
     local data = inst.read(neo.readBufSize)
     if not data then break end
@@ -155,15 +156,15 @@ genPlayer = function (inst)
     tapePos = tapePos + #data
     inst.write(data)
    end
+   maybeSleep()
   end
   inst.seek(-tapeSize)
-  inst.seek(sp)
   fh.close()
+  window.reset(genPlayer(inst))
  end
  local elems = {
   neoux.tcrawview(1, 1, {
-   "Label:",
-   "Contents:"
+   "Label:"
   }),
   neoux.tcfield(7, 1, 34, function (tx)
    if tx then
@@ -245,14 +246,55 @@ genPlayer = function (inst)
    pausePlay()
   end),
   -- R/W buttons
-  neoux.tcbutton(11, 2, "Read", function (w)
+  neoux.tcbutton(1, 2, "Read", function (w)
    rwButton(true)
   end),
-  neoux.tcbutton(17, 2, "Write", function (w)
+  neoux.tcbutton(7, 2, "Write", function (w)
    rwButton(false)
   end),
-  neoux.tcbutton(24, 2, "Write From Web", function (w)
+  neoux.tcbutton(14, 2, "Write Web", function (w)
    w.reset(genWeb(inst))
+  end),
+  neoux.tcbutton(25, 2, "Copy", function (w)
+   w.reset(genList(function (inst2)
+    local ts1 = inst.getSize()
+    inst.stop()
+    inst.seek(-ts1)
+    local ts2 = inst2.getSize()
+    inst2.stop()
+    inst2.seek(-ts2)
+    if ts1 < ts2 then
+     w.reset(genDownloading("copying...", inst))
+    else
+     w.reset(genDownloading("copying...", inst2))
+    end
+    local pos = 0
+    while pos < ts1 and pos < ts2 and not downloadCancelled do
+     local dat = inst.read(neo.readBufSize)
+     inst2.write(dat)
+     pos = pos + #dat
+     maybeSleep()
+    end
+    inst.seek(-ts1)
+    inst2.seek(-ts2)
+    inst2.setLabel((inst.getLabel() or "") .. " Copy")
+    w.reset(genPlayer(inst))
+   end))
+  end),
+  neoux.tcbutton(31, 2, "Erase", function (w)
+   local ts1 = inst.getSize()
+   inst.stop()
+   inst.seek(-ts1)
+   w.reset(genDownloading("erasing...", inst))
+   local blank = ("\x00"):rep(neo.readBufSize)
+   local pos = 0
+   while pos < ts1 and not downloadCancelled do
+    inst.write(blank)
+    pos = pos + #blank
+    maybeSleep()
+   end
+   inst.seek(-ts1)
+   w.reset(genPlayer(inst))
   end)
  }
  updateTick = function ()
@@ -277,14 +319,25 @@ genPlayer = function (inst)
   return n(a, ...)
  end
 end
-local function genList()
+genList = function(callback)
+ updateTick = nil
  local elems = {}
+ local tapes = {}
+ for v in tapeAccess.list() do
+  table.insert(tapes, v)
+ end
  for k, v in ipairs(tapes) do
-  elems[k] = neoux.tcbutton(1, k, v.address:sub(1, 38), function (w)
-   window.reset(genPlayer(v))
+  -- There's 38 chars available...
+  local desc1 = neoux.pad(v.address, 13, false, true)
+  if v.isReady() then
+   desc1 = desc1 .. ": " .. neoux.pad(v.getLabel() or "", 23, false, true)
+  else
+   desc1 = desc1 .. " (no tape)"
+  end
+  elems[k] = neoux.tcbutton(1, k, desc1, function (w)
+   callback(v)
   end)
  end
- tapes = nil
  return 40, #elems, nil, neoux.tcwindow(40, #elems, elems, function (w)
   running = false
   w.close()
@@ -292,7 +345,9 @@ local function genList()
 end
 
 
-window = neoux.create(genList())
+window = neoux.create(genList(function (v)
+ window.reset(genPlayer(v))
+end))
 
 -- Timer for time update
 local function tick()
