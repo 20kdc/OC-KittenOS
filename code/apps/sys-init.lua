@@ -65,6 +65,17 @@ local function basicDraw(bg)
  return gpu
 end
 
+local function consoleEventHandler(ev)
+ if ev[1] == "h._kosneo_syslog" then
+  local text = ""
+  for i = 3, #ev do
+   if i ~= 3 then text = text .. " " end
+   text = text .. tostring(ev[i])
+  end
+  table.insert(console, text)
+ end
+end
+
 -- Attempts to get an NSS monitor with a priority list of screens
 local function retrieveNssMonitor(...)
  local spc = {...}
@@ -130,17 +141,6 @@ local function retrieveNssMonitor(...)
     nssInst.disclaim(v[2])
    end
   end
- end
-end
-
-local function consoleEventHandler(ev)
- if ev[1] == "h._kosneo_syslog" then
-  local text = ""
-  for i = 3, #ev do
-   if i ~= 3 then text = text .. " " end
-   text = text .. tostring(ev[i])
-  end
-  table.insert(console, text)
  end
 end
 

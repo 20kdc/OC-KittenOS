@@ -26,7 +26,7 @@ return {
  },
  ["neo-init"] = {
   desc = "KittenOS NEO / sys-init (startup)",
-  v = 6,
+  v = 7,
   deps = {
    "neo",
    "neo-icecap",
