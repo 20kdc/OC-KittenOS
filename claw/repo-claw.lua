@@ -126,7 +126,7 @@ return {
  },
  ["app-metamachine"] = {
   desc = "Virtual machine",
-  v = 2,
+  v = 4,
   deps = {
    "neo",
    "zzz-license-pd"
@@ -202,7 +202,7 @@ return {
  },
  ["app-tapedeck"] = {
   desc = "Computronics Tape Drive interface",
-  v = 1,
+  v = 2,
   deps = {
    "neo",
    "zzz-license-pd"

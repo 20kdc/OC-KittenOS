@@ -65,6 +65,7 @@ local screensAll = {
 
 local tmpAddress = "k-tmpfs"
 local passthroughs = {}
+local fakeArch = _VERSION
 local components = {
  ["k-computer"] = {
   type = "computer",
@@ -83,6 +84,55 @@ local components = {
   getProgramLocations = function ()
    -- Entries of {"file", "lootdisk"}
    return {}
+  end,
+  getDeviceInfo = function ()
+   return {
+    ["k-computer"] = {
+     ["class"] = "system",
+     ["description"] = "Computer",
+     ["product"] = "Freeziflow Liquid-Cooling Unit",
+     ["vendor"] = "KDC Subsystems",
+     ["capacity"] = "10",
+     ["width"] = "",
+     ["clock"] = ""
+    },
+    ["k-processor"] = {
+     ["class"] = "processor",
+     ["description"] = "CPU",
+     ["product"] = "Celesti4 Quantum Computing System",
+     ["vendor"] = "KDC Subsystems",
+     ["capacity"] = "",
+     ["width"] = "",
+     ["clock"] = "9000"
+    },
+    ["k-memory"] = {
+     ["class"] = "memory",
+     ["description"] = "Memory bank",
+     ["product"] = "Lun4 Paging Subsystem",
+     ["vendor"] = "KDC Subsystems",
+     ["capacity"] = "",
+     ["width"] = "",
+     ["clock"] = "9000"
+    },
+    ["k-gpu"] = {
+     ["class"] = "display",
+     ["description"] = "Graphics controller",
+     ["product"] = "Tw1-l GPU Multiplexer",
+     ["vendor"] = "KDC Subsystems",
+     ["capacity"] = "8000",
+     ["width"] = "8",
+     ["clock"] = "9000"
+    }
+   }
+  end,
+  getArchitectures = function ()
+   return {fakeArch}
+  end,
+  setArchitecture = function (a)
+   fakeArch = a
+  end,
+  getArchitecture = function ()
+   return fakeArch
   end
  },
  ["k-gpu"] = libVGPU.newGPU(screensAll),
@@ -124,8 +174,8 @@ vmComponent = {
   return tk
  end,
  invoke = function (com, me, ...)
-  if not components[com] then error("no such component") end
-  if not components[com][me] then error("no such method") end
+  if not components[com] then error("no such component " .. com) end
+  if not components[com][me] then error("no such method " .. com .. "." .. me) end
   return components[com][me](...)
  end,
  proxy = function (com)
@@ -533,6 +583,9 @@ while ((not vmBaseCoroutine) or (coroutine.status(vmBaseCoroutine) ~= "dead")) a
      break
     elseif ev[3] == "line" then
      screensInt[id][2].line(ev[4])
+    elseif ev[3] == "clipboard" then
+     table.insert(signalStack, {ev[3], screensInt[id][1] .. "-kb", ev[4], "neo"})
+     break
     elseif ev[3] == "touch" or ev[3] == "drag" or ev[3] == "drop" or ev[3] == "scroll" then
      local x = ev[4]
      local y = ev[5]
