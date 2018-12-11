@@ -67,7 +67,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 3,
+  v = 7,
   deps = {
    "neo"
   },

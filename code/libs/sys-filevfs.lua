@@ -97,6 +97,15 @@ function getFsNode(fs, parent, fsc, path, mode)
      n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode) end}
     end
    end
+   if not dir then
+    table.insert(n, {"Copy", function ()
+     local rt, re = require("sys-filewrap").create(fsc, path, false)
+     if not rt then
+      return false, dialog("Open Error: " .. tostring(re), parent)
+     end
+     return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
+    end})
+   end
    if fscrw then
     if dir then
      table.insert(n, {"Mk. Directory", function ()
@@ -113,31 +122,6 @@ function getFsNode(fs, parent, fsc, path, mode)
         return nil, dialog("Done!", t)
        end
       }
-     end})
-    else
-     if mode ~= nil then
-      local tx = "Open"
-      if mode == true then
-       tx = "Save"
-      elseif mode == "append" then
-       tx = "Append"
-      end
-      if fscrw or mode == false then
-       table.insert(n, {tx, function ()
-        local rt, re = require("sys-filewrap").create(fsc, path, mode)
-        if not rt then
-         return false, dialog("Open Error: " .. tostring(re), parent)
-        end
-        return true, rt
-       end})
-      end
-     end
-     table.insert(n, {"Copy", function ()
-      local rt, re = require("sys-filewrap").create(fsc, path, false)
-      if not rt then
-       return false, dialog("Open Error: " .. tostring(re), parent)
-      end
-      return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
      end})
     end
     if path ~= "/" then
@@ -169,6 +153,23 @@ function getFsNode(fs, parent, fsc, path, mode)
         return false, t
        end
       }
+     end})
+    end
+   end
+   if (fscrw or mode == false) and mode ~= nil then
+    local tx = "Open"
+    if mode == true then
+     tx = "Save"
+    elseif mode == "append" then
+     tx = "Append"
+    end
+    if fscrw or mode == false then
+     table.insert(n, {tx, function ()
+      local rt, re = require("sys-filewrap").create(fsc, path, mode)
+      if not rt then
+       return false, dialog("Open Error: " .. tostring(re), parent)
+      end
+      return true, rt
      end})
     end
    end
