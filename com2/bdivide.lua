@@ -34,8 +34,12 @@ while blk ~= "" do
    break
   end
   local pm = p - 1
-  bestData = string.char(128 + lm, math.floor(pm / 256), pm % 256)
-  bestRes = pfx
+  local thirdByte = pm % 256
+  -- anti ']'-corruption helper
+  if thirdByte ~= 93 then
+   bestData = string.char(128 + lm, math.floor(pm / 256), thirdByte)
+   bestRes = pfx
+  end
  end
  -- ok, encode!
  io.write(bestData)

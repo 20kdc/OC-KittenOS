@@ -33,16 +33,19 @@ The most reliable reference on the
 
 Main functions:
 
- fileDialog(mode[, callback]):
+ neoux.fileDialog(mode, [callback],
+  [dfn]):
   Creates a file dialog, returning a
    file wrapper (see ul-fwrap) on
    success, or nil on failure.
-  If a callback is given, then nil is
+  If callback isn't nil, then nil is
    always returned immediately, and
-   the callback is called when the
-   dialog has shown.
+   the callback is called with the
+   result when the dialog is closed.
   mode is the mode used for the file,
    so see ul-fwrap for values.
+  dfn is, if not nil, the default
+   'implied' filename (as with Copy).
 
  neoux.create(w, h, title, callback):
   Creates a window,

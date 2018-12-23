@@ -109,9 +109,12 @@ donkonitDFProvider(function (pkg, pid, sendSig)
   end
  end
  return {
-  showFileDialogAsync = function (forWrite)
+  showFileDialogAsync = function (forWrite, defName)
    if not rawequal(forWrite, nil) then
     require("sys-filewrap").ensureMode(forWrite)
+   end
+   if not rawequal(defName, nil) then
+    defName = tostring(defName)
    end
    -- Not hooked into the event API, so can't safely interfere
    -- Thus, this is async and uses a return event.
@@ -119,7 +122,7 @@ donkonitDFProvider(function (pkg, pid, sendSig)
    neo.scheduleTimer(0)
    table.insert(todo, function ()
     -- sys-filedialog is yet another "library to control memory usage".
-    local closer = require("sys-filedialog")(event, nexus, function (res) openHandles[tag] = nil sendSig("filedialog", tag, res) end, neo.requireAccess("c.filesystem", "file managers"), pkg, forWrite)
+    local closer = require("sys-filedialog")(event, nexus, function (res) openHandles[tag] = nil sendSig("filedialog", tag, res) end, neo.requireAccess("c.filesystem", "file managers"), pkg, forWrite, defName)
     openHandles[tag] = closer
    end)
    return tag

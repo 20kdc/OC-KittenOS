@@ -3,7 +3,7 @@
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
-  v = 5,
+  v = 8,
   deps = {
   },
   dirs = {
@@ -67,7 +67,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 7,
+  v = 8,
   deps = {
    "neo"
   },
@@ -125,7 +125,7 @@ return {
  },
  ["neo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 6,
+  v = 8,
   deps = {
   },
   dirs = {

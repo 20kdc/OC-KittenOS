@@ -2,7 +2,7 @@
 -- No warranty is provided, implied or otherwise.
 
 -- just don't bother with proper indent here
-return function (event, nexus, retFunc, fs, pkg, mode)
+return function (event, nexus, retFunc, fs, pkg, mode, defName)
 
 local fmt = require("fmttext")
 local class = "manage"
@@ -141,7 +141,7 @@ end
 nexus.create(w, h, class .. " " .. pkg, function (w, ev, a, b, c)
  if not wnd then
   wnd = w
-  prepareNode(require("sys-filevfs")(fs, mode))
+  prepareNode(require("sys-filevfs")(fs, mode, defName))
  end
  if ev == "key" then
   key2(a, b, c)

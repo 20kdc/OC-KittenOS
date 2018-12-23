@@ -16,12 +16,12 @@ end
 
 local getFsNode, getRoot
 local setupCopyNode
-function setupCopyNode(parent, myRoot, op, complete, impliedName)
+function setupCopyNode(parent, myRoot, op, complete)
  local function handleResult(aRes, res)
   if aRes then
    return complete(res, true)
   else
-   return nil, setupCopyNode(parent, res, op, complete, impliedName)
+   return nil, setupCopyNode(parent, res, op, complete)
   end
  end
  return {
@@ -32,11 +32,6 @@ function setupCopyNode(parent, myRoot, op, complete, impliedName)
     complete(nil, false)
     return false, parent
    end})
-   if impliedName and myRoot.unknownAvailable then
-    table.insert(l, {"Implied: " .. impliedName, function ()
-     return handleResult(myRoot.selectUnknown(impliedName))
-    end})
-   end
    for _, v in ipairs(myRoot.list()) do
     table.insert(l, {v[1], function ()
      return handleResult(v[2]())
@@ -54,7 +49,7 @@ local function setupCopyVirtualEnvironment(fs, parent, fwrap, impliedName)
  if not fwrap then
   return false, dialog("Could not open source", parent)
  end
- local myRoot = getRoot(fs, true)
+ local myRoot = getRoot(fs, true, impliedName)
  -- Setup wrapping node
  return setupCopyNode(parent, myRoot, "Copy", function (fwrap2, intent)
   if not fwrap2 then
@@ -72,14 +67,22 @@ local function setupCopyVirtualEnvironment(fs, parent, fwrap, impliedName)
   fwrap.close()
   fwrap2.close()
   return false, dialog("Completed copy.", parent)
- end, impliedName)
+ end)
 end
-function getFsNode(fs, parent, fsc, path, mode)
+function getFsNode(fs, parent, fsc, path, mode, impliedName)
  local va = fsc.address:sub(1, 4)
  local fscrw = not fsc.isReadOnly()
  local dir = path:sub(#path, #path) == "/"
  local confirmedDel = false
  local t
+ local function selectUnknown(text)
+  -- Relies on text being nil if used in leaf node
+  local rt, re = require("sys-filewrap").create(fsc, path .. (text or ""), mode)
+  if not rt then
+   return false, dialog("Open Error: " .. tostring(re), parent)
+  end
+  return true, rt
+ end
  t = {
   name = ((dir and "DIR: ") or "FILE: ") .. va .. path,
   list = function ()
@@ -94,17 +97,8 @@ function getFsNode(fs, parent, fsc, path, mode)
      if fsc.isDirectory(fp) then
       nm = "D: " .. v
      end
-     n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode) end}
+     n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode, impliedName) end}
     end
-   end
-   if not dir then
-    table.insert(n, {"Copy", function ()
-     local rt, re = require("sys-filewrap").create(fsc, path, false)
-     if not rt then
-      return false, dialog("Open Error: " .. tostring(re), parent)
-     end
-     return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
-    end})
    end
    if fscrw then
     if dir then
@@ -156,37 +150,38 @@ function getFsNode(fs, parent, fsc, path, mode)
      end})
     end
    end
-   if (fscrw or mode == false) and mode ~= nil then
-    local tx = "Open"
-    if mode == true then
-     tx = "Save"
-    elseif mode == "append" then
-     tx = "Append"
+   if not dir then
+    table.insert(n, {"Copy", function ()
+     local rt, re = require("sys-filewrap").create(fsc, path, false)
+     if not rt then
+      return false, dialog("Open Error: " .. tostring(re), parent)
+     end
+     return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
+    end})
+    if (fscrw or mode == false) and (mode ~= nil) then
+     local tx = "Open"
+     if mode == true then
+      tx = "Save (Overwrite)"
+     elseif mode == "append" then
+      tx = "Append"
+     end
+     if fscrw or mode == false then
+      table.insert(n, {tx, selectUnknown})
+     end
     end
-    if fscrw or mode == false then
-     table.insert(n, {tx, function ()
-      local rt, re = require("sys-filewrap").create(fsc, path, mode)
-      if not rt then
-       return false, dialog("Open Error: " .. tostring(re), parent)
-      end
-      return true, rt
-     end})
-    end
+   elseif impliedName then
+    table.insert(n, {"Implied: " .. impliedName, function ()
+     return selectUnknown(impliedName)
+    end})
    end
    return n
   end,
   unknownAvailable = dir and (mode ~= nil) and ((mode == false) or fscrw),
-  selectUnknown = function (text)
-   local rt, re = require("sys-filewrap").create(fsc, path .. text, mode)
-   if not rt then
-    return false, dialog("Open Error: " .. tostring(re), parent)
-   end
-   return true, rt
-  end
+  selectUnknown = selectUnknown
  }
  return t
 end
-function getRoot(fs, mode)
+function getRoot(fs, mode, defName)
  local t
  t = {
   name = "DRVS:",
@@ -210,7 +205,7 @@ function getRoot(fs, mode)
      id = "RW " .. amount .. "% " .. mb .. "M " .. id
     end
     table.insert(l, {fsi.address:sub(1, 4) .. " " .. id, function ()
-     return nil, getFsNode(fs, t, fsi, "/", mode)
+     return nil, getFsNode(fs, t, fsi, "/", mode, defName)
     end})
    end
    return l

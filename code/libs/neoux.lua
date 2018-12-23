@@ -25,7 +25,7 @@ newNeoux = function (event, neo)
   end
  end)
  local neoux = {}
- neoux.fileDialog = function (forWrite, callback)
+ neoux.fileDialog = function (forWrite, callback, dfn)
   local sync = false
   local rtt = nil
   if not callback then
@@ -35,7 +35,7 @@ newNeoux = function (event, neo)
     rtt = rt
    end
   end
-  local tag = neo.requireAccess("x.neo.pub.base", "filedialog").showFileDialogAsync(forWrite)
+  local tag = neo.requireAccess("x.neo.pub.base", "filedialog").showFileDialogAsync(forWrite, dfn)
   local f
   f = function (_, fd, tg, re)
    if fd == "filedialog" then

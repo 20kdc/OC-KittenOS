@@ -15,10 +15,12 @@ The mode you give to it can be one of
  true: Write "wb"
  "append": Append "ab"
            May have some readability
-            propertiues - just in
+            properties - just in
             case, I've added 'read',
             but don't get your hopes
             up...
+ "access": Like read, but can be
+  re-opened for write.
 
 It returns two things - a table, that
  being the file object, and the
@@ -37,7 +39,9 @@ The possible functions are:
  [aw] write(data): Writes to the
   file.
  [arw] read(data): Reads from the
-  file.
+  file. data is the byte count.
+  However, "*a" is valid here.
+  Other string-based options are not.
 
 NOTE: Some of these may not actually
  work. They're just there as more or
