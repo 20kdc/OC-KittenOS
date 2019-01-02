@@ -22,7 +22,7 @@ local function actualPolicy(pkg, pid, perm, matchesSvc)
   return "allow"
  end
  -- These signals are harmless, though they identify HW (as does everything in OC...)
- if perm == "s.h.component_added" or perm == "s.h.component_removed" then
+ if perm == "s.h.component_added" or perm == "s.h.component_removed" or perm == "s.h.tablet_use" or perm == "c.tablet" then
   return "allow"
  end
  if matchesSvc("r.", pkg, perm) then

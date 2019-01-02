@@ -53,9 +53,9 @@ Here, "*" means that everything after
   program to start up.
 
 "k.computer": The "computer" table,
-               with wrapMeta applied,
-               pullSignal removed,
-               and also pushSignal.
+               with wrapMeta applied.
+The security check may be aliased to
+ the "k.root" permission in future.
 
 "k.kill": function (pid) to kill any
            process on the system.
