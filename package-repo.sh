@@ -5,8 +5,11 @@
 
 # Package repository using supplied inst.lua (use inst-gold.lua for repository branch)
 
-stat repobuild/data/app-claw && rm -rf repobuild
-mkdir repobuild
+# this is a guard check to avoid removing repobuild if it's blatantly
+#  not the actual repobuild directory (this is an rm -rf after all)
+stat repobuild/data/app-claw 1>/dev/null 2>/dev/null && rm -rf repobuild
+
+mkdir -p repobuild
 cp -r code/* repobuild/
 cp -r repository/* repobuild/
 cp $1 repobuild/

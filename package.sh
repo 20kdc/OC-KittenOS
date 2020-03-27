@@ -4,6 +4,7 @@
 # No warranty is provided, implied or otherwise.
 
 rm code/data/app-claw/*
+mkdir -p code/data/app-claw
 lua claw/clawconv.lua code/data/app-claw/ < claw/code-claw.lua > /dev/null
 rm code.tar
 # Hey, look behind you, there's nothing to see here.
