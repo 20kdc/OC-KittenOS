@@ -1,0 +1,26 @@
+The "x.svc.virtudev" service allows
+ the creation of virtual components.
+
+It provides two functions:
+
+install = function (proxy):
+Installs a virtual component.
+
+The provided proxy must have:
+ address: The address (string)
+ type: The type (string)
+
+It SHOULD have the 'slot' attribute
+ that proxies have.
+
+uninstall = function (address):
+Uninstalls a component that your
+ process installed by address.
+
+The service automatically starts
+ and stops as required.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
