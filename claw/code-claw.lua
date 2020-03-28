@@ -125,7 +125,7 @@ return {
  },
  ["neo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 8,
+  v = 9,
   deps = {
   },
   dirs = {
@@ -175,6 +175,20 @@ return {
    "apps/svc-app-claw-worker.lua"
   },
  },
+ ["svc-t"] = {
+  desc = "KittenOS NEO Terminal System",
+  v = 9,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/svc-t.lua",
+   "apps/app-luashell.lua"
+  },
+ },
  ["neo-meta"] = {
   desc = "KittenOS NEO: Use 'All' to install to other disks",
   v = 5,
@@ -190,6 +204,7 @@ return {
    "app-bmpview",
    "app-flash",
    "app-claw",
+   "svc-t",
    "app-wget"
   },
   dirs = {
