@@ -251,6 +251,24 @@ return {
    "docs/repoauthors/app-slaunch"
   },
  },
+ ["svc-virtudev"] = {
+  desc = "a clone of vcomponent",
+  v = 0,
+  deps = {
+   "neo",
+   "zzz-license-pd"
+  },
+  dirs = {
+   "apps",
+   "docs",
+   "docs/repoauthors"
+  },
+  files = {
+   "apps/svc-virtudev.lua",
+   "apps/app-vdrslamp.lua",
+   "docs/repoauthors/svc-virtudev"
+  },
+ },
  -- libraries
  ["lib-knbs"] = {
   desc = "NBS reader/writer library",
