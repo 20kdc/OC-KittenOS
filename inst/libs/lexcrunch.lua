@@ -1,13 +1,7 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- This program tries to crunch down the installer a bit further.
--- Specific target in mind, it has no support for string escapes.
--- It also does this:
-for i = 1, 3 do
- print(io.read())
-end
-
+-- This library helps in crunching down the installer a bit further.
 local sequences = {
  {"\n", " "},
  {"  ", " "},
@@ -77,12 +71,24 @@ local function pass(buffer)
  end
  return ob
 end
-local op = io.read("*a")
-while true do
- local np = pass(op)
- if np == op then
-  io.write(np)
-  return
+
+return function (op)
+ -- comment removal
+ while true do
+  local np = op:gsub("%-%-[^\n]*\n", " ")
+  np = np:gsub("%-%-[^\n]*$", "")
+  if np == op then
+   break
+  end
+  op = np
  end
- op = np
+ -- stripping
+ while true do
+  local np = pass(op)
+  if np == op then
+   return np
+  end
+  op = np
+ end
+ return op
 end
