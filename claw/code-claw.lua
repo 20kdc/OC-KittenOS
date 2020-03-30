@@ -3,7 +3,7 @@
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
-  v = 8,
+  v = 9,
   deps = {
   },
   dirs = {
@@ -18,6 +18,7 @@ return {
    "libs/serial.lua",
    "libs/fmttext.lua",
    "libs/neoux.lua",
+   "libs/lineedit.lua",
    "libs/braille.lua",
    "libs/bmp.lua",
    "libs/sys-filewrap.lua",
@@ -96,7 +97,7 @@ return {
  },
  ["neo-coreapps"] = {
   desc = "KittenOS NEO Core Apps",
-  v = 5,
+  v = 9,
   deps = {
    "neo"
   },

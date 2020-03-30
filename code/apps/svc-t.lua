@@ -32,6 +32,7 @@ local l15 = ""
 -- sW must not go below 3.
 -- sH must not go below 2.
 local sW, sH = 40, 15
+local cX = 1
 local windows = neo.requireAccess("x.neo.pub.window", "windows")
 local window = windows(sW, sH, title)
 
@@ -42,11 +43,12 @@ local function fmtLine(s)
 end
 
 local function line(i)
+ local l = console[i] or l15
+ l = require("lineedit").draw(sW, l, cX, i == sH)
  if i ~= sH then
-  assert(console[i], "console" .. i)
-  window.span(1, i, fmtLine(console[i]), 0xFFFFFF, 0)
+  window.span(1, i, l, 0xFFFFFF, 0)
  else
-  window.span(1, i, fmtLine(l15), 0, 0xFFFFFF)
+  window.span(1, i, l, 0, 0xFFFFFF)
  end
 end
 
@@ -73,22 +75,6 @@ end
 
 local sendSigs = {}
 
-local function submitLine()
- for _, v in pairs(sendSigs) do
-  v("line", l15)
- end
- l15 = ""
- line(sH)
-end
-
-local function clipEnt(tx)
- tx = tx:gsub("\r", "")
- local ci = tx:find("\n") or (#tx + 1)
- tx = tx:sub(1, ci - 1)
- l15 = l15 .. tx
- line(sH)
-end
-
 do
  tReg(function (_, pid, sendSig)
   sendSigs[pid] = sendSig
@@ -112,6 +98,19 @@ do
  end
 end
 
+local function key(a, c)
+ local lT, lC, lX = require("lineedit").key(a, c, l15, cX)
+ l15 = lT or l15
+ cX = lC or cX
+ if lX == "nl" then
+  for _, v in pairs(sendSigs) do
+   v("line", l15)
+  end
+  l15 = ""
+  cX = 1
+ end
+end
+
 local control = false
 while not closeNow do
  local e = {coroutine.yield()}
@@ -121,19 +120,22 @@ while not closeNow do
   if e[3] == "close" then
    break
   elseif e[3] == "clipboard" then
-   clipEnt(e[4])
+   for i = 1, unicode.len(e[4]) do
+    local c = unicode.sub(e[4], i, i)
+    if c ~= "\r" then
+     if c == "\n" then
+      c = "\r"
+     end
+     key(c, 0)
+    end
+   end
+   line(sH)
   elseif e[3] == "key" then
    if e[5] == 29 or e[5] == 157 then
     control = e[6]
    elseif e[6] then
     if not control then
-     if e[4] == 8 or e[4] == 127 then
-      l15 = unicode.sub(l15, 1, -2)
-     elseif e[4] == 13 then
-      submitLine()
-     elseif e[4] >= 32 then
-      l15 = l15 .. unicode.char(e[4])
-     end
+     key(e[4] ~= 0 and unicode.char(e[4]), e[5])
      line(sH)
     elseif e[5] == 203 and sW > 8 then
      sW = sW - 1
