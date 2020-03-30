@@ -611,57 +611,44 @@ local function key(ku, ka, kc, down)
  lIM = lin
 
  local focus = surfaces[1]
- if kc == 29 then isCtrDown = down end
- if kc == 56 then isAltDown = down end
- if isAltDown then
-  if ka == 120 then
-   if focus and down then ofsMSurface(focus, 1) end return
-  end
-  if kc == 200 then
-   if focus and down then ofsSurface(focus, 0, -1) end return
-  end
-  if kc == 208 then
-   if focus and down then ofsSurface(focus, 0, 1) end return
-  end
-  if kc == 203 then
-   if focus and down then ofsSurface(focus, -1, 0) end return
-  end
-  if kc == 205 then
-   if focus and down then ofsSurface(focus, 1, 0) end return
-  end
-  if ka == 122 then
-   if focus and down then
-    local n = table.remove(surfaces, 1)
-    table.insert(surfaces, n)
-    changeFocus(n)
-   end return
-  end
-  if ka == 97 then
-   if not down then
-    isAltDown = false
-   end
-   return
-  end
-  if ka == 3 or ka == 99 then
-   if down then
-    if isCtrDown then
-     error("User-authorized Everest crash.")
-    else
-     if focus then
-      focus[6](focus[8], "close")
-     end
-    end
-   end
-   return
-  end
-  if ka == 13 then
-   if down then
-    startLauncher()
-   end
-   return
-  end
+ if kc == 29 then
+  isCtrDown = down
+ elseif kc == 56 then
+  isAltDown = down
  end
- if focus then
+ if isAltDown and kc == 122 then
+  if focus and down then
+   local n = table.remove(surfaces, 1)
+   table.insert(surfaces, n)
+   changeFocus(n)
+  end
+ elseif isAltDown and kc == 200 then
+  if focus and down then ofsSurface(focus, 0, -1) end
+ elseif isAltDown and kc == 208 then
+  if focus and down then ofsSurface(focus, 0, 1) end
+ elseif isAltDown and kc == 203 then
+  if focus and down then ofsSurface(focus, -1, 0) end
+ elseif isAltDown and kc == 205 then
+  if focus and down then ofsSurface(focus, 1, 0) end
+ elseif isAltDown and ka == 120 then
+  if focus and down then ofsMSurface(focus, 1) end
+ elseif isAltDown and ka == 97 then
+  if not down then
+   isAltDown = false
+  end
+ elseif isAltDown and (ka == 3 or ka == 99) then
+  if down then
+   if isCtrDown then
+    error("User-authorized Everest crash.")
+   elseif focus then
+    focus[6](focus[8], "close")
+   end
+  end
+ elseif isAltDown and ka == 13 then
+  if down then
+   startLauncher()
+  end
+ elseif focus then
   if kc ~= 56 then
    lIM = focus[1]
   end

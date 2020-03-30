@@ -74,10 +74,6 @@ local function bdivide(blk, p)
  local windowSize = 0x10000
  local windowData = ("\x00"):rep(windowSize)
 
- local function crop(data)
-  windowData = (windowData .. data):sub(-windowSize)
- end
-
  while blk ~= "" do
   p(blk)
   local bestData = blk:sub(1, 1)
@@ -102,7 +98,8 @@ local function bdivide(blk, p)
   end
   -- ok, encode!
   out = out .. bestData
-  crop(bestRes)
+  -- crop window
+  windowData = (windowData .. bestRes):sub(-windowSize)
   blk = blk:sub(#bestRes + 1)
  end
  return out
