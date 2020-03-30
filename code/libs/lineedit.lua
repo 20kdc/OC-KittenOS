@@ -3,13 +3,13 @@
 
 return {
  -- note: everything must already be unicode.safeTextFormat'd
- draw = function (sW, line, cursorX, cursorOn, rX)
+ draw = function (sW, line, cursorX, rX)
   -- if no camera, provide a default
-  rX = rX or math.max(1, cursorX - math.floor(sW * 2 / 3))
+  rX = rX or math.max(1, (cursorX or 1) - math.floor(sW * 2 / 3))
   -- transform into area-relative
   local tl = unicode.sub(line, rX, rX + sW - 1)
   -- inject cursor
-  if cursorOn then
+  if cursorX then
    cursorX = (cursorX - rX) + 1
    if cursorX >= 1 then
     if cursorX <= sW then
@@ -51,8 +51,8 @@ return {
    return nil, unicode.len(line) + 1
   elseif ks == "\8" or kc == 211 then -- del
    if cursorX == 1 then
-    -- weld prev line
-    return nil, nil, "wpl"
+    -- weld prev
+    return nil, nil, "w<"
    else
     cS = unicode.sub(cS, 1, unicode.len(cS) - 1)
     return cS .. cE, cursorX - 1

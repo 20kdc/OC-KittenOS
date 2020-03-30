@@ -43,8 +43,9 @@ local function fmtLine(s)
 end
 
 local function line(i)
- local l = console[i] or l15
- l = require("lineedit").draw(sW, l, cX, i == sH)
+ local l, c = console[i] or l15
+ l, c = unicode.safeTextFormat(l, cX)
+ l = require("lineedit").draw(sW, l, i == sH and c)
  if i ~= sH then
   window.span(1, i, l, 0xFFFFFF, 0)
  else

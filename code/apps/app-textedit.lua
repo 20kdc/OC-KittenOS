@@ -131,7 +131,7 @@ local function getline(y)
   return ("¬"):rep(sW)
  end
  line = unicode.safeTextFormat(line)
- return lineEdit.draw(sW, line, cursorXP, rY == cursorY, rX)
+ return lineEdit.draw(sW, line, rY == cursorY and cursorXP, rX)
 end
 local function delLine()
  local contents = lines[cursorY]
@@ -268,7 +268,7 @@ local function key(ks, kc, down)
  elseif lX == "l>" and cursorY < #lines then
   cursorY = cursorY + 1
   cursorX = 1
- elseif lX == "wpl" and cursorY ~= 1 then
+ elseif lX == "w<" and cursorY ~= 1 then
   local l = table.remove(lines, cursorY)
   cursorY = cursorY - 1
   cursorX = unicode.len(lines[cursorY]) + 1

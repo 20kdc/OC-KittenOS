@@ -1,0 +1,93 @@
+The "svc-t" program / "x.svc.t"
+ permission makes up the terminal
+ subsystem for KittenOS NEO.
+
+ --- THEORETICAL TERMINALS MODEL ---
+
+The theoretical model for terminals
+ in KittenOS NEO is that of a stack
+ of processes controlling a player's
+ connection to a MUD, where text is
+ provided to the server and to the
+ player in a line-by-line format,
+ with no "flow control"/ttyattrs.
+
+A process starting another process
+ connected to the same terminal is
+ advised to wait for that process to
+ die before continuing in terminal
+ activities, unless some sort of
+ 'in-band notification' functionality
+ is intended.
+
+The controlling process is whichever
+ process is supposed to be accepting
+ user input. This is contextual, and
+ there is no mechanism to control
+ this explicitly.
+
+The controlling process should show
+ text in response to any user input,
+ or at least provide some form of
+ acknowledgement that user input has
+ been received.
+
+User input IS NOT automatically
+ echoed by the terminal.
+
+  --- ACTUAL USAGE OF TERMINALS ---
+
+Access control on terminals is looser
+ than for most permissions, as it has
+ to be able to be 'sublet' in some
+ cases, including events.
+
+A terminal program is given a string
+ argument for the ID of the terminal
+ to connect to.
+
+A terminal always has an ID beginning
+ with "x.svc.t/". ALWAYS CHECK THIS.
+
+Requiring the responsible access
+ connects to the terminal. All
+ terminal programs SHOULD check for
+ the death of their parent terminal
+ (via the k.procdie event) and
+ self-destruct accordingly.
+
+A program may start svc-t directly.
+
+In this case, it must pass a function
+ (resTbl) and may pass a title.
+
+When the terminal has shown, the
+ function provided is called with a
+ table as follows:
+
+access = "x.svc.t/<...>"
+close = function (): close terminal
+
+The k.kill permission and the close
+ function are the only ways for a
+ program to kill a terminal, and the
+ close function is only given to the
+ creating process.
+
+In either case, when the access has
+ been acquired, the following API is
+ presented:
+
+id = "x.svc.t/<...>"
+pid = <The terminal's PID.>
+line = function (text): Shows a line.
+
+When the user sends a line, an event
+ of: <id>, "line", <text>
+ is provided.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

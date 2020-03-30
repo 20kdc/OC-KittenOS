@@ -383,7 +383,7 @@ newNeoux = function (event, neo)
     local t, e, r = textprop(), require("lineedit")
     p = e.clamp(t, p)
     t, r = unicode.safeTextFormat(t, p)
-    window.span(x, y, "[" .. e.draw(w - 2, t, r, selected) .. "]", bg, fg)
+    window.span(x, y, "[" .. e.draw(w - 2, t, selected and r) .. "]", bg, fg)
    end
   }
  end

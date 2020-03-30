@@ -24,7 +24,7 @@ return {
  },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
-  v = 8,
+  v = 9,
   deps = {
    "zzz-license-pd"
   },
@@ -43,6 +43,7 @@ return {
    "docs/us-setti",
    "docs/us-evrst",
    "docs/us-clawf",
+   "docs/us-termi",
    "docs/ul-seria",
    "docs/ul-fwrap",
    "docs/ul-event",
@@ -50,6 +51,7 @@ return {
    "docs/ul-neoux",
    "docs/ul-brail",
    "docs/ul-bmp__",
+   "docs/ul-linee",
    "docs/gp-pedan",
    "docs/repoauthors/neo-docs"
   },
