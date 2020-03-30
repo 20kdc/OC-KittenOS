@@ -3,6 +3,7 @@
 
 t = ""
 function L(d)
+ if not d then return end
  t = t .. d
  while #t >= 512 do
   M(t:sub(1, 512))

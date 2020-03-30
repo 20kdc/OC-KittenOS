@@ -3,16 +3,12 @@
 
 -- PREPROC (r9 edition): preprocess input to be 7-bit
 
+local frw = require("libs.frw")
+
 local
 -- SHARED WITH DECOMPRESSION ENGINE
 function p(x, y)
  if x == 126 then
-  if y >= 32 then
-   return ({
-    -- Before adding to this, check how installer size is changed.
-    "\x7E", "\x7F"
-   })[y - 31], 3
-  end
   return string.char(y), 3
  elseif x == 127 then
   return string.char(128 + y), 3
@@ -23,7 +19,7 @@ function p(x, y)
  elseif x == 30 then
   return "\x00", 2
  end
- return string.char(("enart"):byte(x % 5 + 1), ("ndtelh"):byte(math.floor(x / 5) + 1)), 2
+ return string.char(("enart"):byte(x % 5 + 1), ("ndtelh"):byte((x - x % 5) / 5 + 1)), 2
 end
 
 local preprocParts = {}
@@ -45,9 +41,10 @@ for i = 0, 127 do
  end
 end
 
-local function preproc(blk)
+local function preproc(blk, p)
  local out = ""
  while blk ~= "" do
+  p(blk)
   local len = math.min(preprocMaxLen, #blk)
   while len > 0 do
    local seg = blk:sub(1, len)
@@ -71,7 +68,7 @@ end
 -- Position is where in the window it was found, minus 1.
 -- windowSize must be the same between the encoder and decoder,
 --  and is the amount of data preserved after cropping.
-local function bdivide(blk)
+local function bdivide(blk, p)
  local out = ""
 
  local windowSize = 0x10000
@@ -82,6 +79,7 @@ local function bdivide(blk)
  end
 
  while blk ~= "" do
+  p(blk)
   local bestData = blk:sub(1, 1)
   local bestRes = bestData
   for lm = 0, 127 do
@@ -111,8 +109,19 @@ local function bdivide(blk)
 end
 
 return function (data)
- data = preproc(data)
- io.stderr:write("---\n")
- data = bdivide(data)
- return data
+ io.stderr:write("preproc: ")
+ local pi = frw.progress()
+ local function p(b)
+  pi(1 - (#b / #data))
+ end
+ data = preproc(data, p)
+ io.stderr:write("\nbdivide: ")
+ pi = frw.progress()
+ data = bdivide(data, p)
+ io.stderr:write("\n")
+ -- These are used to pad the stream to flush the pipeline.
+ -- It's cheaper than the required code.
+ -- 1 byte of buffer for preproc,
+ -- 2 bytes of buffer for bdivide.
+ return data .. ("\x00"):rep(3)
 end

@@ -13,15 +13,10 @@ cd code
 tar --mtime=0 --owner=gray:0 --group=mann:0 -cf ../code.tar .
 cd ..
 
-# Solely for ensuring that a -gold.lua file can be checked before being pushed to repository.
-echo -n "-- KOSNEO inst. " > inst.lua
-git status --porcelain=2 --branch | grep branch.oid >> inst.lua
-echo "-- This is released into the public domain." >> inst.lua
-echo "-- No warranty is provided, implied or otherwise." >> inst.lua
-
 # The Installer Creator
 cd inst
-lua build.lua $1 ../code.tar >> ../inst.lua
+lua build.lua $1 ../code.tar `git status --porcelain=2 --branch | grep branch.oid | grep -E -o "[0-9a-f]*$" -` > ../inst.lua
+lua verify.lua $1 ../code.tar
 cd ..
 
 # Common Repository Setup Code

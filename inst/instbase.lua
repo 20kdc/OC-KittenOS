@@ -33,7 +33,7 @@
 -- Z: component: filesystem
 B = computer
 C = component
-assert(C, "To install, please copy as init.lua to a blank disk or a system to update, then remove all other disks and reboot.")
+assert(C, "KittenOS NEO installer: Copy as init.lua to the target disk, then remove other disks & reboot.")
 
 X = C.list("screen", true)()
 Y = C.list("gpu", true)()
@@ -113,12 +113,6 @@ end
 
 while true do
  A = Z.read(P, 64)
- if not A then
-  L()
-  -- IF WE GET HERE,
-  -- YOU BROKE SOMETHING!
-  A()
- end
  D = ""
  for i = 1, #A do
   -- Read-in state machine

@@ -30,7 +30,10 @@ laboratory/*/*/*/*
 inst.lua
 # Available as the respective release
 inst-gold.lua
-inst/code.tar.bd
+# Compression stuff
+inst/*/output.bin
+inst/*/vfyerr.bin
+# internal
 upldr.sh
 upldr-dev.sh
 upldr-gold.sh
