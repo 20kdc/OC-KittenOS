@@ -31,6 +31,7 @@ return {
  key = function (ks, kc, line, cursorX)
   local cS = unicode.sub(line, 1, cursorX - 1)
   local cE = unicode.sub(line, cursorX)
+  local ll = unicode.len(line)
   if kc == 203 then -- navi <
    if cursorX > 1 then
     return nil, cursorX - 1
@@ -39,7 +40,6 @@ return {
     return nil, nil, "l<"
    end
   elseif kc == 205 then -- navi >
-   local ll = unicode.len(line)
    if cursorX > ll then
     -- cline overflow
     return nil, nil, "l>"
@@ -49,14 +49,18 @@ return {
    return nil, 1
   elseif kc == 207 then -- end
    return nil, unicode.len(line) + 1
-  elseif ks == "\8" or kc == 211 then -- del
+  elseif ks == "\8" then -- del
    if cursorX == 1 then
     -- weld prev
     return nil, nil, "w<"
    else
-    cS = unicode.sub(cS, 1, unicode.len(cS) - 1)
-    return cS .. cE, cursorX - 1
+    return unicode.sub(cS, 1, unicode.len(cS) - 1) .. cE, cursorX - 1
    end
+  elseif kc == 211 then -- del
+   if cursorX > ll then
+    return nil, nil, "w>"
+   end
+   return cS .. unicode.sub(cE, 2)
   elseif ks then -- standard letters
    if ks == "\r" then
     -- new line

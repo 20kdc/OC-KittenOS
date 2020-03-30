@@ -600,13 +600,16 @@ end
 local isAltDown = false
 local isCtrDown = false
 local function key(ku, ka, kc, down)
- local ku = screens.getMonitorByKeyboard(ku)
- if not ku then return end
+ local ku, lin = screens.getMonitorByKeyboard(ku)
  for k, v in ipairs(monitors) do
-  if v[2] == mu then
-   lIM = k
+  if ku and v[2] == ku then
+   lin = k
+   break
   end
  end
+ if not lin then return end
+ lIM = lin
+
  local focus = surfaces[1]
  if kc == 29 then isCtrDown = down end
  if kc == 56 then isAltDown = down end

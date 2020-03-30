@@ -65,6 +65,10 @@ The following extended actions exist:
  the previous line, and the cursor
  should be placed at the weld point.
 
+"w>": This line should be welded to
+ the next line, and the cursor
+ should be placed at the weld point.
+
 "nl": The Enter button was pressed.
 
 -- This is released into

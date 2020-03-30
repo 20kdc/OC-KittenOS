@@ -273,6 +273,10 @@ local function key(ks, kc, down)
   cursorY = cursorY - 1
   cursorX = unicode.len(lines[cursorY]) + 1
   lines[cursorY] = lines[cursorY] .. l
+ elseif lX == "w>" and cursorY ~= #lines then
+  local l = table.remove(lines, cursorY)
+  cursorX = unicode.len(l) + 1
+  lines[cursorY] = l .. lines[cursorY]
  elseif lX == "nl" then
   local line = lines[cursorY]
   lines[cursorY] = unicode.sub(line, 1, cursorX - 1)
