@@ -103,10 +103,12 @@ $}
 
 $dfWindow = ("\x00"):rep(2^16)
 $dfPushBuf = ""
-function $dfOutput($a0)
- $dfWindow = ($dfWindow .. $a0):sub(-2^16)
- $dfPushBuf = $dfPushBuf .. $a0
+${
+function $dfOutput($L|lData)
+ $dfWindow = ($dfWindow .. $lData):sub(-2^16)
+ $dfPushBuf = $dfPushBuf .. $lData
 end
+$}
 
 $dfBittblLength = {
  0, 0, 0, 0, 0, 0, 0, 0,
@@ -157,116 +159,126 @@ $}
 
 -- Huffman Dynamics --
 
-function $dfReadHuffmanDynamicSubcodes(distlens, dst, metatree)
- local loopVar = 0
- distlens[-1] = 0
- while loopVar < dst do
-  local instr = $dfReadHuffmanSymbol(metatree)
-  if instr < 16 then
-   distlens[loopVar] = instr
-   loopVar = loopVar + 1
-  elseif instr == 16 then
-   for loopVar2 = 1, 3 + $dfGetIntField(2) do
-    distlens[loopVar] = distlens[loopVar - 1]
-    loopVar = loopVar + 1
-    if loopVar > dst then error("Overflow") end
+${
+function $dfReadHuffmanDynamicSubcodes($L|lDistLens, $L|lCount, $L|lMetatree, $L|lCode)
+ -- used a lot: $L|lI
+ $lCode = 0
+ $lDistLens[-1] = 0
+ while $lCode < $lCount do
+  -- use a tmpglb since it's just for the chain
+  $L|lInstr = $dfReadHuffmanSymbol($lMetatree)
+  if $lInstr < 16 then
+   $lDistLens[$lCode] = $lInstr
+   $lCode = $lCode + 1
+  elseif $lInstr == 16 then
+   for $lI = 1, 3 + $dfGetIntField(2) do
+    $lDistLens[$lCode] = $lDistLens[$lCode - 1]
+    $lCode = $lCode + 1
+    assert($lCode <= $lCount, "sc.over")
    end
-  elseif instr == 17 then
-   for loopVar2 = 1, 3 + $dfGetIntField(3) do
-    distlens[loopVar] = 0
-    loopVar = loopVar + 1
-    if loopVar > dst then error("Overflow") end
+  elseif $lInstr == 17 then
+   for $lI = 1, 3 + $dfGetIntField(3) do
+    $lDistLens[$lCode] = 0
+    $lCode = $lCode + 1
+    assert($lCode <= $lCount, "sc.over")
    end
-  elseif instr == 18 then
-   for loopVar2 = 1, 11 + $dfGetIntField(7) do
-    distlens[loopVar] = 0
-    loopVar = loopVar + 1
-    if loopVar > dst then error("Overflow") end
+  elseif $lInstr == 18 then
+   for $lI = 1, 11 + $dfGetIntField(7) do
+    $lDistLens[$lCode] = 0
+    $lCode = $lCode + 1
+    assert($lCode <= $lCount, "sc.over")
    end
   else
-   error("unable to handle cl instruction " .. instr)
+   -- is this even possible?
+   error("sc.unki")
   end
  end
- distlens[-1] = nil
+ $lDistLens[-1] = nil
+ return $lDistLens
 end
+$}
 
-function $dfReadHuffmanDynamic()
- local metalensi = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15}
- local metalens = {}
- for loopVar = 0, 18 do metalens[loopVar] = 0 end
- local ltl = $dfGetIntField(5) + 257
- local dst = $dfGetIntField(5) + 1
- local cln = $dfGetIntField(4) + 4
- for loopVar = 1, cln do
-  metalens[metalensi[loopVar]] = $dfGetIntField(3)
+$dfDynamicMetalensScramble = {16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15}
+
+${
+function $dfReadHuffmanDynamic($L|lState, $L|lLiteralSize, $L|lDistanceSize, $L|lDistanceLens)
+ -- $L|lI loop variable, used all over
+ -- to save on locals, this is reused
+ -- as metalens
+ $lState = {}
+ for $lI = 0, 18 do $lState[$lI] = 0 end
+ $lLiteralSize = $dfGetIntField(5) + 257
+ $lDistanceSize = $dfGetIntField(5) + 1
+ for $lI = 1, $dfGetIntField(4) + 4 do
+  $lState[$dfDynamicMetalensScramble[$lI]] = $dfGetIntField(3)
  end
- local metatree = $dfGenHuffmanTree(metalens)
- local alllens = {}
- $dfReadHuffmanDynamicSubcodes(alllens, ltl + dst, metatree)
- local litlens = {}
- local distlens = {}
- for loopVar = 0, ltl - 1 do
-  litlens[loopVar] = alllens[loopVar]
+ -- as metatree
+ $lState = $dfGenHuffmanTree($lState)
+ -- as concatenated subcodes
+ $lState = $dfReadHuffmanDynamicSubcodes({}, $lLiteralSize + $lDistanceSize, $lState)
+ -- The distance lengths are removed from lState,
+ --  while being added to lDistanceLens
+ -- The result is completion
+ $lDistanceLens = {}
+ for $lI = 0, $lDistanceSize - 1 do
+  $lDistanceLens[$lI] = $lState[$lLiteralSize + $lI]
+  $lState[$lLiteralSize + $lI] = nil
  end
- for loopVar = 0, dst - 1 do
-  distlens[loopVar] = alllens[ltl + loopVar]
- end
- return $dfGenHuffmanTree(litlens), $dfGenHuffmanTree(distlens)
+ return $dfGenHuffmanTree($lState), $dfGenHuffmanTree($lDistanceLens)
 end
+$}
 
 -- Main Thread --
 
-$dfThread = coroutine.create(function ($a0, $a1)
+${
+$dfThread = coroutine.create(function ($L|lFinal, $L|lLitLen)
  while true do
-  $a0 = coroutine.yield()
-  $NT|dfBlockType
-  $dfBlockType = $dfGetIntField(2)
-  if $dfBlockType == 0 then
+  $lFinal = coroutine.yield()
+  $L|lBlockType = $dfGetIntField(2)
+  if $lBlockType == 0 then
    -- literal
    $dfGetIntField($dfAlignToByteRemaining)
-   $a1 = $dfGetIntField(16)
+   $lLitLen = $dfGetIntField(16)
    -- this is weird, ignore it
    $dfGetIntField(16)
-   for loopVar = 1, $a1 do
+   for $L|lI = 1, $lLitLen do
     $dfOutput(string.char($dfGetIntField(8)))
    end
-  elseif $dfBlockType == 1 then
+  elseif $lBlockType == 1 then
    -- fixed Huffman
    $dfReadBlockBody($dfFixedLit, $dfFixedDst)
-  elseif $dfBlockType == 2 then
+  elseif $lBlockType == 2 then
    -- dynamic Huffman
    $dfReadBlockBody($dfReadHuffmanDynamic())
   else
    error("b3")
   end
-  $DT|dfBlockType
-  while $a0 do
+  while $lFinal do
    coroutine.yield()
   end
  end
 end)
+$}
 
 -- The Outer Engine --
 
 coroutine.resume($dfThread)
-function $engineInput($a0, $a1)
- $NT|dfForLoopVar
- $NT|dfForLoopVar2
- for $dfForLoopVar = 1, #$a0 do
-  $a1 = $a0:byte($dfForLoopVar)
+${
+function $engineInput($L|lData, $L|lByte)
+ for $L|lI = 1, #$lData do
+  $lByte = $lData:byte($lI)
   $dfAlignToByteRemaining = 8
   while $dfAlignToByteRemaining > 0 do
    -- If we're providing the first bit (v = 8), then there are 7 bits remaining.
    -- So this hits 0 when the *next* 8 yields will provide an as-is byte.
    $dfAlignToByteRemaining = $dfAlignToByteRemaining - 1
-   assert(coroutine.resume($dfThread, $a1 % 2 == 1))
-   $a1 = math.floor($a1 / 2)
+   assert(coroutine.resume($dfThread, $lByte % 2 == 1))
+   $lByte = math.floor($lByte / 2)
   end
  end
- $DT|dfForLoopVar2
- $DT|dfForLoopVar
  -- flush prepared buffer
  $engineOutput($dfPushBuf)
  $dfPushBuf = ""
 end
+$}
 
