@@ -99,11 +99,46 @@ do
  end
 end
 
+-- This decides the history buffer size.
+local history = {
+ "", "", "", ""
+}
+
+local function cycleHistoryUp()
+ local backupFirst = history[1]
+ for i = 1, #history - 1 do
+  history[i] = history[i + 1]
+ end
+ history[#history] = backupFirst
+end
+local function cycleHistoryDown()
+ local backup = history[1]
+ for i = 2, #history do
+  backup, history[i] = history[i], backup
+ end
+ history[1] = backup
+end
+
 local function key(a, c)
+ if c == 200 then
+  -- History cursor up (history down)
+  l15 = history[#history]
+  cX = 1
+  cycleHistoryDown()
+  return
+ elseif c == 208 then
+  -- History cursor down (history up)
+  l15 = history[#history]
+  cX = 1
+  cycleHistoryUp()
+  return
+ end
  local lT, lC, lX = require("lineedit").key(a, c, l15, cX)
  l15 = lT or l15
  cX = lC or cX
  if lX == "nl" then
+  cycleHistoryUp()
+  history[#history] = l15
   for _, v in pairs(sendSigs) do
    v("line", l15)
   end
