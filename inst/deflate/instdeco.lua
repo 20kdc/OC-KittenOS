@@ -9,21 +9,15 @@
 --  set to 8 in the outer engine
 
 function $dfGetIntField($a0, $a1)
- $NTdfForLoopVar
+ $NT|dfForLoopVar
  $a1 = 0
  for $dfForLoopVar = 1, $a0 do
   if coroutine.yield() then
    $a1 = $a1 + 2^($dfForLoopVar - 1)
   end
  end
- $DTdfForLoopVar
+ $DT|dfForLoopVar
  return $a1
-end
-
-function $dfAlignToByte()
- while $dfAlignToByteRemaining do
-  coroutine.yield()
- end
 end
 
 -- Huffman Core --
@@ -75,8 +69,8 @@ function $dfGenHuffmanTree($a0)
 end
 
 -- DEFLATE fixed trees --
-$NTdfFixedTL
-$NTdfFlv
+$NT|dfFixedTL
+$NT|dfFlv
 $dfFixedTL = {}
 for $dfFlv = 0, 143 do $dfFixedTL[$dfFlv] = 8 end
 for $dfFlv = 144, 255 do $dfFixedTL[$dfFlv] = 9 end
@@ -88,8 +82,8 @@ for $dfFlv = 0, 31 do
  $dfFixedTL[$dfFlv] = 5
 end
 $dfFixedDst = $dfGenHuffmanTree($dfFixedTL)
-$DTdfFlv
-$DTdfFixedTL
+$DT|dfFlv
+$DT|dfFixedTL
 
 -- DEFLATE LZ Core --
 
@@ -210,11 +204,11 @@ end
 $dfThread = coroutine.create(function ($a0, $a1)
  while true do
   $a0 = coroutine.yield()
-  $NTdfBlockType
+  $NT|dfBlockType
   $dfBlockType = $dfGetIntField(2)
   if $dfBlockType == 0 then
    -- literal
-   $dfAlignToByte()
+   $dfGetIntField($dfAlignToByteRemaining)
    $a1 = $dfGetIntField(16)
    -- this is weird, ignore it
    $dfGetIntField(16)
@@ -230,7 +224,7 @@ $dfThread = coroutine.create(function ($a0, $a1)
   else
    error("b3")
   end
-  $DTdfBlockType
+  $DT|dfBlockType
   while $a0 do
    coroutine.yield()
   end
@@ -241,8 +235,8 @@ end)
 
 coroutine.resume($dfThread)
 function $engineInput($a0, $a1)
- $NTdfForLoopVar
- $NTdfForLoopVar2
+ $NT|dfForLoopVar
+ $NT|dfForLoopVar2
  for $dfForLoopVar = 1, #$a0 do
   $a1 = $a0:byte($dfForLoopVar)
   $dfAlignToByteRemaining = 8
@@ -254,8 +248,8 @@ function $engineInput($a0, $a1)
    $a1 = math.floor($a1 / 2)
   end
  end
- $DTdfForLoopVar2
- $DTdfForLoopVar
+ $DT|dfForLoopVar2
+ $DT|dfForLoopVar
  -- flush prepared buffer
  $engineOutput($dfPushBuf)
  $dfPushBuf = ""

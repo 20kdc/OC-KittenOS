@@ -42,19 +42,19 @@ function $engineInput($a0)
    $a0 = $bdBDBuffer:sub(1, 1)
    $bdBDBuffer = $bdBDBuffer:sub(2)
   else
-   $NTbdBDPtr
+   $NT|bdBDPtr
    $bdBDPtr = $bdBDBuffer:byte(2) * 256 + $bdBDBuffer:byte(3) + 1
    $a0 = $bdBDWindow:sub($bdBDPtr, $bdBDPtr + $a0 - 125)
    $bdBDBuffer = $bdBDBuffer:sub(4)
-   $DTbdBDPtr
+   $DT|bdBDPtr
   end
   $bdPPBuffer = $bdPPBuffer .. $a0
   $bdBDWindow = ($bdBDWindow .. $a0):sub(-2^16)
   while #$bdPPBuffer > 1 do
-   $NTbdPPAdv
+   $NT|bdPPAdv
    $a0, $bdPPAdv = $bdPP($bdPPBuffer:byte(), $bdPPBuffer:byte(2))
    $bdPPBuffer = $bdPPBuffer:sub($bdPPAdv)
-   $DTbdPPAdv
+   $DT|bdPPAdv
    $engineOutput($a0)
   end
  end

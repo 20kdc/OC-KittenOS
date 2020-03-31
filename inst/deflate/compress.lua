@@ -9,6 +9,6 @@ return function (data, lexCrunch)
  os.execute("zopfli --i1 --deflate -c tempData.bin > tempZopf.bin")
  local res = frw.read("tempZopf.bin")
  os.execute("rm tempData.bin tempZopf.bin")
- return lexCrunch(frw.read("deflate/instdeco.lua"), {}), res
+ return lexCrunch.process(frw.read("deflate/instdeco.lua"), {}), res
 end
 

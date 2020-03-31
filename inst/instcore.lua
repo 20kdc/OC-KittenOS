@@ -28,7 +28,7 @@ $icSectorsRead = 0
 $iBlockingLen = 512
 function $iBlockingHook($a0)
  if $icBytesRemaining > 0 then
-  $NTicByteAdv
+  $NT|icByteAdv
   $icByteAdv = math.min(512, $icBytesRemaining)
   $icBytesRemaining = $icBytesRemaining - $icByteAdv
   if $icFile then
@@ -38,7 +38,7 @@ function $iBlockingHook($a0)
     $icFile = nil
    end
   end
-  $DTicByteAdv
+  $DT|icByteAdv
  else
   $icFilename = $a0:sub(1, 100):gsub("\x00", "")
   -- this sets up the reading/skipping of data

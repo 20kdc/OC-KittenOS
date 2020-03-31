@@ -22,11 +22,11 @@ end
 $engineOutput = function ($a0)
  $iBlockingBuffer = $iBlockingBuffer .. $a0
  while #$iBlockingBuffer >= $iBlockingLen do
-  $NTiBlock
+  $NT|iBlock
   $iBlock = $iBlockingBuffer:sub(1, $iBlockingLen)
   $iBlockingBuffer = $iBlockingBuffer:sub($iBlockingLen + 1)
   $iBlockingHook($iBlock)
-  $DTiBlock
+  $DT|iBlock
  end
 end
 

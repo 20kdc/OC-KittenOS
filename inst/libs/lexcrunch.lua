@@ -13,6 +13,10 @@ local sequences = {
  {"( ", "("},
  {" )", ")"},
  {") ", ")"},
+ {" {", "{"},
+ {"{ ", "{"},
+ {" }", "}"},
+ {"} ", "}"},
  {" <", "<"},
  {"< ", "<"},
  {" >", ">"},
@@ -79,6 +83,8 @@ return function ()
 
  local temporaryPool = {}
 
+ local stackFrames = {}
+
  local possible = {}
  for i = 1, 52 do
   possible[i] = ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"):sub(i, i)
@@ -93,36 +99,82 @@ return function ()
   end
  end
 
- return function (op, defines)
+ local lexCrunch = {}
+ function lexCrunch.dump(file)
+  file:write("forward table:\n")
+  for k, v in pairs(forwardSymTab) do
+   file:write(k .. " -> " .. v .. "\n")
+  end
+  file:write("reverse table (where differing):\n")
+  for k, v in pairs(reverseSymTab) do
+   if forwardSymTab[v] ~= k then
+    file:write(v .. " -> " .. k .. "\n")
+   end
+  end
+ end
+ function lexCrunch.process(op, defines)
   -- symbol replacement
-  op = op:gsub("%$[%$a-zA-Z0-9]*", function (str)
+  op = op:gsub("%$[%$a-z%{%}%|A-Z0-9]*", function (str)
    if str:sub(2, 2) == "$" then
     -- defines
     assert(defines[str], "no define " .. str)
     return defines[str]
-   elseif str:sub(2, 3) == "NT" then
+   end
+   local comGet = str:sub(2):gmatch("[^%|]*")
+   local command = comGet()
+   if command == "NT" then
     -- temporaries +
-    local id = "$" .. str:sub(4)
+    local id = "$" .. comGet()
     assert(not forwardSymTab[id], "var already exists: " .. id)
     local val = table.remove(temporaryPool, 1)
     if not val then val = allocate("temporary") end
     forwardSymTab[id] = val
     return ""
-   elseif str:sub(2, 3) == "DT" then
+   elseif command == "DT" then
     -- temporaries -
-    local id = "$" .. str:sub(4)
+    local id = "$" .. comGet()
     assert(forwardSymTab[id], "no such var: " .. id)
     assert(reverseSymTab[forwardSymTab[id]] == "temporary", "var not allocated as temporary: " .. id)
     table.insert(temporaryPool, forwardSymTab[id])
     forwardSymTab[id] = nil
     return ""
-   else
-    -- normal handling
-    if forwardSymTab[str] then
-     return forwardSymTab[str]
+   elseif command == "NA" then
+    local id = "$" .. comGet()
+    local ib = "$" .. comGet()
+    assert(forwardSymTab[ib], "no such var: " .. ib)
+    assert(not forwardSymTab[id], "alias already present: " .. id)
+    forwardSymTab[id] = forwardSymTab[ib]
+    return ""
+   elseif command == "DA" then
+    local id = "$" .. comGet()
+    assert(forwardSymTab[id], "no entry for " .. id)
+    forwardSymTab[id] = nil
+    return ""
+   elseif command == "L" then
+    local id = "$" .. comGet()
+    assert(not forwardSymTab[id], "var already exists: " .. id)
+    local val = table.remove(temporaryPool, 1)
+    if not val then val = allocate("temporary") end
+    table.insert(stackFrames[1], id)
+    forwardSymTab[id] = val
+    return val
+   elseif command == "{" then
+    table.insert(stackFrames, 1, {})
+    return ""
+   elseif command == "}" then
+    for _, id in ipairs(table.remove(stackFrames, 1)) do
+     table.insert(temporaryPool, forwardSymTab[id])
+     forwardSymTab[id] = nil
     end
-    local v = allocate(str)
-    forwardSymTab[str] = v
+    return ""
+   else
+    local id = "$" .. command
+    -- normal handling
+    if forwardSymTab[id] then
+     return forwardSymTab[id]
+    end
+    local v = allocate(id)
+    forwardSymTab[id] = v
     return v
    end
   end)
@@ -145,4 +197,5 @@ return function ()
   end
   return op
  end
+ return lexCrunch
 end

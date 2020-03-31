@@ -31,8 +31,7 @@ inst.lua
 # Available as the respective release
 inst-gold.lua
 # Compression stuff
-inst/*/output.bin
-inst/*/vfyerr.bin
+inst/iSymTab
 # internal
 upldr.sh
 upldr-dev.sh

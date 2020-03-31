@@ -120,5 +120,5 @@ return function (data, lexCrunch)
  -- It's cheaper than the required code.
  -- 1 byte of buffer for preproc,
  -- 2 bytes of buffer for bdivide.
- return lexCrunch(frw.read("bdivide/instdeco.lua"), {}), data .. ("\x00"):rep(3)
+ return lexCrunch.process(frw.read("bdivide/instdeco.lua"), {}), data .. ("\x00"):rep(3)
 end

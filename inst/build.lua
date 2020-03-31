@@ -22,9 +22,9 @@ local tarSectors = math.floor(#tarData / 512)
 -- Installer Lexcrunch Context --
 local lexCrunch = require("libs.lexcrunch")()
 
-local installerCore = lexCrunch(u.read("instcore.lua"), {["$$SECTORS"] = tostring(tarSectors)})
-local installerHead = lexCrunch(u.read("insthead.lua"), {["$$CORESIZE"] = tostring(#installerCore)})
-local installerTail = lexCrunch(u.read("insttail.lua"), {})
+local installerCore = lexCrunch.process(u.read("instcore.lua"), {["$$SECTORS"] = tostring(tarSectors)})
+local installerHead = lexCrunch.process(u.read("insthead.lua"), {["$$CORESIZE"] = tostring(#installerCore)})
+local installerTail = lexCrunch.process(u.read("insttail.lua"), {})
 
 -- Installer Compression --
 local rawData = installerCore .. tarData
@@ -40,6 +40,11 @@ io.stderr:write("compression with " .. alg .. ": " .. #rawData .. " -> " .. #com
 -- Installer Final Generation --
 put("--" .. cid .. "\n")
 put("--This is released into the public domain. No warranty is provided, implied or otherwise.\n")
-put(lexCrunch(installerHead .. compressionEngine .. installerTail, {}))
+put(lexCrunch.process(installerHead .. compressionEngine .. installerTail, {}))
 put("--[[" .. compressedData .. "]]")
+
+-- Dumping debug info --
+local dbg = io.open("iSymTab", "wb")
+lexCrunch.dump(dbg)
+dbg:close()
 

@@ -5,6 +5,6 @@
 -- Given: data, lexCrunch
 --  returns compressionEngine, compressedData
 return function (data, lexCrunch)
- return lexCrunch(" $engineInput = $engineOutput ", {}), data
+ return lexCrunch.process(" $engineInput = $engineOutput ", {}), data
 end
 

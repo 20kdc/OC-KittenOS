@@ -8,7 +8,7 @@ while true do
  $readInBlock = $filesystem.read($readInFile, 1024)
  for i = 1, #$readInBlock do
   -- Read-in state machine
-  $NTreadInChar
+  $NT|readInChar
   $readInChar = $readInBlock:sub(i, i)
   if not $readInState then
    if $readInChar == "\x00" then
@@ -25,7 +25,7 @@ while true do
    $readInState = 0
   end
  end
- $DTreadInChar
+ $DT|readInChar
 end
 
 -- COMPRESSED DATA FOLLOWS THIS CODE --
