@@ -34,29 +34,31 @@ function $bdPP(x, y)
  return string.char(("enart"):byte(x % 5 + 1), ("ndtelh"):byte((x - x % 5) / 5 + 1)), 2
 end
 
-function $engineInput($a0)
- $bdBDBuffer = $bdBDBuffer .. $a0
+${
+function $engineInput($L|lData)
+ $bdBDBuffer = $bdBDBuffer .. $lData
  while #$bdBDBuffer > 2 do
-  $a0 = $bdBDBuffer:byte()
-  if $a0 < 128 then
-   $a0 = $bdBDBuffer:sub(1, 1)
+  $lData = $bdBDBuffer:byte()
+  if $lData < 128 then
+   $lData = $bdBDBuffer:sub(1, 1)
    $bdBDBuffer = $bdBDBuffer:sub(2)
   else
-   $NT|bdBDPtr
-   $bdBDPtr = $bdBDBuffer:byte(2) * 256 + $bdBDBuffer:byte(3) + 1
-   $a0 = $bdBDWindow:sub($bdBDPtr, $bdBDPtr + $a0 - 125)
+   ${
+   $L|bdBDPtr = $bdBDBuffer:byte(2) * 256 + $bdBDBuffer:byte(3) + 1
+   $lData = $bdBDWindow:sub($bdBDPtr, $bdBDPtr + $lData - 125)
    $bdBDBuffer = $bdBDBuffer:sub(4)
-   $DT|bdBDPtr
+   $}
   end
-  $bdPPBuffer = $bdPPBuffer .. $a0
-  $bdBDWindow = ($bdBDWindow .. $a0):sub(-2^16)
+  $bdPPBuffer = $bdPPBuffer .. $lData
+  $bdBDWindow = ($bdBDWindow .. $lData):sub(-2^16)
   while #$bdPPBuffer > 1 do
-   $NT|bdPPAdv
-   $a0, $bdPPAdv = $bdPP($bdPPBuffer:byte(), $bdPPBuffer:byte(2))
+   ${
+   $lData, $L|bdPPAdv = $bdPP($bdPPBuffer:byte(), $bdPPBuffer:byte(2))
    $bdPPBuffer = $bdPPBuffer:sub($bdPPAdv)
-   $DT|bdPPAdv
-   $engineOutput($a0)
+   $}
+   $engineOutput($lData)
   end
  end
 end
+$}
 

@@ -14,21 +14,54 @@ $readInFile = $filesystem.open("init.neoi.lua", "rb")
 
 $iBlockingBuffer = ""
 $iBlockingLen = $$CORESIZE
-$iBlockingHook = function ($a0)
- -- This takes over the iBlockingHook.
- assert(load($a0))()
+${
+function $iBlockingHook($L|lBlock)
+ -- Run the next script (replacement compression engine,)
+ assert(load($lBlock))()
 end
+$}
 
-$engineOutput = function ($a0)
- $iBlockingBuffer = $iBlockingBuffer .. $a0
+${
+function $engineOutput($L|lBlock)
+ $iBlockingBuffer = $iBlockingBuffer .. $lBlock
  while #$iBlockingBuffer >= $iBlockingLen do
-  $NT|iBlock
-  $iBlock = $iBlockingBuffer:sub(1, $iBlockingLen)
+  $lBlock = $iBlockingBuffer:sub(1, $iBlockingLen)
   $iBlockingBuffer = $iBlockingBuffer:sub($iBlockingLen + 1)
-  $iBlockingHook($iBlock)
-  $DT|iBlock
+  $iBlockingHook($lBlock)
  end
 end
+$}
+$engineInput = $engineOutput
 
--- DECOMPRESSION ENGINE FOLLOWS THIS CODE --
+while true do
+ $readInBlock = $filesystem.read($readInFile, 1024)
+ ${
+ for i = 1, #$readInBlock do
+  -- Read-in state machine
+
+  -- IT IS VERY IMPORTANT that read-in be performed char-by-char.
+  -- This is because of compression chain-loading; if the switch between engines isn't "clean",
+  --  bad stuff happens.
+
+  -- This character becomes invalid once
+  --  it gets passed to engineInput,
+  --  but that's the last step, so it's ok!
+  $L|readInChar = $readInBlock:sub(i, i)
+  if not $readInState then
+   if $readInChar == "\x00" then
+    $readInState = 0
+   end
+  elseif $readInState == 0 then
+   if $readInChar == "\xFE" then
+    $readInState = 1
+   else
+    $engineInput($readInChar)
+   end
+  else
+   $engineInput($readInChar)
+   $readInState = 0
+  end
+ end
+ $}
+end
 

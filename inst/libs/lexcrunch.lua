@@ -135,48 +135,30 @@ return function ()
     assert(defines[str], "no define " .. str)
     return defines[str]
    end
-   local comGet = str:sub(2):gmatch("[^%|]*")
-   local command = comGet()
-   if command == "NT" then
-    -- temporaries +
-    allocTmp("$" .. comGet())
-    return ""
-   elseif command == "DT" then
-    -- temporaries -
-    local id = "$" .. comGet()
-    assert(forwardSymTab[id], "no such var: " .. id)
-    assert(reverseSymTab[forwardSymTab[id]] == "temporary", "var not allocated as temporary: " .. id)
-    table.insert(temporaryPool, forwardSymTab[id])
-    forwardSymTab[id] = nil
-    return ""
-   elseif command == "NA" then
-    local id = "$" .. comGet()
-    local ib = "$" .. comGet()
-    assert(forwardSymTab[ib], "no such var: " .. ib)
-    assert(not forwardSymTab[id], "alias already present: " .. id)
-    forwardSymTab[id] = forwardSymTab[ib]
-    return ""
-   elseif command == "DA" then
-    local id = "$" .. comGet()
-    assert(forwardSymTab[id], "no entry for " .. id)
-    forwardSymTab[id] = nil
-    return ""
-   elseif command == "L" then
-    local id = "$" .. comGet()
+   local com = {}
+   for v in str:sub(2):gmatch("[^%|]*") do
+    table.insert(com, v)
+   end
+   if com[1] == "L" then
+    assert(#com == 2)
+    local id = "$" .. com[2]
     assert(stackFrames[1], "allocation of " .. id .. " outside of stack frame")
     table.insert(stackFrames[1], id)
     return allocTmp(id)
-   elseif command == "{" then
+   elseif com[1] == "{" then
+    assert(#com == 1)
     table.insert(stackFrames, 1, {})
     return ""
-   elseif command == "}" then
+   elseif com[1] == "}" then
+    assert(#com == 1)
     for _, id in ipairs(table.remove(stackFrames, 1)) do
      table.insert(temporaryPool, forwardSymTab[id])
      forwardSymTab[id] = nil
     end
     return ""
    else
-    local id = "$" .. command
+    assert(#com == 1)
+    local id = "$" .. com[1]
     -- normal handling
     if forwardSymTab[id] then
      return forwardSymTab[id]

@@ -28,8 +28,8 @@ $icSectorsRead = 0
 $iBlockingLen = 512
 function $iBlockingHook($a0)
  if $icBytesRemaining > 0 then
-  $NT|icByteAdv
-  $icByteAdv = math.min(512, $icBytesRemaining)
+  ${
+  $L|icByteAdv = math.min(512, $icBytesRemaining)
   $icBytesRemaining = $icBytesRemaining - $icByteAdv
   if $icFile then
    $filesystem.write($icFile, $a0:sub(1, $icByteAdv))
@@ -38,7 +38,7 @@ function $iBlockingHook($a0)
     $icFile = nil
    end
   end
-  $DT|icByteAdv
+  $}
  else
   $icFilename = $a0:sub(1, 100):gsub("\x00", "")
   -- this sets up the reading/skipping of data

@@ -41,8 +41,9 @@ for i = 0, 127 do
  end
 end
 
-local function preproc(blk, p)
+local function preprocWithPadding(blk, p)
  local out = ""
+ local needsPadding = false
  while blk ~= "" do
   p(blk)
   local len = math.min(preprocMaxLen, #blk)
@@ -50,6 +51,7 @@ local function preproc(blk, p)
    local seg = blk:sub(1, len)
    if preprocParts[seg] then
     out = out .. preprocParts[seg]
+    needsPadding = #preprocParts[seg] < 2
     blk = blk:sub(#seg + 1)
     break
    end
@@ -57,53 +59,16 @@ local function preproc(blk, p)
   end
   assert(len ~= 0)
  end
- return out
-end
-
--- BDIVIDE r5 edition
--- Algorithm simplified for smaller implementation and potentially better compression
--- format:
--- 0-127 for constants
--- <128 + (length - 4)>, <position high>, <position low>
--- Position is where in the window it was found, minus 1.
--- windowSize must be the same between the encoder and decoder,
---  and is the amount of data preserved after cropping.
-local function bdivide(blk, p)
- local out = ""
-
- local windowSize = 0x10000
- local windowData = ("\x00"):rep(windowSize)
-
- while blk ~= "" do
-  p(blk)
-  local bestData = blk:sub(1, 1)
-  local bestRes = bestData
-  for lm = 0, 127 do
-   local al = lm + 4
-   local pfx = blk:sub(1, al)
-   if #pfx ~= al then
-    break
-   end
-   local p = windowData:find(pfx, 1, true)
-   if not p then
-    break
-   end
-   local pm = p - 1
-   local thirdByte = pm % 256
-   -- anti ']'-corruption helper
-   if thirdByte ~= 93 then
-    bestData = string.char(128 + lm, math.floor(pm / 256), thirdByte)
-    bestRes = pfx
-   end
-  end
-  -- ok, encode!
-  out = out .. bestData
-  -- crop window
-  windowData = (windowData .. bestRes):sub(-windowSize)
-  blk = blk:sub(#bestRes + 1)
+ -- This needsPadding bit is just sort of quickly added in
+ --  to keep this part properly maintained
+ --  even though it might never get used
+ if needsPadding then
+  return out .. "\x00"
  end
  return out
 end
+
+local bdCore = require("bdivide.core")
 
 return function (data, lexCrunch)
  io.stderr:write("preproc: ")
@@ -111,14 +76,10 @@ return function (data, lexCrunch)
  local function p(b)
   pi(1 - (#b / #data))
  end
- data = preproc(data, p)
+ data = preprocWithPadding(data, p)
  io.stderr:write("\nbdivide: ")
  pi = frw.progress()
- data = bdivide(data, p)
+ data = bdCore.bdividePad(bdCore.bdivide(data, p))
  io.stderr:write("\n")
- -- These are used to pad the stream to flush the pipeline.
- -- It's cheaper than the required code.
- -- 1 byte of buffer for preproc,
- -- 2 bytes of buffer for bdivide.
- return lexCrunch.process(frw.read("bdivide/instdeco.lua"), {}), data .. ("\x00"):rep(3)
+ return lexCrunch.process(frw.read("bdivide/instdeco.lua"), {}), data
 end
