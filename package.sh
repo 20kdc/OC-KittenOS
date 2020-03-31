@@ -16,7 +16,7 @@ cd ..
 # The Installer Creator
 cd inst
 lua build.lua $1 ../code.tar `git status --porcelain=2 --branch | grep branch.oid | grep -E -o "[0-9a-f]*$" -` > ../inst.lua
-lua verify.lua $1 ../code.tar
+lua status.lua ../inst.lua
 cd ..
 
 # Common Repository Setup Code

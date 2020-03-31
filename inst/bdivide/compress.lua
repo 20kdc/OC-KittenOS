@@ -105,7 +105,7 @@ local function bdivide(blk, p)
  return out
 end
 
-return function (data)
+return function (data, lexCrunch)
  io.stderr:write("preproc: ")
  local pi = frw.progress()
  local function p(b)
@@ -120,5 +120,5 @@ return function (data)
  -- It's cheaper than the required code.
  -- 1 byte of buffer for preproc,
  -- 2 bytes of buffer for bdivide.
- return data .. ("\x00"):rep(3)
+ return lexCrunch(frw.read("bdivide/instdeco.lua"), {}), data .. ("\x00"):rep(3)
 end
