@@ -85,6 +85,8 @@ return function ()
 
  local stackFrames = {}
 
+ local log = {}
+
  local possible = {}
  for i = 1, 52 do
   possible[i] = ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"):sub(i, i)
@@ -99,6 +101,15 @@ return function ()
   end
  end
 
+ local function allocTmp(id)
+  assert(not forwardSymTab[id], "var already exists: " .. id)
+  local val = table.remove(temporaryPool, 1)
+  if not val then val = allocate("temporary") end
+  forwardSymTab[id] = val
+  table.insert(log, "allocTmp " .. id .. " -> " .. val)
+  return val
+ end
+
  local lexCrunch = {}
  function lexCrunch.dump(file)
   file:write("forward table:\n")
@@ -110,6 +121,10 @@ return function ()
    if forwardSymTab[v] ~= k then
     file:write(v .. " -> " .. k .. "\n")
    end
+  end
+  file:write("log:\n")
+  for k, v in ipairs(log) do
+   file:write(v .. "\n")
   end
  end
  function lexCrunch.process(op, defines)
@@ -124,11 +139,7 @@ return function ()
    local command = comGet()
    if command == "NT" then
     -- temporaries +
-    local id = "$" .. comGet()
-    assert(not forwardSymTab[id], "var already exists: " .. id)
-    local val = table.remove(temporaryPool, 1)
-    if not val then val = allocate("temporary") end
-    forwardSymTab[id] = val
+    allocTmp("$" .. comGet())
     return ""
    elseif command == "DT" then
     -- temporaries -
@@ -152,12 +163,9 @@ return function ()
     return ""
    elseif command == "L" then
     local id = "$" .. comGet()
-    assert(not forwardSymTab[id], "var already exists: " .. id)
-    local val = table.remove(temporaryPool, 1)
-    if not val then val = allocate("temporary") end
+    assert(stackFrames[1], "allocation of " .. id .. " outside of stack frame")
     table.insert(stackFrames[1], id)
-    forwardSymTab[id] = val
-    return val
+    return allocTmp(id)
    elseif command == "{" then
     table.insert(stackFrames, 1, {})
     return ""

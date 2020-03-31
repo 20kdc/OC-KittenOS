@@ -8,82 +8,96 @@
 -- $dfAlignToByteRemaining is
 --  set to 8 in the outer engine
 
-function $dfGetIntField($a0, $a1)
- $NT|dfForLoopVar
- $a1 = 0
- for $dfForLoopVar = 1, $a0 do
+${
+function $dfGetIntField($L|lLen, $L|lVal)
+ $lVal = 0
+ for $L|lI = 0, $lLen - 1 do
   if coroutine.yield() then
-   $a1 = $a1 + 2^($dfForLoopVar - 1)
+   $lVal = $lVal + 2^$lI
   end
  end
- $DT|dfForLoopVar
- return $a1
+ return $lVal
 end
+$}
 
 -- Huffman Core --
 -- The approach here is based around 1-prefixed integers.
 -- These are stored in a flat table.
 -- So 0b1000 is the pattern 000.
 
-function $dfReadHuffmanSymbol($a0, $a1)
- $a1 = 1
- while not $a0[$a1] do
-  $a1 = ($a1 * 2) + $dfGetIntField(1)
+${
+function $dfReadHuffmanSymbol($L|lTree, $L|lVal)
+ $lVal = 1
+ while not $lTree[$lVal] do
+  $lVal = ($lVal * 2) + $dfGetIntField(1)
  end
- return $a0[$a1]
+ return $lTree[$lVal]
 end
+$}
 
-function $dfGenHuffmanTree($a0)
- local blCount = {}
+${
+function $dfGenHuffmanTree($L|lCodeLens)
+ -- $L|lI (used everywhere; defining inside creates a bug because it gets globalized)
+ $L|lNextCode = {}
+ ${
+ -- To explain:
+ -- lNextCode is needed all the way to the end.
+ -- But lBLCount isn't needed after it's used to
+ --  generate lNextCode.
+ -- And lCode is very, very temporary.
+ -- Hence this massive block.
+ $L|lBLCount = {}
  -- Note the 0
- for loopVar = 0, 15 do
-  blCount[loopVar] = 0
+ for $lI = 0, 15 do
+  $lBLCount[$lI] = 0
  end
- for loopVar = 0, #$a0 do
-  local cl = $a0[loopVar]
-  if cl ~= 0 then
-   blCount[cl] = blCount[cl] + 1
+ for $lI = 0, #$lCodeLens do
+  ${
+  $L|lCodeLen = $lCodeLens[$lI]
+  if $lCodeLen ~= 0 then
+   $lBLCount[$lCodeLen] = $lBLCount[$lCodeLen] + 1
   end
+  $}
  end
 
- local code = 0
- local nextCode = {}
- for loopVar = 1, 15 do
-  code = (code + blCount[loopVar - 1]) * 2
-  nextCode[loopVar] = code
+ $L|lCode = 0
+ for $lI = 1, 15 do
+  $lCode = ($lCode + $lBLCount[$lI - 1]) * 2
+  $lNextCode[$lI] = $lCode
  end
+ $}
 
- local tbl = {}
- for loopVar = 0, #$a0 do
-  local cl = $a0[loopVar]
-  if cl ~= 0 then
-   local pow = math.floor(2 ^ cl)
-   if nextCode[cl] >= pow then error("To L1 not valid for " .. n .. "," .. cl .. ".") end
-   local k = nextCode[cl] + pow
-   assert(not tbl[k], "conflict @ " .. k)
-   tbl[k] = loopVar
-   nextCode[cl] = nextCode[cl] + 1
+ $L|lTree = {}
+ for $lI = 0, #$lCodeLens do
+  ${
+  $L|lCodeLen = $lCodeLens[$lI]
+  if $lCodeLen ~= 0 then
+   $L|lPow = math.floor(2 ^ $lCodeLen)
+   assert($lNextCode[$lCodeLen] < $lPow, "Tl" .. $lCodeLen)
+   $L|lK = $lNextCode[$lCodeLen] + $lPow
+   assert(not $lTree[$lK], "conflict @ " .. $lK)
+   $lTree[$lK] = $lI
+   $lNextCode[$lCodeLen] = $lNextCode[$lCodeLen] + 1
   end
+  $}
  end
- return tbl
+ return $lTree
 end
+$}
 
 -- DEFLATE fixed trees --
-$NT|dfFixedTL
-$NT|dfFlv
-$dfFixedTL = {}
-for $dfFlv = 0, 143 do $dfFixedTL[$dfFlv] = 8 end
-for $dfFlv = 144, 255 do $dfFixedTL[$dfFlv] = 9 end
-for $dfFlv = 256, 279 do $dfFixedTL[$dfFlv] = 7 end
-for $dfFlv = 280, 287 do $dfFixedTL[$dfFlv] = 8 end
+${
+$L|dfFixedTL = {}
+for $L|lI = 0, 143 do $dfFixedTL[$lI] = 8 end
+for $lI = 144, 255 do $dfFixedTL[$lI] = 9 end
+for $lI = 256, 279 do $dfFixedTL[$lI] = 7 end
+for $lI = 280, 287 do $dfFixedTL[$lI] = 8 end
 $dfFixedLit = $dfGenHuffmanTree($dfFixedTL)
+-- last line possibly destroyed dfFixedTL, but that's alright
 $dfFixedTL = {}
-for $dfFlv = 0, 31 do
- $dfFixedTL[$dfFlv] = 5
-end
+for $lI = 0, 31 do $dfFixedTL[$lI] = 5 end
 $dfFixedDst = $dfGenHuffmanTree($dfFixedTL)
-$DT|dfFlv
-$DT|dfFixedTL
+$}
 
 -- DEFLATE LZ Core --
 
@@ -119,26 +133,27 @@ $dfBasetblDist = {
  4097, 6145, 8193, 12289, 16385, 24577
 }
 
-function $dfReadBlockBody(lit, dst)
+${
+function $dfReadBlockBody($L|lLit, $L|lDst, $L|lLitSym, $L|lLen, $L|lDCode, $L|lPtr)
  while true do
-  local litSym = $dfReadHuffmanSymbol(lit)
-  if litSym <= 255 then
-   $dfOutput(string.char(litSym))
-  elseif litSym == 256 then
+  $lLitSym = $dfReadHuffmanSymbol($lLit)
+  if $lLitSym <= 255 then
+   $dfOutput(string.char($lLitSym))
+  elseif $lLitSym == 256 then
    return
-  elseif litSym <= 285 then
-   local len = $dfBasetblLength[litSym - 256] + $dfGetIntField($dfBittblLength[litSym - 256])
-   local dCode = $dfReadHuffmanSymbol(dst)
-   local dst = $dfBasetblDist[dCode + 1] + $dfGetIntField($dfBittblDist[dCode + 1])
-   local ptr = 65537 - dst
-   for loopVar = 1, len do
-    $dfOutput($dfWindow:sub(ptr, ptr))
+  elseif $lLitSym <= 285 then
+   $lLen = $dfBasetblLength[$lLitSym - 256] + $dfGetIntField($dfBittblLength[$lLitSym - 256])
+   $lDCode = $dfReadHuffmanSymbol($lDst)
+   $lPtr = 65537 - ($dfBasetblDist[$lDCode + 1] + $dfGetIntField($dfBittblDist[$lDCode + 1]))
+   for $L|lI = 1, $lLen do
+    $dfOutput($dfWindow:sub($lPtr, $lPtr))
    end
   else
    error("nt" .. v)
   end
  end
 end
+$}
 
 -- Huffman Dynamics --
 
