@@ -188,6 +188,12 @@ local function incoming(s)
      v("telnet", "\xFF\xFE\x01")
     end
     setLineEditing(true)
+   elseif cmd == 251 or cmd == 252 then
+    -- WILL/WON'T (x) (respond with DON'T (X))
+    local res = "\xFF\xFE" .. string.char(param)
+    for _, v in pairs(sendSigs) do
+     v("telnet", res)
+    end
    elseif cmd == 253 or cmd == 254 then
     -- DO/DON'T (x) (respond with WON'T (X))
     local res = "\xFF\xFC" .. string.char(param)
