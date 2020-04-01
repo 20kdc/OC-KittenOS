@@ -155,6 +155,7 @@ end
 
 local tvBuildingCmd = ""
 local tvBuildingUTF = ""
+local tvSubnegotiation = false
 local function incoming(s)
  tvBuildingCmd = tvBuildingCmd .. s
  -- Flush Cmd
@@ -168,7 +169,13 @@ local function incoming(s)
    -- Command Lengths
    if cmd >= 251 and cmd <= 254 then cmdLen = 3 end
    if #tvBuildingCmd < cmdLen then break end
-   if cmd == 251 and param == 1 then
+   if cmd == 240 then
+    -- SE
+    tvSubnegotiation = false
+   elseif cmd == 250 then
+    -- SB
+    tvSubnegotiation = true
+   elseif cmd == 251 and param == 1 then
     -- WILL ECHO (respond with DO ECHO, disable line editing)
     -- test using io.write("\xFF\xFB\x01")
     for _, v in pairs(sendSigs) do
@@ -188,11 +195,15 @@ local function incoming(s)
      v("telnet", res)
     end
    elseif cmd == 255 then
-    tvBuildingUTF = tvBuildingUTF .. "\xFF"
+    if not tvSubnegotiation then
+     tvBuildingUTF = tvBuildingUTF .. "\xFF"
+    end
    end
    tvBuildingCmd = tvBuildingCmd:sub(cmdLen + 1)
   else
-   tvBuildingUTF = tvBuildingUTF .. tvBuildingCmd:sub(1, 1)
+   if not tvSubnegotiation then
+    tvBuildingUTF = tvBuildingUTF .. tvBuildingCmd:sub(1, 1)
+   end
    tvBuildingCmd = tvBuildingCmd:sub(2)
   end
  end
