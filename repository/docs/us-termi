@@ -5,20 +5,34 @@ The "svc-t" program / "x.svc.t"
  --- THEORETICAL TERMINALS MODEL ---
 
 The theoretical model for terminals
- in KittenOS NEO is that of a stack
- of processes controlling a player's
- connection to a MUD, where text is
- provided to the server and to the
- player in a line-by-line format,
- with no "flow control"/ttyattrs.
+ in KittenOS NEO is a TELNET client
+ that only supports the ECHO option,
+ and uses the non-standard behavior
+ of treating ECHO ON as 'enable local
+ line editing'.
+
+To prevent code size going too far,
+ the client is extremely restricted
+ in capabilities.
+
+If you really want full support,
+ write a better terminal application.
+
+Features that get added will be added
+ in accordance with ANSI/TELNET where
+ reasonable or in a compatible-ish
+ fashion where unreasonable.
+
+The defaults will be set based on
+ whatever app-luashell requires, as
+ this is what is expected of modern
+ terminal systems regardless of what
+ the standards may have to say.
 
 A process starting another process
  connected to the same terminal is
  advised to wait for that process to
- die before continuing in terminal
- activities, unless some sort of
- 'in-band notification' functionality
- is intended.
+ die before continuing reading input.
 
 The controlling process is whichever
  process is supposed to be accepting
@@ -32,8 +46,8 @@ The controlling process should show
  acknowledgement that user input has
  been received.
 
-User input IS NOT automatically
- echoed by the terminal.
+For convenience, terminal echo is on
+ by default; this is easily remedied.
 
   --- ACTUAL USAGE OF TERMINALS ---
 
@@ -42,12 +56,15 @@ Access control on terminals is looser
  to be able to be 'sublet' in some
  cases, including events.
 
+As such, the secret flag is set for
+ terminal registration.
+
 A terminal program is given a string
  argument for the ID of the terminal
  to connect to.
 
 A terminal always has an ID beginning
- with "x.svc.t/". ALWAYS CHECK THIS.
+ with "x.neo.pub.t/". ALWAYS CHECK.
 
 Requiring the responsible access
  connects to the terminal. All
@@ -80,11 +97,22 @@ In either case, when the access has
 
 id = "x.svc.t/<...>"
 pid = <The terminal's PID.>
-line = function (text): Shows a line.
+write = function (text): Writes the
+ TELNET data to the terminal.
 
-When the user sends a line, an event
- of: <id>, "line", <text>
- is provided.
+User input is provided in events:
+ <id>, "data", <data>
+
+TELNET commands are provided in:
+ <id>, "telnet", <data>
+
+There is a total of one TELNET
+ command per event, unpadded.
+
+Notably, intermixing the data part
+ of the data/telnet events in order
+ produces the full terminal-to-server
+ TELNET stream.
 
 -- This is released into
  the public domain.

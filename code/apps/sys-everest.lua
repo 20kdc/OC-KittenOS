@@ -616,7 +616,7 @@ local function key(ku, ka, kc, down)
  elseif kc == 56 then
   isAltDown = down
  end
- if isAltDown and kc == 122 then
+ if isAltDown and ka == 122 then
   if focus and down then
    local n = table.remove(surfaces, 1)
    table.insert(surfaces, n)

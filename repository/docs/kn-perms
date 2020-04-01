@@ -63,7 +63,8 @@ The security check may be aliased to
 "r.*": Registers a service's API for
  retrieval via the "x." mechanism.
  Returns a:
- function (function (pkg, pid, send))
+ function (function (pkg, pid, send),
+  secret)
  While the registration is locked on
   success, attempting to use it will
   fail, as no handler has been given.
@@ -71,6 +72,11 @@ The security check may be aliased to
   registration with a callback used
   for when a process tries to use the
   registered API.
+ Unless 'secret' is truthy, a
+  k.registration event is sent to all
+  processes; using the secret flag is
+  useful for a more ad-hoc security
+  approach.
  What that API returns goes to the
   target process.
  The given "sendSig" function can be

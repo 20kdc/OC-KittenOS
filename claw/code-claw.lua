@@ -55,7 +55,7 @@ return {
  },
  ["neo-everest"] = {
   desc = "KittenOS NEO / Everest (windowing)",
-  v = 5,
+  v = 9,
   deps = {
    "neo"
   },
@@ -68,7 +68,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 8,
+  v = 9,
   deps = {
    "neo"
   },
@@ -85,7 +85,7 @@ return {
  },
  ["neo-secpolicy"] = {
   desc = "KittenOS NEO / Secpolicy",
-  v = 8,
+  v = 9,
   deps = {
   },
   dirs = {

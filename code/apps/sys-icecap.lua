@@ -81,20 +81,12 @@ local function getPfx(xd, pkg)
  end
 end
 
-local endAcPattern = "/[a-z0-9/%.]*$"
-
-local function matchesSvc(xd, pkg, perm)
- local pfx = getPfx(xd, pkg)
- if pfx then
-  local permAct = perm
-  local paP = permAct:match(endAcPattern)
-  if paP then
-   permAct = permAct:sub(1, #permAct - #paP)
-  end
-  if permAct == pfx then
-   return "allow"
-  end
+local function splitAC(ac)
+ local sb = ac:match("/[a-z0-9/%.]*$")
+ if sb then
+  return ac:sub(1, #ac - #sb), sb
  end
+ return ac
 end
 
 donkonitDFProvider(function (pkg, pid, sendSig)
@@ -130,7 +122,8 @@ donkonitDFProvider(function (pkg, pid, sendSig)
   myApi = getPfx("", pkg),
   lockPerm = function (perm)
    -- Are we allowed to?
-   if not matchesSvc("x.", pkg, perm) then
+   local permPfx, detail = splitAC(perm)
+   if getPfx("x.", pkg) ~= permPfx then
     return false, "You don't own this permission."
    end
    local set = "perm|*|" .. perm
@@ -223,7 +216,11 @@ local function secPolicyStage2(pid, proc, perm, req)
  -- Push to ICECAP thread to avoid deadlock b/c wrong event-pull context
  neo.scheduleTimer(0)
  table.insert(todo, function ()
-  local ok, err = pcall(secpol, nexus, settings, proc.pkg, pid, perm, req, matchesSvc)
+  local fPerm = perm
+  if fPerm:sub(1, 2) == "r." then
+   fPerm = splitAC(fPerm)
+  end
+  local ok, err = pcall(secpol, nexus, settings, proc.pkg, pid, fPerm, req, getPfx("", proc.pkg))
   if not ok then
    neo.emergency("Used fallback policy because of run-err: " .. err)
    req(def)
@@ -243,11 +240,7 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  end
  -- Do we need to start it?
  if perm:sub(1, 6) == "x.svc." and not neo.usAccessExists(perm) then
-  local appAct = perm:sub(7)
-  local paP = appAct:match(endAcPattern)
-  if paP then
-   appAct = appAct:sub(1, #appAct - #paP)
-  end
+  local appAct = splitAC(perm:sub(3))
   -- Prepare for success
   onReg[perm] = onReg[perm] or {}
   local orp = onReg[perm]

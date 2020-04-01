@@ -11,13 +11,19 @@
 -- IRC is usually pretty safe, but no guarantees.
 
 -- Returns "allow", "deny", or "ask".
-local function actualPolicy(pkg, pid, perm, matchesSvc)
+local function actualPolicy(pkg, pid, perm, pkgSvcPfx)
  -- System stuff is allowed.
  if pkg:sub(1, 4) == "sys-" then
   return "allow"
  end
+ -- svc-t's job is solely to emulate terminals
+ -- TO INSTALL YOUR OWN TERMINAL EMULATOR:
+ -- perm|app-yourterm|r.neo.t
+ if pkg == "svc-t" and perm == "r.neo.pub.t" then
+  return "allow"
+ end
  -- <The following is for apps & services>
- -- x.neo.pub (aka Icecap) is open to all
+ -- x.neo.pub.* is open to all
  if perm:sub(1, 10) == "x.neo.pub." then
   return "allow"
  end
@@ -25,7 +31,8 @@ local function actualPolicy(pkg, pid, perm, matchesSvc)
  if perm == "s.h.component_added" or perm == "s.h.component_removed" or perm == "s.h.tablet_use" or perm == "c.tablet" then
   return "allow"
  end
- if matchesSvc("r.", pkg, perm) then
+ -- Userlevel can register for itself
+ if perm == "r." .. pkgSvcPfx then
   return "allow"
  end
  -- Userlevel has no other registration rights
@@ -44,8 +51,8 @@ local function actualPolicy(pkg, pid, perm, matchesSvc)
  return "ask"
 end
 
-return function (nexus, settings, pkg, pid, perm, rsp, matchesSvc)
- local res = actualPolicy(pkg, pid, perm, matchesSvc)
+return function (nexus, settings, pkg, pid, perm, rsp, pkgSvcPfx)
+ local res = actualPolicy(pkg, pid, perm, pkgSvcPfx)
  if settings then
   res = settings.getSetting("perm|" .. pkg .. "|" .. perm) or
         settings.getSetting("perm|*|" .. perm) or res

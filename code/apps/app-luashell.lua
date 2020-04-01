@@ -3,12 +3,16 @@
 
 local _, _, termId = ...
 local ok = pcall(function ()
- assert(string.sub(termId, 1, 8) == "x.svc.t/")
+ assert(string.sub(termId, 1, 12) == "x.neo.pub.t/")
 end)
+
+local termClose
+
 if not ok then
  termId = nil
  neo.executeAsync("svc-t", function (res)
   termId = res.access
+  termClose = res.close
   neo.scheduleTimer(0)
  end, "luashell")
  while not termId do
@@ -17,7 +21,18 @@ if not ok then
 end
 TERM = neo.requireAccess(termId, "terminal")
 
-TERM.line("KittenOS NEO Lua Shell")
+-- Using event makes it easier for stuff
+--  within the shell to not spectacularly explode.
+event = require("event")(neo)
+
+local alive = true
+event.listen("k.procdie", function (_, _, pid)
+ if pid == TERM.pid then
+  alive = false
+ end
+end)
+
+TERM.write("KittenOS NEO Lua Shell\r\n")
 
 print = function (...)
  local n = {}
@@ -29,10 +44,8 @@ print = function (...)
   end
   table.insert(n, tostring(v))
  end
- TERM.line(table.concat(n, " "))
+ TERM.write(table.concat(n, " ") .. "\r\n")
 end
-
-local alive = true
 
 run = function (x, ...)
  local subPid = neo.executeAsync(x, ...)
@@ -49,40 +62,63 @@ run = function (x, ...)
   error("cannot find " .. x)
  end
  while true do
-  local e = {coroutine.yield()}
+  local e = {event.pull()}
   if e[1] == "k.procdie" then
-   if e[3] == TERM.pid then
-    alive = false
-    return
-   elseif e[3] == subPid then
+   if e[3] == subPid then
     return
    end
   end
  end
 end
 
-exit = function ()
+local ioBuffer = ""
+
+io = {
+ read = function ()
+  while alive do
+   local pos = ioBuffer:find("\n")
+   if pos then
+    local line = ioBuffer:sub(1, pos):gsub("\r", "")
+    ioBuffer = ioBuffer:sub(pos + 1)
+    return line
+   end
+   local e = {event.pull()}
+   if e[1] == TERM.id then
+    if e[2] == "data" then
+     ioBuffer = ioBuffer .. e[3]
+    end
+   end
+  end
+ end,
+ write = function (s) TERM.write(s) end
+}
+
+local originalOS = os
+os = setmetatable({}, {
+ __index = originalOS
+})
+
+os.exit = function ()
  alive = false
 end
 
 while alive do
- local e = {coroutine.yield()}
- if e[1] == "k.procdie" then
-  if e[3] == TERM.pid then
-   alive = false
-  end
- elseif e[1] == TERM.id then
-  if e[2] == "line" then
-   TERM.line("> " .. e[3])
-   local ok, err = pcall(function ()
-    if e[3]:sub(1, 1) == "=" then
-     e[3] = "return " .. e[3]:sub(2)
-    end
-    print(assert(load(e[3]))())
-   end)
-   if not ok then
-    TERM.line(tostring(err))
+ TERM.write("> ")
+ local code = io.read()
+ if code then
+  local ok, err = pcall(function ()
+   if code:sub(1, 1) == "=" then
+    code = "return " .. code:sub(2)
    end
+   print(assert(load(code))())
+  end)
+  if not ok then
+   TERM.write(tostring(err) .. "\r\n")
   end
  end
 end
+
+if termClose then
+ termClose()
+end
+

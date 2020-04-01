@@ -15,66 +15,203 @@ local function rW()
  return string.format("%04x", math.random(0, 65535))
 end
 
-local id = "svc.t/" .. rW() .. rW() .. rW() .. rW()
+local id = "neo.pub.t/" .. rW() .. rW() .. rW() .. rW()
 local closeNow = false
 
+-- Terminus Registration State --
+
 local tReg = neo.requireAccess("r." .. id, "registration")
+local sendSigs = {}
 
--- unicode.safeTextFormat'd lines
+-- Display State --
+-- unicode.safeTextFormat'd lines.
+-- The size of this must not go below 1.
 local console = {}
+-- This must not go below 3.
+local conW = 40
+local conCX, conCY = 1, 1
 for i = 1, 14 do
- console[i] = (" "):rep(40)
+ console[i] = (" "):rep(conW)
 end
 
-local l15 = ""
---++++++++++++++++++++++++++++++++++++++++
-
--- sW must not go below 3.
--- sH must not go below 2.
-local sW, sH = 40, 15
-local cX = 1
-local windows = neo.requireAccess("x.neo.pub.window", "windows")
-local window = windows(sW, sH, title)
-
-local function fmtLine(s)
- s = unicode.safeTextFormat(s)
- local l = unicode.len(s)
- return unicode.sub(s .. (" "):rep(sW - l), -sW)
+-- Line Editing State --
+-- Nil if line editing is off.
+-- In this case, the console height
+--  must be adjusted accordingly.
+local leText = ""
+-- These are NOT nil'd out,
+--  particularly not the history buffer.
+local leCX = 1
+local leHistory = {
+ -- Size = history buffer size
+ "", "", "", ""
+}
+local function cycleHistoryUp()
+ local backupFirst = leHistory[1]
+ for i = 1, #leHistory - 1 do
+  leHistory[i] = leHistory[i + 1]
+ end
+ leHistory[#leHistory] = backupFirst
+end
+local function cycleHistoryDown()
+ local backup = leHistory[1]
+ for i = 2, #leHistory do
+  backup, leHistory[i] = leHistory[i], backup
+ end
+ leHistory[1] = backup
 end
 
-local function line(i)
- local l, c = console[i] or l15
- l, c = unicode.safeTextFormat(l, cX)
- l = require("lineedit").draw(sW, l, i == sH and c)
- if i ~= sH then
-  window.span(1, i, l, 0xFFFFFF, 0)
+-- Window --
+
+local window = neo.requireAccess("x.neo.pub.window", "window")(conW, #console + 1, title)
+
+-- Core Terminal Functions --
+
+local function setSize(w, h)
+ conW = w
+ while #console < h do
+  table.insert(console, "")
+ end
+ while #console > h do
+  table.remove(console, 1)
+ end
+ for i = 1, #console do
+  console[i] = unicode.sub(console[i], 1, w) .. (" "):rep(w - unicode.len(console[i]))
+ end
+ if leText then
+  window.setSize(w, h + 1)
  else
-  window.span(1, i, l, 0, 0xFFFFFF)
+  window.setSize(w, h)
+ end
+ conCX, conCY = 1, h
+end
+
+local function setLineEditing(state)
+ if state and not leText then
+  leText = ""
+  leCX = 1
+  setSize(conW, #console)
+ elseif leText and not state then
+  leText = nil
+  setSize(conW, #console)
  end
 end
 
-local function incoming(s)
- local function shift(f)
+local function draw(i)
+ if console[i] then
+  window.span(1, i, console[i], 0, 0xFFFFFF)
+ elseif leText then
+  window.span(1, i, require("lineedit").draw(conW, unicode.safeTextFormat(leText, leCX)), 0xFFFFFF, 0)
+ end
+end
+local function drawDisplay()
+ for i = 1, #console do draw(i) end
+end
+
+-- Terminal Visual --
+
+local function writeFF()
+ if conCY ~= #console then
+  conCY = conCY + 1
+ else
   for i = 1, #console - 1 do
    console[i] = console[i + 1]
   end
-  console[#console] = f
- end
- -- Need to break this safely.
- shift("")
- for i = 1, unicode.len(s) do
-  local ch = unicode.sub(s, i, i)
-  if unicode.wlen(console[#console] .. ch) > sW then
-   shift(" ")
-  end
-  console[#console] = console[#console] .. ch
- end
- for i = 1, #console do
-  line(i)
+  console[#console] = (" "):rep(conW)
  end
 end
 
-local sendSigs = {}
+local function writeData(data)
+ -- handle data until completion
+ while #data > 0 do
+  local char = unicode.sub(data, 1, 1)
+  data = unicode.sub(data, 2)
+  -- handle character
+  if char == "\r" then
+   conCX = 1
+  elseif char == "\n" then
+   conCX = 1
+   writeFF()
+  elseif char == "\a" then
+   -- Bell (er...)
+  elseif char == "\b" then
+   conCX = math.max(1, conCX - 1)
+  elseif char == "\v" or char == "\f" then
+   writeFF()
+  else
+   local charL = unicode.wlen(char)
+   if (conCX + charL - 1) > conW then
+    conCX = 1
+    writeFF()
+   end
+   local spaces = (" "):rep(charL - 1)
+   console[conCY] = unicode.sub(console[conCY], 1, conCX - 1) .. char .. spaces .. unicode.sub(console[conCY], conCX + charL)
+   conCX = conCX + charL
+  end
+ end
+end
+
+-- The Terminus --
+
+local tvBuildingCmd = ""
+local tvBuildingUTF = ""
+local function incoming(s)
+ tvBuildingCmd = tvBuildingCmd .. s
+ -- Flush Cmd
+ while #tvBuildingCmd > 0 do
+  if tvBuildingCmd:byte() == 255 then
+   -- It's a command. Uhoh.
+   if #tvBuildingCmd < 2 then break end
+   local cmd = tvBuildingCmd:byte(2)
+   local param = tvBuildingCmd:byte(3)
+   local cmdLen = 2
+   -- Command Lengths
+   if cmd >= 251 and cmd <= 254 then cmdLen = 3 end
+   if #tvBuildingCmd < cmdLen then break end
+   if cmd == 251 and param == 1 then
+    -- WILL ECHO (respond with DO ECHO, disable line editing)
+    -- test using io.write("\xFF\xFB\x01")
+    for _, v in pairs(sendSigs) do
+     v("telnet", "\xFF\xFD\x01")
+    end
+    setLineEditing(false)
+   elseif cmd == 252 and param == 1 then
+    -- WON'T ECHO (respond with DON'T ECHO, enable line editing)
+    for _, v in pairs(sendSigs) do
+     v("telnet", "\xFF\xFE\x01")
+    end
+    setLineEditing(true)
+   elseif cmd == 253 or cmd == 254 then
+    -- DO/DON'T (x) (respond with WON'T (X))
+    local res = "\xFF\xFC" .. string.char(param)
+    for _, v in pairs(sendSigs) do
+     v("telnet", res)
+    end
+   elseif cmd == 255 then
+    tvBuildingUTF = tvBuildingUTF .. "\xFF"
+   end
+   tvBuildingCmd = tvBuildingCmd:sub(cmdLen + 1)
+  else
+   tvBuildingUTF = tvBuildingUTF .. tvBuildingCmd:sub(1, 1)
+   tvBuildingCmd = tvBuildingCmd:sub(2)
+  end
+ end
+ -- Flush UTF
+ while #tvBuildingUTF > 0 do
+  local head = tvBuildingUTF:byte()
+  local len = 1
+  if head >= 192 and head < 224 then len = 2 end
+  if head >= 224 and head < 240 then len = 3 end
+  if head >= 240 and head < 248 then len = 4 end
+  if head >= 248 and head < 252 then len = 5 end
+  if head >= 252 and head < 254 then len = 6 end
+  if #tvBuildingUTF < len then break end
+  -- verified one full character...
+  local char = tvBuildingUTF:sub(1, len)
+  tvBuildingUTF = tvBuildingUTF:sub(len + 1)
+  writeData(char)
+ end
+end
 
 do
  tReg(function (_, pid, sendSig)
@@ -82,11 +219,12 @@ do
   return {
    id = "x." .. id,
    pid = neo.pid,
-   line = function (text)
+   write = function (text)
     incoming(tostring(text))
+    drawDisplay()
    end
   }
- end)
+ end, true)
 
  if retTbl then
   coroutine.resume(coroutine.create(retTbl), {
@@ -99,51 +237,45 @@ do
  end
 end
 
--- This decides the history buffer size.
-local history = {
- "", "", "", ""
-}
-
-local function cycleHistoryUp()
- local backupFirst = history[1]
- for i = 1, #history - 1 do
-  history[i] = history[i + 1]
- end
- history[#history] = backupFirst
-end
-local function cycleHistoryDown()
- local backup = history[1]
- for i = 2, #history do
-  backup, history[i] = history[i], backup
- end
- history[1] = backup
-end
-
 local function key(a, c)
- if c == 200 then
-  -- History cursor up (history down)
-  l15 = history[#history]
-  cX = 1
-  cycleHistoryDown()
-  return
- elseif c == 208 then
-  -- History cursor down (history up)
-  l15 = history[#history]
-  cX = 1
-  cycleHistoryUp()
-  return
- end
- local lT, lC, lX = require("lineedit").key(a, c, l15, cX)
- l15 = lT or l15
- cX = lC or cX
- if lX == "nl" then
-  cycleHistoryUp()
-  history[#history] = l15
+ if not leText then
   for _, v in pairs(sendSigs) do
-   v("line", l15)
+   if a == "\r" then
+    v("data", "\r\n")
+   elseif a then
+    v("data", a)
+   end
   end
-  l15 = ""
-  cX = 1
+ else
+  -- Line Editing active
+  if c == 200 or c == 208 then
+   -- History cursor up (history down)
+   leText = leHistory[#leHistory]
+   leCX = unicode.len(leText)
+   if c == 208 then
+    cycleHistoryUp()
+   else
+    cycleHistoryDown()
+   end
+   return
+  end
+  local lT, lC, lX = require("lineedit").key(a, c, leText, leCX)
+  leText = lT or leText
+  leCX = lC or leCX
+  if lX == "nl" then
+   cycleHistoryUp()
+   leHistory[#leHistory] = leText
+   -- the whole thing {
+   local fullText = leText .. "\r\n"
+   writeData(fullText)
+   drawDisplay()
+   for _, v in pairs(sendSigs) do
+    v("data", fullText)
+   end
+   -- }
+   leText = ""
+   leCX = 1
+  end
  end
 end
 
@@ -165,32 +297,26 @@ while not closeNow do
      key(c, 0)
     end
    end
-   line(sH)
+   draw(#console + 1)
   elseif e[3] == "key" then
    if e[5] == 29 or e[5] == 157 then
     control = e[6]
    elseif e[6] then
     if not control then
      key(e[4] ~= 0 and unicode.char(e[4]), e[5])
-     line(sH)
+     draw(#console + 1)
     elseif e[5] == 203 and sW > 8 then
-     sW = sW - 1
-     window.setSize(sW, sH)
-    elseif e[5] == 200 and sH > 2 then
-     sH = sH - 1
-     table.remove(console, 1)
-     window.setSize(sW, sH)
+     setSize(conW - 1, #console)
+    elseif e[5] == 200 and #console > 1 then
+     setSize(conW, #console - 1)
     elseif e[5] == 205 then
-     sW = sW + 1
-     window.setSize(sW, sH)
+     setSize(conW + 1, #console)
     elseif e[5] == 208 then
-     sH = sH + 1
-     table.insert(console, 1, "")
-     window.setSize(sW, sH)
+     setSize(conW, #console + 1)
     end
    end
   elseif e[3] == "line" then
-   line(e[4])
+   draw(e[4])
   end
  end
 end
