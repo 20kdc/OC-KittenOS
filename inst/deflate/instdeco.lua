@@ -1,6 +1,9 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
+-- THIS NEXT LINE IS CLEARLY AWFUL
+$bdBDWindow = nil
+
 -- THE DEFLATE DECOMPRESSOR OF MADNESS --
 
 -- Core I/O --
@@ -101,11 +104,11 @@ $}
 
 -- DEFLATE LZ Core --
 
-$dfWindow = ("\x00"):rep(2^16)
+$dfWindow = ("\x00"):rep(2^15)
 $dfPushBuf = ""
 ${
 function $dfOutput($L|lData)
- $dfWindow = ($dfWindow .. $lData):sub(-2^16)
+ $dfWindow = ($dfWindow .. $lData):sub(-2^15)
  $dfPushBuf = $dfPushBuf .. $lData
 end
 $}
@@ -146,7 +149,7 @@ function $dfReadBlockBody($L|lLit, $L|lDst, $L|lLitSym, $L|lLen, $L|lDCode, $L|l
   elseif $lLitSym <= 285 then
    $lLen = $dfBasetblLength[$lLitSym - 256] + $dfGetIntField($dfBittblLength[$lLitSym - 256])
    $lDCode = $dfReadHuffmanSymbol($lDst)
-   $lPtr = 65537 - ($dfBasetblDist[$lDCode + 1] + $dfGetIntField($dfBittblDist[$lDCode + 1]))
+   $lPtr = 32769 - ($dfBasetblDist[$lDCode + 1] + $dfGetIntField($dfBittblDist[$lDCode + 1]))
    for $L|lI = 1, $lLen do
     $dfOutput($dfWindow:sub($lPtr, $lPtr))
    end
