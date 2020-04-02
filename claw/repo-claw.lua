@@ -96,6 +96,7 @@ return {
   v = 0,
   deps = {
    "neo",
+   "svc-t",
    "zzz-license-pd"
   },
   dirs = {
