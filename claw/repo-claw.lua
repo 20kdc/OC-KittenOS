@@ -93,7 +93,7 @@ return {
  },
  ["app-kmt"] = {
   desc = "Line-terminal for MUDs & such",
-  v = 1,
+  v = 2,
   deps = {
    "neo",
    "zzz-license-pd"

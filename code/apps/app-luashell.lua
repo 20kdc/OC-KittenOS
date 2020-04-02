@@ -10,11 +10,11 @@ local termClose
 
 if not ok then
  termId = nil
- neo.executeAsync("svc-t", function (res)
+ assert(neo.executeAsync("svc-t", function (res)
   termId = res.access
   termClose = res.close
   neo.scheduleTimer(0)
- end, "luashell")
+ end, "luashell"))
  while not termId do
   coroutine.yield()
  end
@@ -32,7 +32,7 @@ event.listen("k.procdie", function (_, _, pid)
  end
 end)
 
-TERM.write(([[
+TERM.write([[
     KittenOS NEO Shell Usage Notes
 
 Prefixing = is an alias for 'return '.
@@ -46,7 +46,7 @@ os.exit(): quit the shell
 =listCmdApps(): -t- (terminal) apps
 event: useful for setting up listeners
  without breaking shell functionality
-]]):gsub("[\r]*\n", "\r\n"))
+]])
 
 function listCmdApps()
  local apps = {}

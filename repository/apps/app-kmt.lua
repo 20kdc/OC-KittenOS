@@ -1,181 +1,96 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- app-kmt.lua : LC emergency plan
+-- app-kmt.lua : just a utility now
 -- Authors: 20kdc
 
-local lcOverride = false
-local l15 = "20kdc.duckdns.org:8888"
-
--- unicode.safeTextFormat'd lines
-local console = {
- "┎┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┒",
- "┋         ┃ ╱  ┃╲    ╱┃  ▀▀┃▀▀         ┋",
- "┋         ┃╳   ┃ ╲  ╱ ┃    ┃           ┋",
- "┋         ┃ ╲  ┃  ╲╱  ┃    ┃           ┋",
- "┋                                      ┋",
- "┋      KittenOS NEO MUD Terminal       ┋",
- "┖┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┚",
- ":Type text, Enter key sends.",
- ":'>' is 'from you', '<' 'to you'.",
- ":':' is 'internal message'.",
- ":Control-Arrows resizes window.",
--- ":F5/F6 copies/pastes current line.",
- ":",
- ":",
- ":Enter target server:port",
- -- 14
-}
---++++++++++++++++++++++++++++++++++++++++
-
--- sW must not go below 3.
--- sH must not go below 2.
-local sW, sH = 40, 15
 local inet = neo.requireAccess("c.internet", "internet").list()()
-local windows = neo.requireAccess("x.neo.pub.window", "windows")
-local window = windows(sW, sH)
 
-local tcp = nil
-local dummyTcp = {read = function() return "" end, write = function() end, close = function() end}
-local tcpBuf = ""
+local _, _, termId = ...
+local ok = pcall(function ()
+ assert(string.sub(termId, 1, 12) == "x.neo.pub.t/")
+end)
 
-local function fmtLine(s)
- s = unicode.safeTextFormat(s)
- local l = unicode.len(s)
- return unicode.sub(s .. (" "):rep(sW - l), -sW)
-end
+local termClose
 
-local function line(i)
- if i ~= sH then
-  assert(console[i], "console" .. i)
-  window.span(1, i, fmtLine(console[i]), 0xFFFFFF, 0)
- else
-  window.span(1, i, fmtLine(l15), 0, 0xFFFFFF)
+if not ok then
+ termId = nil
+ assert(neo.executeAsync("svc-t", function (res)
+  termId = res.access
+  termClose = res.close
+  neo.scheduleTimer(0)
+ end, "kmt"))
+ while true do
+  if coroutine.yield() == "k.timer" then break end
  end
 end
+local term = neo.requireAccess(termId, "terminal")
 
-local function incoming(s)
- local function shift(f)
-  for i = 1, #console - 1 do
-   console[i] = console[i + 1]
-  end
-  console[#console] = f
- end
- -- Need to break this safely.
- shift("")
- for i = 1, unicode.len(s) do
-  local ch = unicode.sub(s, i, i)
-  if unicode.wlen(console[#console] .. ch) > sW then
-   shift(" ")
-  end
-  console[#console] = console[#console] .. ch
- end
- for i = 1, #console do
-  line(i)
- end
-end
+term.write([[
+┎┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┒
+┋         ┃ ╱  ┃╲    ╱┃  ▀▀┃▀▀         ┋
+┋         ┃╳   ┃ ╲  ╱ ┃    ┃           ┋
+┋         ┃ ╲  ┃  ╲╱  ┃    ┃           ┋
+┋                                      ┋
+┋      KittenOS NEO MUD Terminal       ┋
+┖┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┚
+export TERM=ansi-generic <- IMPORTANT!!!
+Enter target server:port...
+]])
 
-local function submitLine()
- incoming(">" .. l15)
- if not tcp then
-  tcp = inet.connect(l15)
-  if not tcp then
-   incoming(":The connection could not be created.")
-   tcp = dummyTcp
-  else
-   if not tcp.finishConnect() then
-    incoming(":Warning: finishConnect = false")
-   end
-   neo.scheduleTimer(os.uptime() + 0.1)
-  end
- else
-  -- PRJblackstar doesn't need \r but others might
-  tcp.write(l15 .. "\r\n")
- end
- l15 = ""
- line(sH)
-end
+local targetBuffer = ""
 
-if lcOverride then
- submitLine()
-end
-
-local function clipEnt(tx)
- tx = tx:gsub("\r", "")
- local ci = tx:find("\n") or (#tx + 1)
- tx = tx:sub(1, ci - 1)
- l15 = tx
- line(sH)
-end
-
-local control = false
+neo.scheduleTimer(0)
 while true do
  local e = {coroutine.yield()}
  if e[1] == "k.timer" then
-  while true do
+  while tcp do
    local b, e = tcp.read(neo.readBufSize)
    if not b then
     if e then
-     incoming(":Warning: " .. e)
+     term.write("\nkmt: " .. tostring(e) .. "\n")
      tcp.close()
-     tcp = dummyTcp
+     tcp = nil
     end
-    break
    elseif b == "" then
     break
    else
-    tcpBuf = tcpBuf .. b:gsub("\r", "")
-    while true do
-     local nlp = tcpBuf:find("\n")
-     if nlp then
-      incoming("<" .. tcpBuf:sub(1, nlp - 1))
-      tcpBuf = tcpBuf:sub(nlp + 1)
-     else
-      break
-     end
-    end
+    term.write(b)
    end
   end
-  neo.scheduleTimer(os.uptime() + 0.1)
- elseif e[1] == "x.neo.pub.window" then
-  if e[3] == "close" then
-   if tcp then
-    tcp.close()
-   end
-   return
-  elseif e[3] == "clipboard" then
-   clipEnt(e[4])
-  elseif e[3] == "key" then
-   if e[5] == 29 or e[5] == 157 then
-    control = e[6]
-   elseif e[6] then
-    if not control then
-     if e[4] == 8 or e[4] == 127 then
-      l15 = unicode.sub(l15, 1, -2)
-     elseif e[4] == 13 then
-      submitLine()
-     elseif e[4] >= 32 then
-      l15 = l15 .. unicode.char(e[4])
-     end
-     line(sH)
-    elseif e[5] == 203 and sW > 8 then
-     sW = sW - 1
-     window.setSize(sW, sH)
-    elseif e[5] == 200 and sH > 2 then
-     sH = sH - 1
-     table.remove(console, 1)
-     window.setSize(sW, sH)
-    elseif e[5] == 205 then
-     sW = sW + 1
-     window.setSize(sW, sH)
-    elseif e[5] == 208 then
-     sH = sH + 1
-     table.insert(console, 1, "")
-     window.setSize(sW, sH)
+  neo.scheduleTimer(os.uptime() + 0.049)
+ elseif e[1] == "k.procdie" then
+  if e[3] == term.pid then
+   break
+  end
+ elseif e[1] == termId then
+  if targetBuffer and e[2] == "data" then
+   targetBuffer = targetBuffer .. e[3]:gsub("\r", "")
+   local p = targetBuffer:find("\n")
+   if p then
+    local ok, res, rer = pcall(inet.connect, targetBuffer:sub(1, p - 1))
+    targetBuffer = targetBuffer:sub(p + 1):gsub("\n", "\r\n")
+    if not ok then
+     -- Likes to return this kind
+     term.write("kmt: " .. tostring(res) .. "\n")
+    elseif not res then
+     -- Could theoretically return this kind
+     term.write("kmt: " .. tostring(rer) .. "\n")
+    else
+     -- Hopefully this kind
+     term.write("kmt: Connecting...\n")
+     tcp = res
+     tcp.write(targetBuffer)
+     targetBuffer = nil
     end
    end
-  elseif e[3] == "line" then
-   line(e[4])
+  elseif tcp and e[2] == "data" or e[2] == "telnet" then
+   tcp.write(e[3])
   end
  end
 end
+
+if tcp then
+ tcp.close()
+end
+

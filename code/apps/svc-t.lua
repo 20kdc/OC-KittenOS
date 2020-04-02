@@ -30,7 +30,9 @@ local console = {}
 -- This must not go below 3.
 local conW = 40
 local conCX, conCY = 1, 1
-local conCV = false
+-- Performance
+local consoleShown = {}
+local conCYShown
 for i = 1, 14 do
  console[i] = (" "):rep(conW)
 end
@@ -70,6 +72,9 @@ local window = neo.requireAccess("x.neo.pub.window", "window")(conW, #console + 
 
 local function setSize(w, h)
  conW = w
+ for i = 1, #console do
+  consoleShown[i] = nil
+ end
  while #console < h do
   table.insert(console, "")
  end
@@ -101,7 +106,7 @@ end
 local function draw(i)
  if console[i] then
   window.span(1, i, console[i], 0, 0xFFFFFF)
-  if i == conCY and conCV then
+  if i == conCY and not leText then
    window.span(conCX, i, unicode.sub(console[i], conCX, conCX), 0xFFFFFF, 0)
   end
  elseif leText then
@@ -109,7 +114,13 @@ local function draw(i)
  end
 end
 local function drawDisplay()
- for i = 1, #console do draw(i) end
+ for i = 1, #console do
+  if consoleShown[i] ~= console[i] or i == conCY or i == conCYShown then
+   draw(i)
+   consoleShown[i] = console[i]
+  end
+ end
+ conCYShown = conCY
 end
 
 -- Terminal Visual --
@@ -147,6 +158,8 @@ local function writeData(data)
   end
   if char == "\r" then
    conCX = 1
+  elseif char == "\x00" then
+   -- caused by TELNET \r rules
   elseif char == "\n" then
    conCX = 1
    writeFF()
@@ -171,6 +184,7 @@ local function writeData(data)
 end
 
 local function writeANSI(s)
+ --neo.emergency("svc-t.ansi: " .. s)
  -- This supports just about enough to get by.
  if s == "c" then
   for i = 1, #console do
@@ -186,13 +200,18 @@ local function writeANSI(s)
   if cmd == "H" or cmd == "f" then
    local p = s:find(";")
    if not p then
-    conCX, conCY = 1, 1
+    conCY = np
+    conCX = 1
    else
     conCY = tonumber(s:sub(2, p - 1)) or 1
     conCX = tonumber(s:sub(p + 1, -2)) or 1
    end
   elseif cmd == "K" then
    console[conCY] = unicode.sub(console[conCY], 1, conCX - 1) .. (" "):rep(1 + conW - conCX)
+  elseif cmd == "J" then
+   for i = 1, #console do
+    console[i] = (" "):rep(conW)
+   end
   elseif cmd == "A" then
    conCY = conCY - np
   elseif cmd == "B" then
@@ -372,10 +391,24 @@ local function key(a, c)
   -- Line Editing not active.
   -- For now support a bare minimum.
   for _, v in pairs(sendSigs) do
-   if control then
-    if a == 99 then
-     v("telnet", "\xFF\xF4")
-    end
+   if a == "\x03" then
+    v("telnet", "\xFF\xF4")
+   elseif c == 199 then
+    v("data", "\x1b[H")
+   elseif c == 201 then
+    v("data", "\x1b[5~")
+   elseif c == 207 then
+    v("data", "\x1b[F")
+   elseif c == 209 then
+    v("data", "\x1b[6~")
+   elseif c == 203 then
+    v("data", "\x1b[D")
+   elseif c == 205 then
+    v("data", "\x1b[C")
+   elseif c == 200 then
+    v("data", "\x1b[A")
+   elseif c == 208 then
+    v("data", "\x1b[B")
    elseif a == "\r" then
     v("data", "\r\n")
    elseif a then

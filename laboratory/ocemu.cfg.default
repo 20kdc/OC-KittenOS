@@ -3,8 +3,8 @@ ocemu {
     components {
       {"gpu", "c1-gpu-tier3", 0, 160, 50, 3},
       {"gpu", "c1-gpu-tier1", 0, 50, 16, 1},
---      {"screen_sdl2", "c1-screen-tier3", -1, 160, 50, 3},
-      {"screen_sdl2", "c1-screen-tier1", -1, 50, 16, 1},
+      {"screen_sdl2", "c1-screen-tier3", -1, 160, 50, 3},
+--      {"screen_sdl2", "c1-screen-tier1", -1, 50, 16, 1},
       {"modem", "c1-modem", 1, false},
       {"eeprom", "c1-eeprom", 9, "lua/bios.lua"},
       {"filesystem", "c1-tmpfs", -1, "tmpfs", "tmpfs", false, 5},
