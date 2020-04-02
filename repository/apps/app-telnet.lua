@@ -1,7 +1,7 @@
 -- This is released into the public domain.
 -- No warranty is provided, implied or otherwise.
 
--- app-kmt.lua : just a utility now
+-- app-telnet.lua : just a utility now
 -- Authors: 20kdc
 
 local inet = neo.requireAccess("c.internet", "internet").list()()

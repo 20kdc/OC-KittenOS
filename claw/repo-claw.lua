@@ -91,9 +91,9 @@ return {
    "docs/repoauthors/app-allmem"
   },
  },
- ["app-kmt"] = {
-  desc = "Line-terminal for MUDs & such",
-  v = 2,
+ ["app-telnet"] = {
+  desc = "TELNET client",
+  v = 0,
   deps = {
    "neo",
    "zzz-license-pd"
@@ -104,8 +104,8 @@ return {
    "docs/repoauthors"
   },
   files = {
-   "apps/app-kmt.lua",
-   "docs/repoauthors/app-kmt"
+   "apps/app-telnet.lua",
+   "docs/repoauthors/app-telnet"
   },
  },
  ["svc-ghostie"] = {
