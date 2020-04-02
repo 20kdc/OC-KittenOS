@@ -30,6 +30,7 @@ local console = {}
 -- This must not go below 3.
 local conW = 40
 local conCX, conCY = 1, 1
+local conCV = false
 for i = 1, 14 do
  console[i] = (" "):rep(conW)
 end
@@ -100,6 +101,9 @@ end
 local function draw(i)
  if console[i] then
   window.span(1, i, console[i], 0, 0xFFFFFF)
+  if i == conCY and conCV then
+   window.span(conCX, i, unicode.sub(console[i], conCX, conCX), 0xFFFFFF, 0)
+  end
  elseif leText then
   window.span(1, i, require("lineedit").draw(conW, unicode.safeTextFormat(leText, leCX)), 0xFFFFFF, 0)
  end
@@ -110,14 +114,24 @@ end
 
 -- Terminal Visual --
 
+local function consoleSD()
+ for i = 1, #console - 1 do
+  console[i] = console[i + 1]
+ end
+ console[#console] = (" "):rep(conW)
+end
+local function consoleSU()
+ local backup = (" "):rep(conW)
+ for i = 1, #console do
+  backup, console[i] = console[i], backup
+ end
+end
+
 local function writeFF()
  if conCY ~= #console then
   conCY = conCY + 1
  else
-  for i = 1, #console - 1 do
-   console[i] = console[i + 1]
-  end
-  console[#console] = (" "):rep(conW)
+  consoleSD()
  end
 end
 
@@ -151,8 +165,54 @@ local function writeData(data)
    local spaces = (" "):rep(charL - 1)
    console[conCY] = unicode.sub(console[conCY], 1, conCX - 1) .. char .. spaces .. unicode.sub(console[conCY], conCX + charL)
    conCX = conCX + charL
+   -- Cursor can be (intentionally!) off-screen here
   end
  end
+end
+
+local function writeANSI(s)
+ -- This supports just about enough to get by.
+ if s == "c" then
+  for i = 1, #console do
+   console[i] = (" "):rep(conW)
+  end
+  conCX, conCY = 1, 1
+  return
+ end
+ local pfx = s:sub(1, 1)
+ local cmd = s:sub(#s)
+ if pfx == "[" then
+  local np = tonumber(s:sub(2, -2)) or 1
+  if cmd == "H" or cmd == "f" then
+   local p = s:find(";")
+   if not p then
+    conCX, conCY = 1, 1
+   else
+    conCY = tonumber(s:sub(2, p - 1)) or 1
+    conCX = tonumber(s:sub(p + 1, -2)) or 1
+   end
+  elseif cmd == "K" then
+   console[conCY] = unicode.sub(console[conCY], 1, conCX - 1) .. (" "):rep(1 + conW - conCX)
+  elseif cmd == "A" then
+   conCY = conCY - np
+  elseif cmd == "B" then
+   conCY = conCY + np
+  elseif cmd == "C" then
+   conCX = conCX + np
+  elseif cmd == "D" then
+   conCX = conCX - np
+  elseif cmd == "S" then
+   for i = 1, np do
+    consoleSU()
+   end
+  elseif cmd == "T" then
+   for i = 1, np do
+    consoleSD()
+   end
+  end
+ end
+ conCX = math.min(math.max(math.floor(conCX), 1), conW)
+ conCY = math.min(math.max(math.floor(conCY), 1), #console)
 end
 
 -- The Terminus --
@@ -217,20 +277,51 @@ local function incoming(s)
    tvBuildingCmd = tvBuildingCmd:sub(2)
   end
  end
- -- Flush UTF
+ -- Flush UTF/Display
  while #tvBuildingUTF > 0 do
   local head = tvBuildingUTF:byte()
   local len = 1
-  if head >= 192 and head < 224 then len = 2 end
-  if head >= 224 and head < 240 then len = 3 end
-  if head >= 240 and head < 248 then len = 4 end
-  if head >= 248 and head < 252 then len = 5 end
-  if head >= 252 and head < 254 then len = 6 end
-  if #tvBuildingUTF < len then break end
-  -- verified one full character...
-  local char = tvBuildingUTF:sub(1, len)
+  local handled = false
+  if head == 27 then
+   local h2 = tvBuildingUTF:byte(2)
+   if h2 == 91 then
+    for i = 3, #tvBuildingUTF do
+     local cmd = tvBuildingUTF:byte(i)
+     if cmd >= 0x40 and cmd <= 0x7E then
+      writeANSI(tvBuildingUTF:sub(2, i))
+      len = i
+      handled = true
+      break
+     end
+    end
+   elseif h2 then
+    len = 2
+    writeANSI(tvBuildingUTF:sub(2, 2))
+    handled = true
+   end
+   if not handled then break end
+  end
+  if not handled then
+   if head < 192 then
+    len = 1
+   elseif head < 224 then
+    len = 2
+   elseif head < 240 then
+    len = 3
+   elseif head < 248 then
+    len = 4
+   elseif head < 252 then
+    len = 5
+   elseif head < 254 then
+    len = 6
+   end
+   if #tvBuildingUTF < len then
+    break
+   end
+   -- verified one full character...
+   writeData(tvBuildingUTF:sub(1, len))
+  end
   tvBuildingUTF = tvBuildingUTF:sub(len + 1)
-  writeData(char)
  end
 end
 
@@ -262,16 +353,16 @@ local control = false
 
 local function key(a, c)
  if control then
-  if e[5] == 203 and conW > 8 then
+  if c == 203 and conW > 8 then
    setSize(conW - 1, #console)
    return
-  elseif e[5] == 200 and #console > 1 then
+  elseif c == 200 and #console > 1 then
    setSize(conW, #console - 1)
    return
-  elseif e[5] == 205 then
+  elseif c == 205 then
    setSize(conW + 1, #console)
    return
-  elseif e[5] == 208 then
+  elseif c == 208 then
    setSize(conW, #console + 1)
    return
   end
