@@ -32,43 +32,59 @@ event.listen("k.procdie", function (_, _, pid)
  end
 end)
 
-TERM.write("KittenOS NEO Lua Shell\r\n")
+TERM.write(([[
+    KittenOS NEO Shell Usage Notes
 
-print = function (...)
- local n = {}
- local s = {...}
- for i = 1, #s do
-  local v = s[i]
-  if v == nil then
-   v = "nil"
+Prefixing = is an alias for 'return '.
+io.read(): Reads a line.
+print: 'print with table dumping' impl.
+TERM: Your terminal. (see us-termi doc.)
+os.execute(): launch terminal apps!
+tries '*', 'sys-t-*', 'svc-t-*', 'app-*'
+ example: os.execute("luashell")
+os.exit(): quit the shell
+=listCmdApps(): -t- (terminal) apps
+event: useful for setting up listeners
+ without breaking shell functionality
+]]):gsub("[\r]*\n", "\r\n"))
+
+function listCmdApps()
+ local apps = {}
+ for _, v in ipairs(neo.listApps()) do
+  if v:sub(4, 6) == "-t-" then
+   table.insert(apps, v)
   end
-  table.insert(n, tostring(v))
  end
- TERM.write(table.concat(n, " ") .. "\r\n")
+ return apps
 end
 
-run = function (x, ...)
- local subPid = neo.executeAsync(x, ...)
- if not subPid then
-  subPid = neo.executeAsync("sys-t-" .. x, TERM.id, ...)
- end
- if not subPid then
-  subPid = neo.executeAsync("svc-t-" .. x, TERM.id, ...)
- end
- if not subPid then
-  subPid = neo.executeAsync("app-" .. x, TERM.id, ...)
- end
- if not subPid then
-  error("cannot find " .. x)
- end
- while true do
-  local e = {event.pull()}
-  if e[1] == "k.procdie" then
-   if e[3] == subPid then
-    return
-   end
+local function vPrint(slike, ...)
+ local s = {...}
+ if #s > 1 then
+  for i = 1, #s do
+   if i ~= 1 then TERM.write("\t") end
+   vPrint(slike, s[i])
   end
+ elseif slike and type(s[1]) == "string" then
+  TERM.write("\"" .. s[1] .. "\"")
+ elseif type(s[1]) ~= "table" then
+  TERM.write(tostring(s[1]))
+ else
+  TERM.write("{")
+  for k, v in pairs(s[1]) do
+   TERM.write("[")
+   vPrint(true, k)
+   TERM.write("] = ")
+   vPrint(true, v)
+   TERM.write(", ")
+  end
+  TERM.write("}")
  end
+end
+
+print = function (...)
+ vPrint(false, ...)
+ TERM.write("\r\n")
 end
 
 local ioBuffer = ""
@@ -98,8 +114,32 @@ os = setmetatable({}, {
  __index = originalOS
 })
 
-os.exit = function ()
+function os.exit()
  alive = false
+end
+
+function os.execute(x, ...)
+ local subPid = neo.executeAsync(x, TERM.id, ...)
+ if not subPid then
+  subPid = neo.executeAsync("sys-t-" .. x, TERM.id, ...)
+ end
+ if not subPid then
+  subPid = neo.executeAsync("svc-t-" .. x, TERM.id, ...)
+ end
+ if not subPid then
+  subPid = neo.executeAsync("app-" .. x, TERM.id, ...)
+ end
+ if not subPid then
+  error("cannot find " .. x)
+ end
+ while true do
+  local e = {event.pull()}
+  if e[1] == "k.procdie" then
+   if e[3] == subPid then
+    return
+   end
+  end
+ end
 end
 
 while alive do

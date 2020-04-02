@@ -127,6 +127,10 @@ local function writeData(data)
   local char = unicode.sub(data, 1, 1)
   data = unicode.sub(data, 2)
   -- handle character
+  if char == "\t" then
+   -- not ideal, but allowed
+   char = " "
+  end
   if char == "\r" then
    conCX = 1
   elseif char == "\n" then
@@ -254,21 +258,45 @@ do
  end
 end
 
+local control = false
+
 local function key(a, c)
+ if control then
+  if e[5] == 203 and conW > 8 then
+   setSize(conW - 1, #console)
+   return
+  elseif e[5] == 200 and #console > 1 then
+   setSize(conW, #console - 1)
+   return
+  elseif e[5] == 205 then
+   setSize(conW + 1, #console)
+   return
+  elseif e[5] == 208 then
+   setSize(conW, #console + 1)
+   return
+  end
+ end
+ -- so with the reserved ones dealt with...
  if not leText then
+  -- Line Editing not active.
+  -- For now support a bare minimum.
   for _, v in pairs(sendSigs) do
-   if a == "\r" then
+   if control then
+    if a == 99 then
+     v("telnet", "\xFF\xF4")
+    end
+   elseif a == "\r" then
     v("data", "\r\n")
    elseif a then
     v("data", a)
    end
   end
- else
-  -- Line Editing active
+ elseif not control then
+  -- Line Editing active and control isn't involved
   if c == 200 or c == 208 then
    -- History cursor up (history down)
    leText = leHistory[#leHistory]
-   leCX = unicode.len(leText)
+   leCX = unicode.len(leText) + 1
    if c == 208 then
     cycleHistoryUp()
    else
@@ -296,7 +324,6 @@ local function key(a, c)
  end
 end
 
-local control = false
 while not closeNow do
  local e = {coroutine.yield()}
  if e[1] == "k.procdie" then
@@ -319,18 +346,8 @@ while not closeNow do
    if e[5] == 29 or e[5] == 157 then
     control = e[6]
    elseif e[6] then
-    if not control then
-     key(e[4] ~= 0 and unicode.char(e[4]), e[5])
-     draw(#console + 1)
-    elseif e[5] == 203 and sW > 8 then
-     setSize(conW - 1, #console)
-    elseif e[5] == 200 and #console > 1 then
-     setSize(conW, #console - 1)
-    elseif e[5] == 205 then
-     setSize(conW + 1, #console)
-    elseif e[5] == 208 then
-     setSize(conW, #console + 1)
-    end
+    key(e[4] ~= 0 and unicode.char(e[4]), e[5])
+    draw(#console + 1)
    end
   elseif e[3] == "line" then
    draw(e[4])
