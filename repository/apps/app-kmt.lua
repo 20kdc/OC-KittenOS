@@ -34,7 +34,7 @@ term.write([[
 ┋                                      ┋
 ┋      KittenOS NEO MUD Terminal       ┋
 ┖┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┚
-export TERM=ansi-generic <- IMPORTANT!!!
+export TERM=ansi.sys <- IMPORTANT!!!
 Enter target server:port...
 ]])
 

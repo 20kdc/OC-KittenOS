@@ -1,33 +1,26 @@
-The "svc-t" program / "x.svc.t"
+The "svc-t" program / "x.neo.pub.t"
  permission makes up the terminal
  subsystem for KittenOS NEO.
 
  --- THEORETICAL TERMINALS MODEL ---
 
 The theoretical model for terminals
- in KittenOS NEO is a TELNET client
- that only supports the ECHO option,
- and uses the non-standard behavior
- of treating ECHO ON as 'enable local
- line editing'.
+ in KittenOS NEO is a TELNET client,
+ using the non-standard behavior of
+ treating a lack of remote echo as
+ meaning 'local line editing'.
 
 To prevent code size going too far,
- the client is extremely restricted
- in capabilities.
+ the shipped terminal supports:
+
+1. Built-in history as part of the
+ line editing functionality
+
+2. ANSI.SYS-compatible display, but
+ no support for attributes.
 
 If you really want full support,
  write a better terminal application.
-
-Features that get added will be added
- in accordance with ANSI/TELNET where
- reasonable or in a compatible-ish
- fashion where unreasonable.
-
-The defaults will be set based on
- whatever app-luashell requires, as
- this is what is expected of modern
- terminal systems regardless of what
- the standards may have to say.
 
 A process starting another process
  connected to the same terminal is
@@ -82,7 +75,7 @@ When the terminal has shown, the
  function provided is called with a
  table as follows:
 
-access = "x.svc.t/<...>"
+access = "x.neo.pub.t/<...>"
 close = function (): close terminal
 
 The k.kill permission and the close
@@ -95,7 +88,7 @@ In either case, when the access has
  been acquired, the following API is
  presented:
 
-id = "x.svc.t/<...>"
+id = "x.neo.pub.t/<...>"
 pid = <The terminal's PID.>
 write = function (text): Writes the
  TELNET data to the terminal.

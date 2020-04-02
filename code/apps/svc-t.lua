@@ -30,6 +30,7 @@ local console = {}
 -- This must not go below 3.
 local conW = 40
 local conCX, conCY = 1, 1
+local conSCX, conSCY = 1, 1
 -- Performance
 local consoleShown = {}
 local conCYShown
@@ -138,6 +139,13 @@ local function consoleSU()
  end
 end
 
+local function consoleCLS()
+ for i = 1, #console do
+  console[i] = (" "):rep(conW)
+ end
+ conCX, conCY = 1, 1
+end
+
 local function writeFF()
  if conCY ~= #console then
   conCY = conCY + 1
@@ -150,6 +158,7 @@ local function writeData(data)
  -- handle data until completion
  while #data > 0 do
   local char = unicode.sub(data, 1, 1)
+  --neo.emergency("svc-t.data: " .. char:byte())
   data = unicode.sub(data, 2)
   -- handle character
   if char == "\t" then
@@ -187,17 +196,22 @@ local function writeANSI(s)
  --neo.emergency("svc-t.ansi: " .. s)
  -- This supports just about enough to get by.
  if s == "c" then
-  for i = 1, #console do
-   console[i] = (" "):rep(conW)
-  end
-  conCX, conCY = 1, 1
+  consoleCLS()
   return
  end
  local pfx = s:sub(1, 1)
  local cmd = s:sub(#s)
  if pfx == "[" then
   local np = tonumber(s:sub(2, -2)) or 1
-  if cmd == "H" or cmd == "f" then
+  if cmd == "A" then
+   conCY = conCY - np
+  elseif cmd == "B" then
+   conCY = conCY + np
+  elseif cmd == "C" then
+   conCX = conCX + np
+  elseif cmd == "D" then
+   conCX = conCX - np
+  elseif cmd == "f" or cmd == "H" then
    local p = s:find(";")
    if not p then
     conCY = np
@@ -206,28 +220,25 @@ local function writeANSI(s)
     conCY = tonumber(s:sub(2, p - 1)) or 1
     conCX = tonumber(s:sub(p + 1, -2)) or 1
    end
-  elseif cmd == "K" then
-   console[conCY] = unicode.sub(console[conCY], 1, conCX - 1) .. (" "):rep(1 + conW - conCX)
   elseif cmd == "J" then
-   for i = 1, #console do
-    console[i] = (" "):rep(conW)
+   consoleCLS()
+  elseif cmd == "K" then
+   if s == "[K" or s == "[0K" then
+    -- bash needs this
+    console[conCY] = unicode.sub(console[conCY], 1, conCX - 1) .. (" "):rep(1 + conW - conCX)
+   else
+    console[conCY] = (" "):rep(conW)
    end
-  elseif cmd == "A" then
-   conCY = conCY - np
-  elseif cmd == "B" then
-   conCY = conCY + np
-  elseif cmd == "C" then
-   conCX = conCX + np
-  elseif cmd == "D" then
-   conCX = conCX - np
-  elseif cmd == "S" then
-   for i = 1, np do
-    consoleSU()
+  elseif cmd == "n" then
+   if s == "[6n" then
+    for _, v in pairs(sendSigs) do
+     v("data", "\x1b[" .. conY .. ";" .. conX .. "R")
+    end
    end
-  elseif cmd == "T" then
-   for i = 1, np do
-    consoleSD()
-   end
+  elseif cmd == "s" then
+   conSCX, conSCY = conCX, conCY
+  elseif cmd == "u" then
+   conCX, conCY = conSCX, conSCY
   end
  end
  conCX = math.min(math.max(math.floor(conCX), 1), conW)
