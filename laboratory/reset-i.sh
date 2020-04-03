@@ -7,5 +7,5 @@ cp ocemu.cfg.default ocemu.cfg && rm -rf c1-sda c1-sdb tmpfs
 mkdir c1-sda c1-sdb
 echo -n c1-sda > c1-eeprom/data.bin
 cd ..
-./package.sh
+./package.sh $*
 cp inst.lua laboratory/c1-sda/init.lua

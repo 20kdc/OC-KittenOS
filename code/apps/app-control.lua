@@ -226,7 +226,7 @@ window = neoux.create(currentGen())
 while running do
  local src, id, k, v = event.pull()
  if src == "x.neo.sys.manage" then
-  if id == "set_setting" then
+  if id == "set_setting" and currentGen ~= logGen then
    window.reset(currentGen())
   end
  end

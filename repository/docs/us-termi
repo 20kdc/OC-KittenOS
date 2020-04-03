@@ -1,0 +1,114 @@
+The "svc-t" program / "x.neo.pub.t"
+ permission makes up the terminal
+ subsystem for KittenOS NEO.
+
+ --- THEORETICAL TERMINALS MODEL ---
+
+The theoretical model for terminals
+ in KittenOS NEO is a TELNET client,
+ using the non-standard behavior of
+ treating a lack of remote echo as
+ meaning 'local line editing'.
+
+To prevent code size going too far,
+ the shipped terminal supports:
+
+1. Built-in history as part of the
+ line editing functionality
+
+2. ANSI.SYS-compatible display, but
+ no support for attributes.
+
+If you really want full support,
+ write a better terminal application.
+
+A process starting another process
+ connected to the same terminal is
+ advised to wait for that process to
+ die before continuing reading input.
+
+The controlling process is whichever
+ process is supposed to be accepting
+ user input. This is contextual, and
+ there is no mechanism to control
+ this explicitly.
+
+The controlling process should show
+ text in response to any user input,
+ or at least provide some form of
+ acknowledgement that user input has
+ been received.
+
+For convenience, terminal echo is on
+ by default; this is easily remedied.
+
+  --- ACTUAL USAGE OF TERMINALS ---
+
+Access control on terminals is looser
+ than for most permissions, as it has
+ to be able to be 'sublet' in some
+ cases, including events.
+
+As such, the secret flag is set for
+ terminal registration.
+
+A terminal program is given a string
+ argument for the ID of the terminal
+ to connect to.
+
+A terminal always has an ID beginning
+ with "x.neo.pub.t/". ALWAYS CHECK.
+
+Requiring the responsible access
+ connects to the terminal. All
+ terminal programs SHOULD check for
+ the death of their parent terminal
+ (via the k.procdie event) and
+ self-destruct accordingly.
+
+A program may start svc-t directly.
+
+In this case, it must pass a function
+ (resTbl) and may pass a title.
+
+When the terminal has shown, the
+ function provided is called with a
+ table as follows:
+
+access = "x.neo.pub.t/<...>"
+close = function (): close terminal
+
+The k.kill permission and the close
+ function are the only ways for a
+ program to kill a terminal, and the
+ close function is only given to the
+ creating process.
+
+In either case, when the access has
+ been acquired, the following API is
+ presented:
+
+id = "x.neo.pub.t/<...>"
+pid = <The terminal's PID.>
+write = function (text): Writes the
+ TELNET data to the terminal.
+
+User input is provided in events:
+ <id>, "data", <data>
+
+TELNET commands are provided in:
+ <id>, "telnet", <data>
+
+There is a total of one TELNET
+ command per event, unpadded.
+
+Notably, intermixing the data part
+ of the data/telnet events in order
+ produces the full terminal-to-server
+ TELNET stream.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

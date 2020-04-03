@@ -339,6 +339,7 @@ newNeoux = function (event, neo)
  end
  -- Note: w should be at least 2 - this is similar to buttons.
  neoux.tcfield = function (x, y, w, textprop)
+  local p = 1
   return {
    x = x,
    y = y,
@@ -347,22 +348,24 @@ newNeoux = function (event, neo)
    selectable = true,
    key = function (window, update, a, c, d, f)
     if d then
+     local ot = textprop()
+     local le = require("lineedit")
+     p = le.clamp(ot, p)
      if c == 63 then
-      neo.requireAccess("x.neo.pub.globals", "clipboard").setSetting("clipboard", textprop())
+      neo.requireAccess("x.neo.pub.globals", "clipboard").setSetting("clipboard", ot)
      elseif c == 64 then
       local contents = neo.requireAccess("x.neo.pub.globals", "clipboard").getSetting("clipboard")
       contents = contents:match("^[^\r\n]*")
       textprop(contents)
       update()
-     elseif a == 8 then
-      local str = textprop()
-      textprop(unicode.sub(str, 1, unicode.len(str) - 1))
-      update()
-      return true
-     elseif a >= 32 then
-      textprop(textprop() .. unicode.char(a))
-      update()
-      return true
+     elseif a ~= 9 then
+      local lT, lC, lX = le.key(a ~= 0 and unicode.char(a), c, ot, p)
+      if lT or lC then
+       if lT then textprop(lT) end
+       p = lC or p
+       update()
+       return true
+      end
      end
     end
    end,
@@ -377,9 +380,10 @@ newNeoux = function (event, neo)
      fg = bg
      bg = fg1
     end
-    local text = unicode.safeTextFormat(textprop())
-    text = "[" .. neoux.pad(text, w - 2, false, true, true) .. "]"
-    window.span(x, y, text, bg, fg)
+    local t, e, r = textprop(), require("lineedit")
+    p = e.clamp(t, p)
+    t, r = unicode.safeTextFormat(t, p)
+    window.span(x, y, "[" .. e.draw(w - 2, t, selected and r) .. "]", bg, fg)
    end
   }
  end

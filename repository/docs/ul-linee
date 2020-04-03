@@ -1,0 +1,78 @@
+The "lineedit" library provides a
+ quick way to implement nice line
+ editing into applications.
+
+It requires the user to store the
+ line and the cursor position for the
+ line, which allows the user to
+ implement any additional logic for
+ the application.
+
+(To clarify, this implies that the
+ library's functions are stateless.)
+
+The functions are as follows:
+
+draw = function (sW, line, curX, rX):
+ Returns the spantext.
+
+sW is the width of the area.
+line is the safeTextFormatted text.
+curX is the cursor in screen units
+(usually done as part of the text
+ formatting)
+This is optional, and if not provided
+ the cursor will not be shown.
+rX is an optional camera override.
+If not provided, the cursor will be
+ used; if that is not provided, then
+ the left side will be shown.
+
+clamp = function (line, curX):
+ Returns curX clamped to the line's
+  length (does not check for < 1).
+
+key = function (ks, kc, line, curX):
+ Performs something.
+
+ks, if truthy, is the unicode.char
+ of the key event key character.
+kc is the key event keycode.
+(If feeding in clipboard characters,
+ use 0 here.)
+
+line is the text.
+
+This returns three values, any of
+ which or all of which may be nil for
+ a 'no effect' response:
+
+The new line text, 'lT'.
+The new curX, 'lC'.
+The extended action, 'lX'.
+
+The following extended actions exist:
+
+"l<": The cursor should be warped to
+ the end of the previous line, if one
+ exists (if not, do nothing)
+
+"l>": The cursor should be warped to
+ the start of the next line, if one
+ exists (if not, do nothing)
+
+"w<": This line should be welded to
+ the previous line, and the cursor
+ should be placed at the weld point.
+
+"w>": This line should be welded to
+ the next line, and the cursor
+ should be placed at the weld point.
+
+"nl": The Enter button was pressed.
+
+-- This is released into
+ the public domain.
+-- No warranty is provided,
+ implied or otherwise.
+

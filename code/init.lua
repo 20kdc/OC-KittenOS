@@ -459,7 +459,7 @@ function retrieveAccess(perm, pkg, pid)
   accesses[uid] = function (pkg, pid)
    return nil
   end
-  return function (f)
+  return function (f, secret)
    -- Registration function
    ensureType(f, "function")
    local accessObjectCache = {}
@@ -481,8 +481,10 @@ function retrieveAccess(perm, pkg, pid)
     end
     -- returns nil and fails
    end
-   -- Announce registration
-   distEvent(nil, "k.registration", uid)
+   if not secret then
+    -- Announce registration
+    distEvent(nil, "k.registration", uid)
+   end
   end, function ()
    -- Registration becomes null (access is held but other processes cannot retrieve object)
    if accesses[uid] then

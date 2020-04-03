@@ -30,31 +30,16 @@ local clipsrc = neo.requireAccess("x.neo.pub.globals", "clipboard")
 local windows = neo.requireAccess("x.neo.pub.window", "windows")
 local files = neo.requireAccess("x.neo.pub.base", "files").showFileDialogAsync
 
+local lineEdit = require("lineedit")
+
 local cursorX = 1
 local cursorY = math.ceil(#lines / 2)
-local cFlash = true
-local ctrlFlag, focFlag, appendFlag
+local ctrlFlag, appendFlag
 local dialogLock = false
 local sW, sH = 37, #lines + 2
 local window = windows(sW, sH)
 local filedialog = nil
 local flush
-
-local function splitCur()
- local s = lines[cursorY]
- local st = unicode.sub(s, 1, cursorX - 1)
- local en = unicode.sub(s, cursorX)
- return st, en
-end
-
-local function clampCursorX()
- local s = lines[cursorY]
- if unicode.len(s) < (cursorX - 1) then
-  cursorX = unicode.len(s) + 1
-  return true
- end
- return false
-end
 
 local cbs = {}
 
@@ -139,31 +124,14 @@ local function getline(y)
  -- rX is difficult!
  local rX = 1
  local Xthold = math.max(1, math.floor(sW / 2) - 1)
- local _, cursorXP = unicode.safeTextFormat(lines[cursorY], cursorX)
+ local cLine, cursorXP = unicode.safeTextFormat(lines[cursorY], cursorX)
  rX = (math.max(0, math.floor(cursorXP / Xthold) - 1) * Xthold) + 1
  local line = lines[rY]
  if not line then
   return ("¬"):rep(sW)
  end
  line = unicode.safeTextFormat(line)
- -- <alter RX here by 1 if needed>
- local tl = unicode.sub(line, rX, rX + sW - 1)
- cursorXP = (cursorXP - rX) + 1
- if cFlash then
-  if rY == cursorY then
-   if cursorXP >= 1 then
-    if cursorXP <= sW then
-     local start = unicode.sub(tl, 1, cursorXP - 1)
-     local endx = unicode.sub(tl, cursorXP + 1)
-     tl = start .. "_" .. endx
-    end
-   end
-  end
- end
- while unicode.len(tl) < sW do
-  tl = tl .. " "
- end
- return tl
+ return lineEdit.draw(sW, line, rY == cursorY and cursorXP, rX)
 end
 local function delLine()
  local contents = lines[cursorY]
@@ -179,22 +147,7 @@ local function delLine()
  end
  return contents
 end
--- add a single character
-local function putLetter(ch)
- if ch == "\r" then
-  local a, b = splitCur()
-  lines[cursorY] = a
-  table.insert(lines, cursorY + 1, b)
-  cursorY = cursorY + 1
-  cursorX = 1
-  return
- end
- local a, b = splitCur()
- a = a .. ch
- lines[cursorY] = a .. b
- cursorX = unicode.len(a) + 1
-end
-local function key(ka, kc, down)
+local function key(ks, kc, down)
  if dialogLock then
   return false
  end
@@ -212,18 +165,22 @@ local function key(ka, kc, down)
     sH = 1
    end
    sW, sH = window.setSize(sW, sH)
+   return false
   elseif kc == 208 then -- Down
    sH = sH + 1
    sW, sH = window.setSize(sW, sH)
+   return false
   elseif kc == 203 then -- Left
    sW = sW - 1
    if sW == 0 then
     sW = 1
    end
    sW, sH = window.setSize(sW, sH)
+   return false
   elseif kc == 205 then -- Right
    sW = sW + 1
    sW, sH = window.setSize(sW, sH)
+   return false
   elseif kc == 14 then -- ^Backspace
    delLine()
    return true
@@ -240,7 +197,7 @@ local function key(ka, kc, down)
    if cursorY < 1 then
     cursorY = 1
    end
-   clampCursorX()
+   cursorX = lineEdit.clamp(lines[cursorY], cursorX)
    return true
   elseif kc == 208 or kc == 209 then -- Go down one - go down page
    local moveAmount = 1
@@ -251,36 +208,7 @@ local function key(ka, kc, down)
    if cursorY > #lines then
     cursorY = #lines
    end
-   clampCursorX()
-   return true
-  elseif kc == 203 then
-   if cursorX > 1 then
-    cursorX = cursorX - 1
-   else
-    if cursorY > 1 then
-     cursorY = cursorY - 1
-     cursorX = unicode.len(lines[cursorY]) + 1
-    else
-     return false
-    end
-   end
-   return true
-  elseif kc == 205 then
-   cursorX = cursorX + 1
-   if clampCursorX() then
-    if cursorY < #lines then
-     cursorY = cursorY + 1
-     cursorX = 1
-    end
-   end
-   return true
-  end
-  -- Extra Non-Control Keys
-  if kc == 199 then
-   cursorX = 1
-   return true
-  elseif kc == 207 then
-   cursorX = unicode.len(lines[cursorY]) + 1
+   cursorX = lineEdit.clamp(lines[cursorY], cursorX)
    return true
   end
   -- Major Actions
@@ -291,10 +219,13 @@ local function key(ka, kc, down)
    return true
   elseif kc == 61 then -- F3
    startLoad()
+   return false
   elseif kc == 62 then -- F4
    startSave()
+   return false
   elseif kc == 63 then -- F5
    clipsrc.setSetting("clipboard", lines[cursorY])
+   return false
   elseif kc == 64 then -- F6
    local tx = clipsrc.getSetting("clipboard") or ""
    local txi = tx:find("\n")
@@ -311,6 +242,7 @@ local function key(ka, kc, down)
    return true
   elseif kc == 65 then -- F7
    appendFlag = false
+   return false
   elseif kc == 66 then -- F8
    if appendFlag then
     local base = clipsrc.getSetting("clipboard")
@@ -322,29 +254,37 @@ local function key(ka, kc, down)
    return true
   end
  end
- -- Letters
- if ka == 8 or kc == 211 then
-  if cursorX == 1 then
-   if cursorY == 1 then
-    return false
-   end
-   local l = table.remove(lines, cursorY)
-   cursorY = cursorY - 1
-   cursorX = unicode.len(lines[cursorY]) + 1
-   lines[cursorY] = lines[cursorY] .. l
-  else
-   local a, b = splitCur()
-   a = unicode.sub(a, 1, unicode.len(a) - 1)
-   lines[cursorY] = a.. b
-   cursorX = cursorX - 1
-  end
-  return true
+ -- LEL Keys
+ local lT, lC, lX = lineEdit.key(ks, kc, lines[cursorY], cursorX)
+ if lT then
+  lines[cursorY] = lT
  end
- if ka ~= 0 then
-  putLetter(unicode.char(ka))
-  return true
+ if lC then
+  cursorX = lC
  end
- return false
+ if lX == "l<" and cursorY > 1 then
+  cursorY = cursorY - 1
+  cursorX = unicode.len(lines[cursorY]) + 1
+ elseif lX == "l>" and cursorY < #lines then
+  cursorY = cursorY + 1
+  cursorX = 1
+ elseif lX == "w<" and cursorY ~= 1 then
+  local l = table.remove(lines, cursorY)
+  cursorY = cursorY - 1
+  cursorX = unicode.len(lines[cursorY]) + 1
+  lines[cursorY] = lines[cursorY] .. l
+ elseif lX == "w>" and cursorY ~= #lines then
+  local l = table.remove(lines, cursorY)
+  cursorX = unicode.len(l) + 1
+  lines[cursorY] = l .. lines[cursorY]
+ elseif lX == "nl" then
+  local line = lines[cursorY]
+  lines[cursorY] = unicode.sub(line, 1, cursorX - 1)
+  table.insert(lines, cursorY + 1, unicode.sub(line, cursorX))
+  cursorX = 1
+  cursorY = cursorY + 1
+ end
+ return true
 end
 
 flush = function ()
@@ -353,16 +293,9 @@ flush = function ()
  end
 end
 
-neo.scheduleTimer(os.uptime() + 0.5)
-
 while true do
  local e = {coroutine.yield()}
- if e[1] == "k.timer" and e[2] == focFlag then
-  cFlash = not cFlash
-  local csY = math.ceil(sH / 2)
-  window.span(1, csY, getline(csY), 0xFFFFFF, 0)
-  focFlag = neo.scheduleTimer(os.uptime() + 0.5)
- elseif e[1] == "x.neo.pub.window" then
+ if e[1] == "x.neo.pub.window" then
   if e[2] == window.id then
    if e[3] == "line" then
     window.span(1, e[4], getline(e[4]), 0xFFFFFF, 0)
@@ -373,14 +306,13 @@ while true do
     local csY = math.ceil(sH / 2)
     local nY = math.max(1, math.min(#lines, (math.floor(e[5]) - csY) + cursorY))
     cursorY = nY
-    clampCursorX()
+    cursorX = lineEdit.clamp(lines[cursorY], cursorX)
     flush()
    elseif e[3] == "key" then
-    if key(e[4], e[5], e[6]) then
+    if key(e[4] ~= 0 and unicode.char(e[4]), e[5], e[6]) then
      flush()
     end
    elseif e[3] == "focus" then
-    focFlag = e[4] and neo.scheduleTimer(0)
     ctrlFlag = false
    elseif e[3] == "close" then
     return
@@ -392,7 +324,7 @@ while true do
       if c == "\n" then
        c = "\r"
       end
-      putLetter(c)
+      key(c, 0, true)
      end
     end
     flush()

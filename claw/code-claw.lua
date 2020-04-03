@@ -3,7 +3,7 @@
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
-  v = 8,
+  v = 9,
   deps = {
   },
   dirs = {
@@ -18,6 +18,7 @@ return {
    "libs/serial.lua",
    "libs/fmttext.lua",
    "libs/neoux.lua",
+   "libs/lineedit.lua",
    "libs/braille.lua",
    "libs/bmp.lua",
    "libs/sys-filewrap.lua",
@@ -54,7 +55,7 @@ return {
  },
  ["neo-everest"] = {
   desc = "KittenOS NEO / Everest (windowing)",
-  v = 5,
+  v = 9,
   deps = {
    "neo"
   },
@@ -67,7 +68,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 8,
+  v = 9,
   deps = {
    "neo"
   },
@@ -84,7 +85,7 @@ return {
  },
  ["neo-secpolicy"] = {
   desc = "KittenOS NEO / Secpolicy",
-  v = 8,
+  v = 9,
   deps = {
   },
   dirs = {
@@ -96,7 +97,7 @@ return {
  },
  ["neo-coreapps"] = {
   desc = "KittenOS NEO Core Apps",
-  v = 5,
+  v = 9,
   deps = {
    "neo"
   },
@@ -125,7 +126,7 @@ return {
  },
  ["neo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 8,
+  v = 9,
   deps = {
   },
   dirs = {
@@ -175,6 +176,20 @@ return {
    "apps/svc-app-claw-worker.lua"
   },
  },
+ ["svc-t"] = {
+  desc = "KittenOS NEO Terminal System",
+  v = 9,
+  deps = {
+   "neo"
+  },
+  dirs = {
+   "apps"
+  },
+  files = {
+   "apps/svc-t.lua",
+   "apps/app-luashell.lua"
+  },
+ },
  ["neo-meta"] = {
   desc = "KittenOS NEO: Use 'All' to install to other disks",
   v = 5,
@@ -190,6 +205,7 @@ return {
    "app-bmpview",
    "app-flash",
    "app-claw",
+   "svc-t",
    "app-wget"
   },
   dirs = {

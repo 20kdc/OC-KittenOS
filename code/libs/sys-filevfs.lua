@@ -94,11 +94,25 @@ function getFsNode(fs, parent, fsc, path, mode, impliedName)
     for k, v in ipairs(fsc.list(path)) do
      local nm = "F: " .. v
      local fp = path .. v
-     if fsc.isDirectory(fp) then
+     local cDir = fsc.isDirectory(fp)
+     if cDir then
       nm = "D: " .. v
      end
-     n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode, impliedName) end}
+     if (not cDir) and (fscrw or mode == false) and (mode ~= nil) then
+      local vn = v
+      n[k + 1] = {nm, function () return selectUnknown(vn) end}
+     else
+      n[k + 1] = {nm, function () return nil, getFsNode(fs, t, fsc, fp, mode, impliedName) end}
+     end
     end
+   else
+    table.insert(n, {"Copy", function ()
+     local rt, re = require("sys-filewrap").create(fsc, path, false)
+     if not rt then
+      return false, dialog("Open Error: " .. tostring(re), parent)
+     end
+     return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
+    end})
    end
    if fscrw then
     if dir then
@@ -151,24 +165,6 @@ function getFsNode(fs, parent, fsc, path, mode, impliedName)
     end
    end
    if not dir then
-    table.insert(n, {"Copy", function ()
-     local rt, re = require("sys-filewrap").create(fsc, path, false)
-     if not rt then
-      return false, dialog("Open Error: " .. tostring(re), parent)
-     end
-     return nil, setupCopyVirtualEnvironment(fs, parent, rt, path:match("[^/]*$") or "")
-    end})
-    if (fscrw or mode == false) and (mode ~= nil) then
-     local tx = "Open"
-     if mode == true then
-      tx = "Save (Overwrite)"
-     elseif mode == "append" then
-      tx = "Append"
-     end
-     if fscrw or mode == false then
-      table.insert(n, {tx, selectUnknown})
-     end
-    end
    elseif impliedName then
     table.insert(n, {"Implied: " .. impliedName, function ()
      return selectUnknown(impliedName)

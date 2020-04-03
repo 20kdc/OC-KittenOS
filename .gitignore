@@ -1,8 +1,6 @@
 # This is released into the public domain.
 # No warranty is provided, implied or otherwise.
 
-# leaving in preSH.tar.gz for anyone who's interested
-# in how NOT to do compression
 code.tar
 code/data/app-claw/*
 work.tar
@@ -32,7 +30,9 @@ laboratory/*/*/*/*
 inst.lua
 # Available as the respective release
 inst-gold.lua
-com2/code.tar.bd
+# Compression stuff
+inst/iSymTab
+# internal
 upldr.sh
 upldr-dev.sh
 upldr-gold.sh

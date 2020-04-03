@@ -24,7 +24,7 @@ return {
  },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
-  v = 8,
+  v = 9,
   deps = {
    "zzz-license-pd"
   },
@@ -43,6 +43,7 @@ return {
    "docs/us-setti",
    "docs/us-evrst",
    "docs/us-clawf",
+   "docs/us-termi",
    "docs/ul-seria",
    "docs/ul-fwrap",
    "docs/ul-event",
@@ -50,6 +51,7 @@ return {
    "docs/ul-neoux",
    "docs/ul-brail",
    "docs/ul-bmp__",
+   "docs/ul-linee",
    "docs/gp-pedan",
    "docs/repoauthors/neo-docs"
   },
@@ -89,11 +91,12 @@ return {
    "docs/repoauthors/app-allmem"
   },
  },
- ["app-kmt"] = {
-  desc = "Line-terminal for MUDs & such",
-  v = 1,
+ ["app-telnet"] = {
+  desc = "TELNET client",
+  v = 0,
   deps = {
    "neo",
+   "svc-t",
    "zzz-license-pd"
   },
   dirs = {
@@ -102,8 +105,8 @@ return {
    "docs/repoauthors"
   },
   files = {
-   "apps/app-kmt.lua",
-   "docs/repoauthors/app-kmt"
+   "apps/app-telnet.lua",
+   "docs/repoauthors/app-telnet"
   },
  },
  ["svc-ghostie"] = {
