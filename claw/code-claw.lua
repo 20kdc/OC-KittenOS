@@ -68,7 +68,7 @@ return {
  },
  ["neo-icecap"] = {
   desc = "KittenOS NEO / Icecap",
-  v = 9,
+  v = 10,
   deps = {
    "neo"
   },
@@ -126,7 +126,7 @@ return {
  },
  ["neo-logo"] = {
   desc = "KittenOS NEO Logo (data)",
-  v = 9,
+  v = 10,
   deps = {
   },
   dirs = {
@@ -192,7 +192,7 @@ return {
  },
  ["neo-meta"] = {
   desc = "KittenOS NEO: Use 'All' to install to other disks",
-  v = 5,
+  v = 9,
   deps = {
    "neo",
    "neo-init",

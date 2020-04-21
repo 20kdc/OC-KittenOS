@@ -240,7 +240,7 @@ rootAccess.securityPolicy = function (pid, proc, perm, req)
  end
  -- Do we need to start it?
  if perm:sub(1, 6) == "x.svc." and not neo.usAccessExists(perm) then
-  local appAct = splitAC(perm:sub(3))
+  local appAct = splitAC(perm:sub(7))
   -- Prepare for success
   onReg[perm] = onReg[perm] or {}
   local orp = onReg[perm]
