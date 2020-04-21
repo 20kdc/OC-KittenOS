@@ -339,7 +339,8 @@ newNeoux = function (event, neo)
  end
  -- Note: w should be at least 2 - this is similar to buttons.
  neoux.tcfield = function (x, y, w, textprop)
-  local p = 1
+  -- compat. workaround for apps which nuke tcfields
+  local p = unicode.len(textprop()) + 1
   return {
    x = x,
    y = y,
