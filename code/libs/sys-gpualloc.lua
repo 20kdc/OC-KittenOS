@@ -95,7 +95,7 @@ return function (
        return v, didBind
       end
      end
-    end, v
+    end, monitor
    end
   end
  end
