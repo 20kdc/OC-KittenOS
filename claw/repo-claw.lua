@@ -309,5 +309,20 @@ return {
    "docs/licensing/Public Domain",
    "docs/repoauthors/zzz-license-pd"
   },
+ },
+ ["zzz-license-kosneo-bsd0"] = {
+  desc = "license file 'KittenOS NEO BSD0'",
+  v = 0,
+  deps = {
+  },
+  dirs = {
+   "docs",
+   "docs/licensing",
+   "docs/repoauthors"
+  },
+  files = {
+   "docs/licensing/KittenOS NEO BSD0",
+   "docs/repoauthors/zzz-license-kosneo-bsd0"
+  },
  }
 }
