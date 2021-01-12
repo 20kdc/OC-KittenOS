@@ -1,4 +1,4 @@
-repository/apps/svc-virtudev.lua: 20kdc, Public Domain
-repository/apps/app-vdrslamp.lua: 20kdc, Public Domain
-repository/docs/us-virtu: 20kdc, Public Domain
+repository/apps/svc-virtudev.lua: 20kdc, KittenOS NEO BSD0
+repository/apps/app-vdrslamp.lua: 20kdc, KittenOS NEO BSD0
+repository/docs/us-virtu: 20kdc, KittenOS NEO BSD0
 

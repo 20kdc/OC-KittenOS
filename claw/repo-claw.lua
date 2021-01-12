@@ -11,10 +11,10 @@
 return {
  ["app-eeprog"] = {
   desc = "Example program: EEPROM programmer / copier",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -28,9 +28,9 @@ return {
  },
  ["neo-docs"] = {
   desc = "KittenOS NEO system documentation",
-  v = 9,
+  v = 10,
   deps = {
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "docs",
@@ -62,10 +62,10 @@ return {
  },
  ["app-nbox2018"] = {
   desc = "NBOX2018 and NPRT2018, a 3D-printing toolbox",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -80,10 +80,10 @@ return {
  },
  ["app-allmem"] = {
   desc = "Near-reproducible memory usage figures",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -97,11 +97,11 @@ return {
  },
  ["app-telnet"] = {
   desc = "TELNET client",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
    "svc-t",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -115,10 +115,10 @@ return {
  },
  ["svc-ghostie"] = {
   desc = "Application that schedules a scare after a random time to test svc autostart",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -133,10 +133,10 @@ return {
  },
  ["app-metamachine"] = {
   desc = "Virtual machine",
-  v = 4,
+  v = 5,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -157,10 +157,10 @@ return {
  },
  ["app-pclogix-upload"] = {
   desc = "paste.pc-logix.com text uploader",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -174,10 +174,10 @@ return {
  },
  ["app-rsctrl"] = {
   desc = "Redstone control",
-  v = 0,
+  v = 1,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -191,11 +191,11 @@ return {
  },
  ["app-nbcompose"] = {
   desc = "Music player/composer using the NBS format",
-  v = 1,
+  v = 2,
   deps = {
    "neo",
    "lib-knbs",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -209,10 +209,10 @@ return {
  },
  ["app-tapedeck"] = {
   desc = "Computronics Tape Drive interface",
-  v = 2,
+  v = 3,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
@@ -261,9 +261,9 @@ return {
  -- libraries
  ["lib-knbs"] = {
   desc = "NBS reader/writer library",
-  v = 1,
+  v = 2,
   deps = {
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "libs",
@@ -277,10 +277,10 @@ return {
  },
  ["svc-virtudev"] = {
   desc = "a clone of vcomponent",
-  v = 1,
+  v = 2,
   deps = {
    "neo",
-   "zzz-license-pd"
+   "zzz-license-kosneo-bsd0"
   },
   dirs = {
    "apps",
