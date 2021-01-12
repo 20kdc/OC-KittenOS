@@ -16,6 +16,6 @@ stat repobuild/data/app-claw 1>/dev/null 2>/dev/null && rm -rf repobuild
 mkdir -p repobuild
 cp -r code/* repobuild/
 cp -r repository/* repobuild/
-cp $1 repobuild/
+cp $1 repobuild/inst.lua
 lua claw/clawconv.lua repobuild/data/app-claw/ < claw/code-claw.lua > repobuild/data/app-claw/local.c2l
 lua claw/clawconv.lua repobuild/data/app-claw/ < claw/repo-claw.lua >> repobuild/data/app-claw/local.c2l
