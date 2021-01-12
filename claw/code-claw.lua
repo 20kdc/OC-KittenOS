@@ -1,5 +1,10 @@
--- This is released into the public domain.
--- No warranty is provided, implied or otherwise.
+-- Copyright (C) 2018-2021 by KittenOS NEO contributors
+--
+-- Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+-- THIS SOFTWARE.
+
 return {
  ["neo"] = {
   desc = "KittenOS NEO Kernel & Base Libs",
@@ -27,7 +32,7 @@ return {
  },
  ["neo-init"] = {
   desc = "KittenOS NEO / sys-init (startup)",
-  v = 7,
+  v = 10,
   deps = {
    "neo",
    "neo-icecap",
@@ -42,7 +47,7 @@ return {
  },
  ["neo-launcher"] = {
   desc = "KittenOS NEO / Default app-launcher",
-  v = 2,
+  v = 10,
   deps = {
    "neo"
   },
@@ -55,7 +60,7 @@ return {
  },
  ["neo-everest"] = {
   desc = "KittenOS NEO / Everest (windowing)",
-  v = 9,
+  v = 10,
   deps = {
    "neo"
   },
@@ -85,7 +90,7 @@ return {
  },
  ["neo-secpolicy"] = {
   desc = "KittenOS NEO / Secpolicy",
-  v = 9,
+  v = 10,
   deps = {
   },
   dirs = {
@@ -97,7 +102,7 @@ return {
  },
  ["neo-coreapps"] = {
   desc = "KittenOS NEO Core Apps",
-  v = 9,
+  v = 10,
   deps = {
    "neo"
   },
@@ -113,7 +118,7 @@ return {
  },
  ["app-bmpview"] = {
   desc = "KittenOS NEO .bmp viewer",
-  v = 5,
+  v = 10,
   deps = {
    "neo",
   },
@@ -138,7 +143,7 @@ return {
  },
  ["app-flash"] = {
   desc = "KittenOS NEO EEPROM Flasher",
-  v = 5,
+  v = 10,
   deps = {
    "neo"
   },
@@ -151,7 +156,7 @@ return {
  },
  ["app-wget"] = {
   desc = "KittenOS Web Retriever",
-  v = 2,
+  v = 10,
   deps = {
    "neo"
   },
@@ -164,7 +169,7 @@ return {
  },
  ["app-claw"] = {
   desc = "KittenOS NEO Package Manager",
-  v = 5,
+  v = 10,
   deps = {
    "neo"
   },
@@ -178,7 +183,7 @@ return {
  },
  ["svc-t"] = {
   desc = "KittenOS NEO Terminal System",
-  v = 9,
+  v = 10,
   deps = {
    "neo"
   },
@@ -192,7 +197,7 @@ return {
  },
  ["neo-meta"] = {
   desc = "KittenOS NEO: Use 'All' to install to other disks",
-  v = 9,
+  v = 10,
   deps = {
    "neo",
    "neo-init",

@@ -36,12 +36,16 @@ It would be really nice if, if I have screwed up, that you tell me how.
 Preferably with a solution that fits the technological constraints.
 
 Licensing in this project is rather fluid,
- but everything in code/ is unconditionally under the following license:
+ but everything that is not in `repository/` is unconditionally under the following license:
 
-    This is released into the public domain.
-    No warranty is provided, implied or otherwise.
+    Copyright (C) 2018-2021 by KittenOS NEO contributors
 
-This will be referred to as "Public Domain".
+    Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+    THIS SOFTWARE.
+
+This will be referred to as "BSD0".
 
 It should be considered equivalent to CC0, and this is the intent,
  but it is smaller, which is somewhat important when optimizing for size.
