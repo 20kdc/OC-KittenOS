@@ -16,7 +16,7 @@ neo.requestAccess("s.h._kosneo_syslog")
 
 -- gpuG/performDisclaim are GPU management, while screen is used for prioritization
 local gpuG, performDisclaim, screen = nil
-local scrW, scrH
+local scrW, scrH = 1, 1
 local nssInst
 
 local console = {}
@@ -272,6 +272,7 @@ local function finalPrompt()
    if sig[1] == "x.neo.sys.screens" then
     -- We need to reinit screens no matter what.
     retrieveNssMonitor(screen)
+    active = false
    end
    if sig[1] == "h.key_down" then
     if sig[2] ~= lastKeyboard then
@@ -280,7 +281,7 @@ local function finalPrompt()
      if nScreen and nScreen ~= screen then
       neo.emergency("new primary:", nScreen)
       retrieveNssMonitor(nScreen, screen)
-      basicDraw()
+      active = false
      end
     end
     if sig[4] == 15 then
