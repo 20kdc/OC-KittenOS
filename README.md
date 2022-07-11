@@ -1,3 +1,49 @@
+# ATTENTION! WARNING! ETCETERA!!!
+
+AS OF 11TH JULY 2022, ALL SUPPORT AND MAINTENANCE ON THIS REPOSITORY HAS BEEN DROPPED.
+
+Microsoft finally turned off whatever mechanism PolyMC was using to let people play multiplayer on Mojang accounts.
+
+Use UltimMC. Use something like https://modrinth.com/mod/easyauth . Host your servers this way.
+
+Microsoft have proven they are willing to remove a bought product off your hands if you don't agree to their new rules about it.
+
+They have proven that "buying" something off of them means nothing and anything you've "bought" from Mojang means nothing.
+
+*They have stolen what they have been paid money for. Therefore they don't deserve to have anything bought off them at all.*
+
+And before any of you go "just migrate", look at the warning signs as to the ban systems.
+
+Maybe watch FitMC's video: https://www.youtube.com/watch?v=rdoFUhd0EkI
+
+Or maybe read the migration horror stories:
+
++ https://www.reddit.com/r/xbox/comments/sscoa7/does_anyone_have_an_idea_why_was_i_locked_out_of/
++ https://news.ycombinator.com/item?id=31551846
++ https://answers.microsoft.com/en-us/xbox/forum/all/im-locked-out-of-minecraft-after-migrating-my/9f1f64cb-6a2d-4cd2-abb8-0010a6bc6f31
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+. OLD README BELOW
+
 # KittenOS NEO
 
 As per usual, no warranty, not my responsibility if this breaks, or if you somehow try to run it on an actual (non-OpenComputers) computer.
