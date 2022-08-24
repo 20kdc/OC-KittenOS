@@ -22,6 +22,7 @@ Or maybe read the migration horror stories:
 + https://news.ycombinator.com/item?id=31551846
 + https://answers.microsoft.com/en-us/xbox/forum/all/im-locked-out-of-minecraft-after-migrating-my/9f1f64cb-6a2d-4cd2-abb8-0010a6bc6f31
 + https://www.reddit.com/r/Minecraft/comments/we8asn/why_microsoft_ever_since_i_was_forced_to_migrate/
++ even rekrap1 got bitten by this: https://www.youtube.com/watch?v=rzPYH98TTMM
 
 .
 
